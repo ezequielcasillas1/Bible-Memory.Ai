@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OpenAIService, VerseResponse, ImprovementSuggestion } from './services/openai';
 import { fetchEnglishBiblesByAbbrev, searchPassageByQuery, type ApiBibleSummary } from './services/apiBible';
+import { fetchEnglishBiblesByAbbrev, searchPassageByQuery, type ApiBibleSummary } from './services/apiBible';
 import { 
   BookOpen, 
   User, 
@@ -90,6 +91,8 @@ function App() {
   // Settings state
   const [uiLanguage, setUiLanguage] = useState('English');
   const [bibleLanguage, setBibleLanguage] = useState('English');
+  const [supportedBibles, setSupportedBibles] = useState<ApiBibleSummary[]>([]);
+  const [selectedBibleId, setSelectedBibleId] = useState<string | null>(null);
   const [bibleVersion, setBibleVersion] = useState('kjv');
   
   // User stats
@@ -115,6 +118,26 @@ function App() {
   useEffect(() => {
     generateNewVerses();
     generateImprovementSuggestions();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const desired = ['KJV','NKJV','NLT','ESV','ASV'];
+        const list = await fetchEnglishBiblesByAbbrev(desired);
+        list.sort((a,b) => a.abbreviation.localeCompare(b.abbreviation));
+        setSupportedBibles(list);
+
+        // Sync current setting to a valid API.Bible ID
+        const match = list.find(x => x.abbreviation.toLowerCase() === bibleVersion.toLowerCase()) ?? list[0];
+        if (match) {
+          setBibleVersion(match.abbreviation);       // keeps your old state in sync
+          setSelectedBibleId(match.id);              // new: drives API.Bible calls
+        }
+      } catch (e) {
+        console.error('Failed to load API.Bible versions', e);
+      }
+    })();
   }, []);
 
   // Generate improvement suggestions when stats change
