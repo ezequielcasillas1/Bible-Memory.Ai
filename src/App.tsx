@@ -825,7 +825,7 @@ function App() {
                   <div className="flex justify-start">
                     <div className="bg-gray-100 text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
                       <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                        <h3 className="text-lg font-semibold text-gray-800">{verse.reference} ({bibleVersion})</h3>
                         <p className="text-sm">AI is thinking...</p>
                       </div>
                     </div>
