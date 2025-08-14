@@ -23,19 +23,42 @@ export interface BibleBook {
 }
 
 export class BibleApiService {
-  private static readonly BASE_URL = '/bible-api';
+  private static readonly BASE_URL = '/api/bible';
 
   // Get a specific verse by reference
   static async getVerse(reference: string, version?: string): Promise<BibleVerse> {
     try {
+      // Format reference for bible.org API (e.g., "John 3:16" -> "?passage=John+3:16")
+      const formattedRef = encodeURIComponent(reference.replace(/\s+/g, '+'));
       const url = version 
-        ? `${this.BASE_URL}/${encodeURIComponent(reference)}?translation=${version}`
-        : `${this.BASE_URL}/${encodeURIComponent(reference)}`;
+        ? `${this.BASE_URL}/?passage=${formattedRef}&version=${version}&type=json`
+        : `${this.BASE_URL}/?passage=${formattedRef}&type=json`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch verse: ${response.statusText}`);
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // Convert bible.org API response to our expected format
+      if (Array.isArray(data) && data.length > 0) {
+        const verseData = data[0];
+        return {
+          reference: reference,
+          verses: [{
+            book_id: verseData.bookname || '',
+            book_name: verseData.bookname || reference.split(' ')[0],
+            chapter: parseInt(reference.match(/(\d+):/)?.[1] || '1'),
+            verse: parseInt(reference.match(/:(\d+)/)?.[1] || '1'),
+            text: verseData.text || ''
+          }],
+          text: verseData.text || '',
+          translation_id: version || 'ESV',
+          translation_name: version || 'English Standard Version',
+          translation_note: ''
+        };
+      } else {
+        throw new Error('No verse data found');
+      }
     } catch (error) {
       console.error('Error fetching verse:', error);
       throw error;

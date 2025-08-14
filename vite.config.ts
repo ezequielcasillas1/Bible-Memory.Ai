@@ -6,10 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/bible-api': {
-        target: 'https://bible-api.com',
+      '/api/bible': {
+        target: 'https://labs.bible.org/api',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/bible-api/, ''),
+        rewrite: (path) => path.replace(/^\/api\/bible/, ''),
       },
     },
   },
