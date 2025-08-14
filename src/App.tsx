@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OpenAIService, VerseResponse, ImprovementSuggestion } from './services/openai';
+import { fetchEnglishBiblesByAbbrev, searchPassageByQuery, type ApiBibleSummary } from './services/apiBible';
 import { 
   BookOpen, 
   User, 
