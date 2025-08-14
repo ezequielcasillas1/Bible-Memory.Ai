@@ -13,7 +13,9 @@ export async function fetchEnglishBiblesByAbbrev(abbrevs: string[]): Promise<Api
   const key = import.meta.env.VITE_API_BIBLE_KEY;
   if (!key) throw new Error('Missing VITE_API_BIBLE_KEY');
 
-  const url = `${API}/bibles?language=eng&abbreviation=${encodeURIComponent(abbrevs.join(','))}&include-full-details=true`;
+  const url = abbrevs.length > 0 
+    ? `${API}/bibles?language=eng&abbreviation=${encodeURIComponent(abbrevs.join(','))}&include-full-details=true`
+    : `${API}/bibles?language=eng&include-full-details=true`;
   const res = await fetch(url, {
     headers: { 'accept': 'application/json', 'api-key': key }
   });
