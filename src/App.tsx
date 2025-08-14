@@ -613,6 +613,12 @@ function App() {
               />
               <div className="flex justify-center mt-6">
                 <button
+                  onClick={resetMemorizeSession}
+                  className="bg-gray-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-600 transition-colors mr-4"
+                >
+                  Exit
+                </button>
+                <button
                   onClick={checkAnswer}
                   className="button-primary text-white px-8 py-3 rounded-lg font-medium flex items-center space-x-2"
                 >
