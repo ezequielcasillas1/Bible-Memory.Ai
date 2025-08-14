@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { BibleApiService } from './bibleApi';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -26,6 +27,116 @@ export interface ImprovementSuggestion {
 
 export class OpenAIService {
   static async generateVerses(type: 'commission' | 'help'): Promise<VerseResponse> {
+    // First, try to get real Bible verses from the API
+    try {
+      const verse1 = await BibleApiService.getRandomVerse(type);
+      const verse2 = await BibleApiService.getRandomVerse(type);
+      
+      // Convert to our format
+      const otVerse = BibleApiService.getTestament(verse1.verses?.[0]?.book_name || '') === 'OT' ? verse1 : verse2;
+      const ntVerse = BibleApiService.getTestament(verse1.verses?.[0]?.book_name || '') === 'NT' ? verse1 : verse2;
+      
+      // If we don't have both OT and NT, get another verse
+      let finalOtVerse = otVerse;
+      let finalNtVerse = ntVerse;
+      
+      if (BibleApiService.getTestament(otVerse.verses?.[0]?.book_name || '') !== 'OT') {
+        // Try to get an OT verse
+        const otVerseRefs = type === 'commission' 
+          ? ['Isaiah 53:6', 'Jeremiah 29:11', 'Psalm 23:1', 'Proverbs 3:5-6', 'Isaiah 41:10']
+          : ['Psalm 23:4', 'Isaiah 41:10', 'Psalm 55:22', 'Joshua 1:9', 'Psalm 46:1'];
+        const randomOtRef = otVerseRefs[Math.floor(Math.random() * otVerseRefs.length)];
+        finalOtVerse = await BibleApiService.getVerse(randomOtRef);
+      }
+      
+      if (BibleApiService.getTestament(ntVerse.verses?.[0]?.book_name || '') !== 'NT') {
+        // Try to get an NT verse
+        const ntVerseRefs = type === 'commission'
+          ? ['John 3:16', 'Romans 6:23', 'Romans 10:9', 'Ephesians 2:8-9', 'John 14:6']
+          : ['Matthew 11:28-30', '1 Peter 5:7', 'Philippians 4:13', '2 Corinthians 12:9', 'Hebrews 13:5'];
+        const randomNtRef = ntVerseRefs[Math.floor(Math.random() * ntVerseRefs.length)];
+        finalNtVerse = await BibleApiService.getVerse(randomNtRef);
+      }
+      
+      // Now generate AI reasons for these real verses
+      const reasonPrompt = type === 'commission' 
+        ? `For these two Bible verses, provide compelling reasons why they encourage someone to accept Christ and follow Christianity:
+
+Old Testament: "${finalOtVerse.text}" (${BibleApiService.formatReference(finalOtVerse)})
+New Testament: "${finalNtVerse.text}" (${BibleApiService.formatReference(finalNtVerse)})
+
+Focus on verses that show:
+- Benefits of following Christ (eternal life, forgiveness, peace, transformation)
+- The nature and goodness of God (love, mercy, justice, faithfulness)
+- Consequences of rejecting Christ (judgment, separation from God)
+- Human need for salvation (sin, brokenness, inability to save oneself)
+- Hope and assurance (God's promises, joy, belonging, purpose)
+
+Return in this exact JSON format:
+{
+  "oldTestament": {
+    "reason": "Brief explanation of why this verse encourages conversion to Christianity"
+  },
+  "newTestament": {
+    "reason": "Brief explanation of why this verse encourages conversion to Christianity"
+  },
+  "connection": "Brief explanation of how these verses work together to show compelling reasons to follow Christ"
+}`
+        : `For these two Bible verses, explain how they offer comfort, help, and encouragement to people in difficult times:
+
+Old Testament: "${finalOtVerse.text}" (${BibleApiService.formatReference(finalOtVerse)})
+New Testament: "${finalNtVerse.text}" (${BibleApiService.formatReference(finalNtVerse)})
+
+Return in this exact JSON format:
+{
+  "oldTestament": {
+    "reason": "Brief explanation of how this verse provides help and comfort"
+  },
+  "newTestament": {
+    "reason": "Brief explanation of how this verse provides help and comfort"
+  },
+  "connection": "Brief explanation of how these verses work together to provide comfort and help"
+}`;
+
+      const reasonResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a biblical scholar who provides insightful explanations of Bible verses. Always return valid JSON format."
+          },
+          {
+            role: "user",
+            content: reasonPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 400
+      });
+
+      const reasonContent = reasonResponse.choices[0]?.message?.content;
+      if (reasonContent) {
+        const reasons = JSON.parse(reasonContent);
+        
+        return {
+          oldTestament: {
+            text: finalOtVerse.text.replace(/\s+/g, ' ').trim(),
+            reference: BibleApiService.formatReference(finalOtVerse),
+            reason: reasons.oldTestament.reason
+          },
+          newTestament: {
+            text: finalNtVerse.text.replace(/\s+/g, ' ').trim(),
+            reference: BibleApiService.formatReference(finalNtVerse),
+            reason: reasons.newTestament.reason
+          },
+          connection: reasons.connection
+        };
+      }
+    } catch (error) {
+      console.error('Error using Bible API, falling back to AI generation:', error);
+    }
+
+    // Fallback to original AI-only generation if Bible API fails
     const prompt = type === 'commission' 
       ? `Generate two Bible verses (one from Old Testament, one from New Testament) that give compelling reasons for someone to accept Christ and follow Christianity. Focus on verses that show:
 
