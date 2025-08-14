@@ -23,7 +23,7 @@ export interface BibleBook {
 }
 
 export class BibleApiService {
-  private static readonly BASE_URL = 'https://bible-api.com';
+  private static readonly BASE_URL = '/bible-api';
 
   // Get a specific verse by reference
   static async getVerse(reference: string, version?: string): Promise<BibleVerse> {
