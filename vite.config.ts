@@ -6,10 +6,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/bible': {
-        target: 'https://labs.bible.org/api',
+      '/api/scripture': {
+        target: 'https://api.scripture.api.bible/v1',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/bible/, ''),
+        rewrite: (path) => path.replace(/^\/api\/scripture/, ''),
+        headers: {
+          'api-key': '6d078a413735440025d1f98883a8d372'
+        }
       },
     },
   },
