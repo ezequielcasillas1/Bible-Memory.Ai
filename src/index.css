@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: 280 60% 30%;
+  --primary-foreground: 280 10% 98%;
+  --secondary: 45 40% 60%;
+  --secondary-foreground: 260 20% 15%;
+  --background: 280 10% 98%;
+  --foreground: 260 20% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 260 20% 15%;
+  --accent: 45 50% 70%;
+  --destructive: 15 70% 55%;
+  --border: 280 20% 88%;
+  --ring: 280 60% 30%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-pulse-gentle {
+  animation: pulseGentle 2s infinite;
+}
+
+.animate-count-up {
+  animation: countUp 0.8s ease-out;
+}
+
+.animate-celebration {
+  animation: celebration 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGentle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes countUp {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes celebration {
+  0% {
+    transform: scale(0.5) rotate(-5deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.verse-card {
+  transition: all 0.3s ease;
+}
+
+.verse-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.nav-tab {
+  transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+  transform: translateY(-1px);
+}
+
+.nav-tab.active {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  color: hsl(var(--primary-foreground));
+}
+
+.button-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  transition: all 0.2s ease;
+}
+
+.button-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.toggle-switch {
+  transition: all 0.2s ease;
+}
+
+.achievement-badge {
+  transition: all 0.3s ease;
+}
+
+.achievement-badge:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.settings-modal {
+  animation: modalOpen 0.25s ease-out;
+}
+
+@keyframes modalOpen {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.countdown-timer {
+  transition: all 0.3s ease;
+}
+
+.countdown-urgent {
+  color: #ef4444;
+  animation: pulseUrgent 0.5s infinite alternate;
+}
+
+@keyframes pulseUrgent {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+
+.progress-bar {
+  transition: width 0.8s ease-out;
+}
+
+.typewriter {
+  overflow: hidden;
+  border-right: 2px solid hsl(var(--primary));
+  white-space: nowrap;
+  animation: typing 2s steps(40, end), blink 0.75s step-end infinite;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink {
+  from, to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: hsl(var(--primary));
+  }
+}
