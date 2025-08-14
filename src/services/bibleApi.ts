@@ -26,9 +26,12 @@ export class BibleApiService {
   private static readonly BASE_URL = 'https://bible-api.com';
 
   // Get a specific verse by reference
-  static async getVerse(reference: string): Promise<BibleVerse> {
+  static async getVerse(reference: string, version?: string): Promise<BibleVerse> {
     try {
-      const response = await fetch(`${this.BASE_URL}/${encodeURIComponent(reference)}`);
+      const url = version 
+        ? `${this.BASE_URL}/${encodeURIComponent(reference)}?translation=${version}`
+        : `${this.BASE_URL}/${encodeURIComponent(reference)}`;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch verse: ${response.statusText}`);
       }
@@ -40,9 +43,9 @@ export class BibleApiService {
   }
 
   // Get multiple verses
-  static async getVerses(references: string[]): Promise<BibleVerse[]> {
+  static async getVerses(references: string[], version?: string): Promise<BibleVerse[]> {
     try {
-      const promises = references.map(ref => this.getVerse(ref));
+      const promises = references.map(ref => this.getVerse(ref, version));
       return await Promise.all(promises);
     } catch (error) {
       console.error('Error fetching multiple verses:', error);
@@ -51,7 +54,7 @@ export class BibleApiService {
   }
 
   // Get a random verse from a predefined list of powerful verses
-  static async getRandomVerse(type: 'commission' | 'help' = 'commission'): Promise<BibleVerse> {
+  static async getRandomVerse(type: 'commission' | 'help' = 'commission', version?: string): Promise<BibleVerse> {
     const commissionVerses = [
       'John 3:16',
       'Romans 6:23',
@@ -102,7 +105,7 @@ export class BibleApiService {
     const randomIndex = Math.floor(Math.random() * verses.length);
     const selectedReference = verses[randomIndex];
 
-    return await this.getVerse(selectedReference);
+    return await this.getVerse(selectedReference, version);
   }
 
   // Get verses from a specific book

@@ -86,6 +86,11 @@ function App() {
   const [memorizedVerses, setMemorizedVerses] = useState<Verse[]>([]);
   const [likedVerses, setLikedVerses] = useState<Verse[]>([]);
   
+  // Settings state
+  const [uiLanguage, setUiLanguage] = useState('English');
+  const [bibleLanguage, setBibleLanguage] = useState('English');
+  const [bibleVersion, setBibleVersion] = useState('kjv');
+  
   // User stats
   const [userStats, setUserStats] = useState<UserStats>({
     totalPoints: 1247,
@@ -128,7 +133,7 @@ function App() {
   const generateNewVerses = async () => {
     setIsGenerating(true);
     try {
-      const response = await OpenAIService.generateVerses(verseType);
+      const response = await OpenAIService.generateVerses(verseType, bibleVersion);
       setCurrentVerses({
         ot: { 
           text: response.oldTestament.text, 
@@ -173,7 +178,79 @@ function App() {
   // Update verses when type changes
   useEffect(() => {
     generateNewVerses();
-  }, [verseType]);
+  }, [verseType, bibleVersion]);
+
+  // Update verses when Bible version changes (with delay to prevent rapid calls)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentVerses) {
+        generateNewVerses();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [bibleVersion]);
+
+  // Available languages and versions
+  const uiLanguages = [
+    'English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian',
+    'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi'
+  ];
+
+  const bibleLanguages = [
+    'English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian',
+    'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi'
+  ];
+
+  const bibleVersions = {
+    English: [
+      { code: 'kjv', name: 'KJV (King James Version)', description: 'Traditional, formal language' },
+      { code: 'nkjv', name: 'NKJV (New King James Version)', description: 'Modern language, traditional style' },
+      { code: 'nlt', name: 'NLT (New Living Translation)', description: 'Easy-to-read contemporary' },
+      { code: 'esv', name: 'ESV (English Standard Version)', description: 'Literal, word-for-word accuracy' },
+      { code: 'asv', name: 'ASV (American Standard Version)', description: 'Formal equivalence' },
+      { code: 'basicenglish', name: 'Basic English Bible', description: 'Simple vocabulary' },
+      { code: 'darby', name: 'Darby Translation', description: 'Literal translation' },
+      { code: 'douayrheims', name: 'Douay-Rheims', description: 'Catholic translation' },
+      { code: 'web', name: 'World English Bible', description: 'Modern public domain' },
+      { code: 'ylt', name: 'Young\'s Literal Translation', description: 'Very literal' }
+    ],
+    Spanish: [
+      { code: 'rv1909', name: 'Reina-Valera 1909', description: 'Classic Spanish translation' },
+      { code: 'rv1960', name: 'Reina-Valera 1960', description: 'Most popular Spanish Bible' },
+      { code: 'rvr1960', name: 'RVR1960 (Alternative)', description: 'Reina-Valera Revisada 1960' }
+    ],
+    French: [
+      { code: 'ls1910', name: 'Louis Segond 1910', description: 'Standard French Bible' }
+    ],
+    German: [
+      { code: 'luther1912', name: 'Luther Bible 1912', description: 'Classic German translation' }
+    ],
+    Portuguese: [
+      { code: 'almeida', name: 'João Ferreira de Almeida', description: 'Traditional Portuguese' }
+    ],
+    Italian: [
+      { code: 'diodati', name: 'Giovanni Diodati Bible', description: 'Classic Italian translation' }
+    ],
+    Russian: [
+      { code: 'synodal', name: 'Russian Synodal Translation', description: 'Standard Russian Bible' }
+    ],
+    Chinese: [
+      { code: 'cuv', name: 'Chinese Union Version Simplified', description: 'Standard Chinese Bible' }
+    ],
+    Japanese: [
+      { code: 'kougo', name: 'Kougo-yaku Bible', description: 'Modern Japanese translation' }
+    ],
+    Korean: [
+      { code: 'krv', name: 'Korean Revised Version', description: 'Standard Korean Bible' }
+    ],
+    Arabic: [
+      { code: 'arabic', name: 'Arabic Bible', description: 'Standard Arabic translation' }
+    ],
+    Hindi: [
+      { code: 'hindi', name: 'Hindi Bible', description: 'Standard Hindi translation' }
+    ]
+  };
 
   const startMemorizeSession = (verse: Verse) => {
     setSelectedVerse(verse);
@@ -1081,11 +1158,11 @@ function App() {
   const renderSettings = () => (
     showSettings && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="settings-modal bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+        <div className="settings-modal bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-gray-900 flex items-center">
               <Settings className="h-5 w-5 text-purple-600 mr-2" />
-              Settings
+              Language & Bible Settings
             </h3>
             <button
               onClick={() => setShowSettings(false)}
@@ -1095,18 +1172,117 @@ function App() {
             </button>
           </div>
           
-          <div className="text-center py-8">
-            <Book className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-            <h4 className="font-semibold text-gray-900 mb-2">Bible Memory Career Settings</h4>
-            <p className="text-gray-600 mb-6">
-              Coming Soon - Customization options for your memorization journey will be added here
-            </p>
-            <button
-              onClick={() => setShowSettings(false)}
-              className="button-primary text-white px-6 py-2 rounded-lg font-medium"
-            >
-              Close
-            </button>
+          <div className="space-y-8">
+            {/* Current Settings Summary */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Current Settings</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p><span className="font-medium">UI Language:</span> {uiLanguage}</p>
+                <p><span className="font-medium">Bible Language:</span> {bibleLanguage}</p>
+                <p><span className="font-medium">Bible Version:</span> {bibleVersions[bibleLanguage as keyof typeof bibleVersions]?.find(v => v.code === bibleVersion)?.name || bibleVersion}</p>
+              </div>
+            </div>
+
+            {/* UI Language Selection */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                Interface Language
+              </h4>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                {uiLanguages.map((language) => (
+                  <button
+                    key={language}
+                    onClick={() => setUiLanguage(language)}
+                    className={`p-3 rounded-lg text-sm font-medium transition-colors ${
+                      uiLanguage === language
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {language}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bible Language Selection */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                Bible Language
+              </h4>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                {bibleLanguages.map((language) => (
+                  <button
+                    key={language}
+                    onClick={() => {
+                      setBibleLanguage(language);
+                      // Auto-select first available version for the language
+                      const versions = bibleVersions[language as keyof typeof bibleVersions];
+                      if (versions && versions.length > 0) {
+                        setBibleVersion(versions[0].code);
+                      }
+                    }}
+                    className={`p-3 rounded-lg text-sm font-medium transition-colors ${
+                      bibleLanguage === language
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {language}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bible Version Selection */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                Bible Version ({bibleLanguage})
+              </h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {(bibleVersions[bibleLanguage as keyof typeof bibleVersions] || []).map((version) => (
+                  <button
+                    key={version.code}
+                    onClick={() => setBibleVersion(version.code)}
+                    className={`w-full p-3 rounded-lg text-left transition-colors ${
+                      bibleVersion === version.code
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className="font-medium">{version.name}</div>
+                    <div className={`text-sm ${
+                      bibleVersion === version.code ? 'text-green-100' : 'text-gray-500'
+                    }`}>
+                      {version.description}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowSettings(false);
+                  // Trigger verse regeneration with new settings
+                  generateNewVerses();
+                }}
+                className="button-primary text-white px-6 py-2 rounded-lg font-medium"
+              >
+                Save Settings
+              </button>
+            </div>
           </div>
         </div>
       </div>

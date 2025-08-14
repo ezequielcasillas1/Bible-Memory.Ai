@@ -26,11 +26,11 @@ export interface ImprovementSuggestion {
 }
 
 export class OpenAIService {
-  static async generateVerses(type: 'commission' | 'help'): Promise<VerseResponse> {
+  static async generateVerses(type: 'commission' | 'help', bibleVersion?: string): Promise<VerseResponse> {
     // First, try to get real Bible verses from the API
     try {
-      const verse1 = await BibleApiService.getRandomVerse(type);
-      const verse2 = await BibleApiService.getRandomVerse(type);
+      const verse1 = await BibleApiService.getRandomVerse(type, bibleVersion);
+      const verse2 = await BibleApiService.getRandomVerse(type, bibleVersion);
       
       // Convert to our format
       const otVerse = BibleApiService.getTestament(verse1.verses?.[0]?.book_name || '') === 'OT' ? verse1 : verse2;
@@ -46,7 +46,7 @@ export class OpenAIService {
           ? ['Isaiah 53:6', 'Jeremiah 29:11', 'Psalm 23:1', 'Proverbs 3:5-6', 'Isaiah 41:10']
           : ['Psalm 23:4', 'Isaiah 41:10', 'Psalm 55:22', 'Joshua 1:9', 'Psalm 46:1'];
         const randomOtRef = otVerseRefs[Math.floor(Math.random() * otVerseRefs.length)];
-        finalOtVerse = await BibleApiService.getVerse(randomOtRef);
+        finalOtVerse = await BibleApiService.getVerse(randomOtRef, bibleVersion);
       }
       
       if (BibleApiService.getTestament(ntVerse.verses?.[0]?.book_name || '') !== 'NT') {
@@ -55,7 +55,7 @@ export class OpenAIService {
           ? ['John 3:16', 'Romans 6:23', 'Romans 10:9', 'Ephesians 2:8-9', 'John 14:6']
           : ['Matthew 11:28-30', '1 Peter 5:7', 'Philippians 4:13', '2 Corinthians 12:9', 'Hebrews 13:5'];
         const randomNtRef = ntVerseRefs[Math.floor(Math.random() * ntVerseRefs.length)];
-        finalNtVerse = await BibleApiService.getVerse(randomNtRef);
+        finalNtVerse = await BibleApiService.getVerse(randomNtRef, bibleVersion);
       }
       
       // Now generate AI reasons for these real verses
