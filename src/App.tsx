@@ -113,6 +113,14 @@ const App: React.FC = () => {
   const [isMemorizing, setIsMemorizing] = useState(false);
   const [memorizationTimer, setMemorizationTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [studyTimer, setStudyTimer] = useState(0);
+  const [isStudying, setIsStudying] = useState(false);
+  const [memorizationPhase, setMemorizationPhase] = useState<'study' | 'input' | 'feedback'>('study');
+  const [memorizationResult, setMemorizationResult] = useState<{
+    accuracy: number;
+    feedback: string;
+    suggestions: string[];
+  } | null>(null);
 
   // User stats and progress
   const [userStats, setUserStats] = useState<UserStats>({
@@ -136,7 +144,8 @@ const App: React.FC = () => {
     darkMode: false,
     fontSize: 'medium' as 'small' | 'medium' | 'large',
     dailyReminder: true,
-    showHints: true
+    showHints: true,
+    studyTime: 10
   });
 
   // Chat state
@@ -172,13 +181,24 @@ const App: React.FC = () => {
   // Timer effect for memorization sessions
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isMemorizing && !isPaused) {
+    if (isStudying && !isPaused && studyTimer > 0) {
+      interval = setInterval(() => {
+        setStudyTimer(prev => {
+          if (prev <= 1) {
+            setIsStudying(false);
+            setMemorizationPhase('input');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (isMemorizing && !isPaused && memorizationPhase === 'input') {
       interval = setInterval(() => {
         setMemorizationTimer(prev => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isMemorizing, isPaused]);
+  }, [isMemorizing, isPaused, isStudying, studyTimer, memorizationPhase]);
 
   const generateNewVerses = async () => {
     setIsLoading(true);
@@ -230,20 +250,30 @@ const App: React.FC = () => {
       completed: false,
       accuracy: 0
     });
-    setIsMemorizing(true);
+    setIsStudying(true);
+    setStudyTimer(settings.studyTime);
     setMemorizationTimer(0);
     setIsPaused(false);
     setUserInput('');
-    setShowVerse(false);
+    setShowVerse(true);
+    setMemorizationPhase('study');
+    setMemorizationResult(null);
   };
 
   const checkMemorization = async () => {
     if (!currentSession) return;
 
+    setIsMemorizing(true);
     const accuracy = await OpenAIService.analyzeMemorizationAccuracy(
       userInput,
       currentSession.verse.text
     );
+
+    setMemorizationResult({
+      accuracy: accuracy.accuracy,
+      feedback: accuracy.feedback,
+      suggestions: accuracy.suggestions
+    });
 
     const updatedSession = {
       ...currentSession,
@@ -253,6 +283,7 @@ const App: React.FC = () => {
     };
 
     setCurrentSession(updatedSession);
+    setMemorizationPhase('feedback');
 
     if (updatedSession.completed) {
       // Update user stats
@@ -263,10 +294,28 @@ const App: React.FC = () => {
         totalPracticeTime: prev.totalPracticeTime + memorizationTimer,
         averageAccuracy: (prev.averageAccuracy * prev.versesMemorized + accuracy.accuracy) / (prev.versesMemorized + 1)
       }));
-
-      setIsMemorizing(false);
-      setCurrentSession(null);
     }
+    setIsMemorizing(false);
+  };
+
+  const retryMemorization = () => {
+    setUserInput('');
+    setMemorizationResult(null);
+    setIsStudying(true);
+    setStudyTimer(settings.studyTime);
+    setMemorizationTimer(0);
+    setMemorizationPhase('study');
+    setShowVerse(true);
+  };
+
+  const chooseNewVerse = () => {
+    setSelectedVerse(null);
+    setCurrentSession(null);
+    setIsMemorizing(false);
+    setIsStudying(false);
+    setMemorizationResult(null);
+    setMemorizationPhase('study');
+    setActiveTab('home');
   };
 
   const searchBible = async () => {
@@ -538,23 +587,182 @@ const App: React.FC = () => {
           <div className="space-y-8">
             {selectedVerse ? (
               <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Choose a Verse to Memorize</h2>
-                  <p className="text-gray-600">Practice reciting your selected verse</p>
-                </div>
+                {memorizationPhase === 'study' && (
+                  <>
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-gray-800 mb-2">Study Your Verse</h2>
+                      <p className="text-gray-600">Memorize this verse before the timer runs out</p>
+                    </div>
 
-                {/* Selected Verse Display */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
-                  <p className="text-lg leading-relaxed text-gray-700 mb-4 italic text-center">
-                    "{selectedVerse.text}"
-                  </p>
-                  <p className="text-purple-600 font-medium text-center">
-                    {selectedVerse.reference}
-                  </p>
-                </div>
+                    {/* Countdown Timer */}
+                    <div className="flex justify-center mb-8">
+                      <div className="relative">
+                        <div className="w-32 h-32 rounded-full border-8 border-purple-200 flex items-center justify-center relative">
+                          <div 
+                            className="absolute inset-0 rounded-full border-8 border-purple-600 transition-all duration-1000"
+                            style={{
+                              clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos(2 * Math.PI * (settings.studyTime - studyTimer) / settings.studyTime - Math.PI/2)}% ${50 + 50 * Math.sin(2 * Math.PI * (settings.studyTime - studyTimer) / settings.studyTime - Math.PI/2)}%, 50% 50%)`
+                            }}
+                          ></div>
+                          <div className="text-3xl font-bold text-purple-600">
+                            {studyTimer}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Memorization Interface */}
-                {!isMemorizing ? (
+                    {/* Selected Verse Display */}
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
+                      <p className="text-lg leading-relaxed text-gray-700 mb-4 italic text-center">
+                        "{selectedVerse.text}"
+                      </p>
+                      <p className="text-purple-600 font-medium text-center">
+                        {selectedVerse.reference}
+                      </p>
+                    </div>
+
+                    <div className="text-center">
+                      <button
+                        onClick={() => setIsPaused(!isPaused)}
+                        className="flex items-center space-x-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors mx-auto"
+                      >
+                        {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                        <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {memorizationPhase === 'input' && (
+                  <>
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-gray-800 mb-2">Recite from Memory</h2>
+                      <p className="text-gray-600">Type the verse as accurately as you can remember</p>
+                      <p className="text-purple-600 font-medium mt-2">{selectedVerse.reference}</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-center mb-4">
+                        <div className="flex items-center space-x-2 bg-purple-100 rounded-full px-4 py-2">
+                          <Clock className="w-4 h-4 text-purple-600" />
+                          <span className="text-sm font-medium text-purple-700">
+                            {formatTime(memorizationTimer)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <textarea
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        placeholder="Type the verse from memory..."
+                        className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-lg"
+                        rows={4}
+                        autoFocus
+                      />
+                      
+                      <div className="flex items-center justify-center space-x-4">
+                        <button
+                          onClick={() => setIsPaused(!isPaused)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                        </button>
+                        
+                        <button
+                          onClick={checkMemorization}
+                          disabled={!userInput.trim() || isMemorizing}
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
+                        >
+                          {isMemorizing ? 'Checking...' : 'Check Answer'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {memorizationPhase === 'feedback' && memorizationResult && (
+                  <>
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-gray-800 mb-2">Your Results</h2>
+                      <p className="text-gray-600">Here's how you did with your memorization</p>
+                    </div>
+
+                    {/* Accuracy Score */}
+                    <div className="text-center mb-8">
+                      <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full text-3xl font-bold mb-4 ${
+                        memorizationResult.accuracy >= 90 ? 'bg-green-100 text-green-600' :
+                        memorizationResult.accuracy >= 70 ? 'bg-yellow-100 text-yellow-600' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        {Math.round(memorizationResult.accuracy)}%
+                      </div>
+                      <p className={`text-lg font-semibold ${
+                        memorizationResult.accuracy >= 90 ? 'text-green-600' :
+                        memorizationResult.accuracy >= 70 ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {memorizationResult.accuracy >= 90 ? 'Excellent!' :
+                         memorizationResult.accuracy >= 70 ? 'Good Job!' :
+                         'Keep Practicing!'}
+                      </p>
+                    </div>
+
+                    {/* Feedback */}
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Feedback</h3>
+                      <p className="text-gray-700">{memorizationResult.feedback}</p>
+                    </div>
+
+                    {/* Improvement Suggestions */}
+                    {memorizationResult.suggestions.length > 0 && (
+                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 mb-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                          <Lightbulb className="w-5 h-5 mr-2 text-yellow-600" />
+                          Improvement Tips
+                        </h3>
+                        <ul className="space-y-2">
+                          {memorizationResult.suggestions.map((suggestion, index) => (
+                            <li key={index} className="flex items-start space-x-2">
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></span>
+                              <span className="text-gray-700">{suggestion}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Original Verse for Comparison */}
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Original Verse</h3>
+                      <p className="text-lg leading-relaxed text-gray-700 italic">
+                        "{selectedVerse.text}"
+                      </p>
+                      <p className="text-purple-600 font-medium mt-2">
+                        {selectedVerse.reference}
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-center space-x-4">
+                      <button
+                        onClick={retryMemorization}
+                        className="flex items-center space-x-2 px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl font-medium hover:bg-purple-50 transition-all"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Try Again</span>
+                      </button>
+                      
+                      <button
+                        onClick={chooseNewVerse}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+                      >
+                        Choose New Verse
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {!isStudying && memorizationPhase === 'study' && (
                   <div className="text-center">
                     <button
                       onClick={startMemorization}
@@ -563,29 +771,23 @@ const App: React.FC = () => {
                       Start Memorizing
                     </button>
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 bg-purple-100 rounded-full px-4 py-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-purple-700">
-                          {formatTime(memorizationTimer)}
-                        </span>
-                      </div>
-                      
-                      <button
-                        onClick={() => setShowVerse(!showVerse)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                      >
-                        {showVerse ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                        <span>{showVerse ? 'Hide' : 'Show'} Verse</span>
-                      </button>
-                    </div>
-
-                    {showVerse && (
-                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6">
-                        <p className="text-lg leading-relaxed text-gray-700 italic text-center">
-                          "{selectedVerse.text}"
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Verse Selected</h3>
+                <p className="text-gray-500 mb-6">Choose a verse from the Home tab to start memorizing</p>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+                >
+                  Go to Home
+                </button>
+              </div>
+            )}
+          </div>
+        )}
                         </p>
                       </div>
                     )}
@@ -830,6 +1032,29 @@ const App: React.FC = () => {
             
             <div className="p-6 space-y-6">
               {/* Bible Version */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Study Time (seconds)
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="range"
+                    min="5"
+                    max="60"
+                    step="5"
+                    value={settings.studyTime}
+                    onChange={(e) => setSettings(prev => ({ ...prev, studyTime: parseInt(e.target.value) }))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>5s</span>
+                    <span className="font-medium text-purple-600">{settings.studyTime}s</span>
+                    <span>60s</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Difficulty */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Bible Version
