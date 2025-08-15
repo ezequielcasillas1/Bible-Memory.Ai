@@ -7,7 +7,7 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     const apiKey = import.meta.env.VITE_BIBLE_API_KEY;
     
     if (!apiKey) {
-      console.warn('VITE_BIBLE_API_KEY not found in environment variables');
+      console.error('VITE_BIBLE_API_KEY not found in environment variables');
       return [];
     }
 
