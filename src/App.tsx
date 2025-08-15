@@ -86,13 +86,19 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-type Tab = 'memorize' | 'bible' | 'progress' | 'chat';
+type Tab = 'home' | 'memorize' | 'bible' | 'progress' | 'chat';
+type VerseType = 'commission' | 'help';
 
 const App: React.FC = () => {
   // Core state
-  const [activeTab, setActiveTab] = useState<Tab>('memorize');
-  const [verses, setVerses] = useState<Verse[]>([]);
-  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [verseType, setVerseType] = useState<VerseType>('commission');
+  const [verses, setVerses] = useState<{ oldTestament: Verse | null; newTestament: Verse | null; connection: string }>({
+    oldTestament: null,
+    newTestament: null,
+    connection: ''
+  });
+  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,7 +135,6 @@ const App: React.FC = () => {
     soundEnabled: true,
     darkMode: false,
     fontSize: 'medium' as 'small' | 'medium' | 'large',
-    verseType: 'commission' as 'commission' | 'help',
     dailyReminder: true,
     showHints: true
   });
@@ -142,8 +147,6 @@ const App: React.FC = () => {
   // Bible reading state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedBook, setSelectedBook] = useState('');
-  const [selectedChapter, setSelectedChapter] = useState(1);
 
   // Load supported Bible versions
   useEffect(() => {
@@ -161,10 +164,10 @@ const App: React.FC = () => {
     loadBibleVersions();
   }, []);
 
-  // Generate initial verses
+  // Generate initial verses when component mounts or verse type changes
   useEffect(() => {
     generateNewVerses();
-  }, [settings.verseType, selectedBibleVersion]);
+  }, [verseType, selectedBibleVersion]);
 
   // Timer effect for memorization sessions
   useEffect(() => {
@@ -181,29 +184,29 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response: VerseResponse = await OpenAIService.generateVerses(settings.verseType, selectedBibleVersion);
+      const response: VerseResponse = await OpenAIService.generateVerses(verseType, selectedBibleVersion);
       
-      const newVerses: Verse[] = [
-        {
-          id: Date.now().toString() + '_ot',
-          text: response.oldTestament.text,
-          reference: response.oldTestament.reference,
-          testament: 'OT',
-          reason: response.oldTestament.reason
-        },
-        {
-          id: Date.now().toString() + '_nt',
-          text: response.newTestament.text,
-          reference: response.newTestament.reference,
-          testament: 'NT',
-          reason: response.newTestament.reason
-        }
-      ];
+      const oldTestamentVerse: Verse = {
+        id: Date.now().toString() + '_ot',
+        text: response.oldTestament.text,
+        reference: response.oldTestament.reference,
+        testament: 'OT',
+        reason: response.oldTestament.reason
+      };
+
+      const newTestamentVerse: Verse = {
+        id: Date.now().toString() + '_nt',
+        text: response.newTestament.text,
+        reference: response.newTestament.reference,
+        testament: 'NT',
+        reason: response.newTestament.reason
+      };
       
-      setVerses(newVerses);
-      setCurrentVerseIndex(0);
-      setUserInput('');
-      setShowVerse(false);
+      setVerses({
+        oldTestament: oldTestamentVerse,
+        newTestament: newTestamentVerse,
+        connection: response.connection
+      });
     } catch (error) {
       console.error('Error generating verses:', error);
       setError('Failed to generate verses. Please try again.');
@@ -212,12 +215,16 @@ const App: React.FC = () => {
     }
   };
 
+  const selectVerse = (verse: Verse) => {
+    setSelectedVerse(verse);
+    setActiveTab('memorize');
+  };
+
   const startMemorization = () => {
-    if (verses.length === 0) return;
+    if (!selectedVerse) return;
     
-    const currentVerse = verses[currentVerseIndex];
     setCurrentSession({
-      verse: currentVerse,
+      verse: selectedVerse,
       startTime: new Date(),
       attempts: 0,
       completed: false,
@@ -316,8 +323,6 @@ const App: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const currentVerse = verses[currentVerseIndex];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       {/* Header */}
@@ -357,6 +362,7 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex space-x-1">
             {[
+              { id: 'home', label: 'Home', icon: Home },
               { id: 'memorize', label: 'Memorize', icon: Brain },
               { id: 'bible', label: 'Bible', icon: Book },
               { id: 'progress', label: 'Progress', icon: TrendingUp },
@@ -367,7 +373,7 @@ const App: React.FC = () => {
                 onClick={() => setActiveTab(id as Tab)}
                 className={`nav-tab flex items-center space-x-2 px-6 py-3 rounded-t-lg font-medium transition-all ${
                   activeTab === id
-                    ? 'active text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
                     : 'text-gray-600 hover:text-purple-600 hover:bg-white/40'
                 }`}
               >
@@ -393,130 +399,234 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {/* Home Tab - Original UI */}
+        {activeTab === 'home' && (
+          <div className="space-y-8">
+            {/* Main Title */}
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-800 mb-4">
+                Receive Today's Commission or Help People Verses
+              </h1>
+              
+              {/* Verse Type Tabs */}
+              <div className="flex justify-center space-x-4 mb-8">
+                <button
+                  onClick={() => setVerseType('commission')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                    verseType === 'commission'
+                      ? 'text-purple-600 border-b-2 border-purple-600'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
+                >
+                  Commission Verses
+                </button>
+                <button
+                  onClick={() => setVerseType('help')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                    verseType === 'help'
+                      ? 'text-purple-600 border-b-2 border-purple-600'
+                      : 'text-gray-600 hover:text-purple-600'
+                  }`}
+                >
+                  Help People Verses
+                </button>
+              </div>
+            </div>
+
+            {/* Verses Display */}
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Old Testament Verse */}
+                {verses.oldTestament && (
+                  <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800">Old Testament</h3>
+                      <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium">
+                        OT
+                      </span>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <p className="text-lg leading-relaxed text-gray-700 mb-4 italic">
+                        "{verses.oldTestament.text}"
+                      </p>
+                      <p className="text-purple-600 font-medium">
+                        {verses.oldTestament.reference}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => selectVerse(verses.oldTestament!)}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+                    >
+                      Memorize This Verse
+                    </button>
+                  </div>
+                )}
+
+                {/* New Testament Verse */}
+                {verses.newTestament && (
+                  <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800">New Testament</h3>
+                      <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                        NT
+                      </span>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <p className="text-lg leading-relaxed text-gray-700 mb-4 italic">
+                        "{verses.newTestament.text}"
+                      </p>
+                      <p className="text-purple-600 font-medium">
+                        {verses.newTestament.reference}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => selectVerse(verses.newTestament!)}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+                    >
+                      Memorize This Verse
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Connection Insight */}
+            {verses.connection && (
+              <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
+                <div className="flex items-center mb-4">
+                  <Heart className="w-5 h-5 text-purple-600 mr-2" />
+                  <h3 className="text-lg font-bold text-gray-800">Connection Insight</h3>
+                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  {verses.connection}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={generateNewVerses}
+                disabled={isLoading}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Generate New Verses</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('memorize')}
+                className="flex items-center space-x-2 px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl font-medium hover:bg-purple-50 transition-all"
+              >
+                <span>Go to Memorize</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Memorize Tab */}
         {activeTab === 'memorize' && (
           <div className="space-y-8">
-            {/* Current Verse Card */}
-            {currentVerse && (
-              <div className="verse-card bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-purple-200">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${currentVerse.testament === 'OT' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      <BookOpen className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{currentVerse.reference}</h3>
-                      <p className="text-sm text-gray-600">{currentVerse.testament === 'OT' ? 'Old Testament' : 'New Testament'}</p>
-                    </div>
+            {selectedVerse ? (
+              <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Choose a Verse to Memorize</h2>
+                  <p className="text-gray-600">Practice reciting your selected verse</p>
+                </div>
+
+                {/* Selected Verse Display */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
+                  <p className="text-lg leading-relaxed text-gray-700 mb-4 italic text-center">
+                    "{selectedVerse.text}"
+                  </p>
+                  <p className="text-purple-600 font-medium text-center">
+                    {selectedVerse.reference}
+                  </p>
+                </div>
+
+                {/* Memorization Interface */}
+                {!isMemorizing ? (
+                  <div className="text-center">
+                    <button
+                      onClick={startMemorization}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-medium text-lg hover:shadow-lg transition-all"
+                    >
+                      Start Memorizing
+                    </button>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {isMemorizing && (
-                      <div className="flex items-center space-x-2 bg-purple-100 rounded-full px-3 py-1">
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 bg-purple-100 rounded-full px-4 py-2">
                         <Clock className="w-4 h-4 text-purple-600" />
                         <span className="text-sm font-medium text-purple-700">
                           {formatTime(memorizationTimer)}
                         </span>
                       </div>
-                    )}
-                    <button
-                      onClick={() => setShowVerse(!showVerse)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      {showVerse ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                      
+                      <button
+                        onClick={() => setShowVerse(!showVerse)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        {showVerse ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        <span>{showVerse ? 'Hide' : 'Show'} Verse</span>
+                      </button>
+                    </div>
 
-                {showVerse && (
-                  <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
-                    <p className="text-lg leading-relaxed text-gray-800 mb-4">
-                      "{currentVerse.text}"
-                    </p>
-                    {currentVerse.reason && (
-                      <div className="mt-4 p-4 bg-white/60 rounded-lg">
-                        <p className="text-sm text-gray-700">
-                          <Lightbulb className="w-4 h-4 inline mr-2 text-yellow-600" />
-                          {currentVerse.reason}
+                    {showVerse && (
+                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6">
+                        <p className="text-lg leading-relaxed text-gray-700 italic text-center">
+                          "{selectedVerse.text}"
                         </p>
                       </div>
                     )}
+
+                    <textarea
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      placeholder="Type the verse from memory..."
+                      className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                      rows={4}
+                    />
+                    
+                    <div className="flex items-center justify-center space-x-4">
+                      <button
+                        onClick={() => setIsPaused(!isPaused)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                      </button>
+                      
+                      <button
+                        onClick={checkMemorization}
+                        disabled={!userInput.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
+                      >
+                        Check Answer
+                      </button>
+                    </div>
                   </div>
                 )}
-
-                {/* Memorization Input */}
-                <div className="space-y-4">
-                  <textarea
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Type the verse from memory..."
-                    className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                    rows={4}
-                    disabled={!isMemorizing}
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {!isMemorizing ? (
-                        <button
-                          onClick={startMemorization}
-                          className="button-primary flex items-center space-x-2 px-6 py-3 text-white rounded-xl font-medium"
-                        >
-                          <Play className="w-4 h-4" />
-                          <span>Start Memorizing</span>
-                        </button>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setIsPaused(!isPaused)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                          >
-                            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={checkMemorization}
-                            className="button-primary flex items-center space-x-2 px-6 py-3 text-white rounded-xl font-medium"
-                            disabled={!userInput.trim()}
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>Check Answer</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={generateNewVerses}
-                      disabled={isLoading}
-                      className="flex items-center space-x-2 px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                      <span>New Verses</span>
-                    </button>
-                  </div>
-                </div>
               </div>
-            )}
-
-            {/* Verse Navigation */}
-            {verses.length > 1 && (
-              <div className="flex items-center justify-center space-x-4">
+            ) : (
+              <div className="text-center py-12">
+                <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Verse Selected</h3>
+                <p className="text-gray-500 mb-6">Choose a verse from the Home tab to start memorizing</p>
                 <button
-                  onClick={() => setCurrentVerseIndex(Math.max(0, currentVerseIndex - 1))}
-                  disabled={currentVerseIndex === 0}
-                  className="p-2 bg-white/80 hover:bg-white rounded-full shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setActiveTab('home')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all"
                 >
-                  <ChevronUp className="w-5 h-5" />
-                </button>
-                <span className="text-sm text-gray-600">
-                  {currentVerseIndex + 1} of {verses.length}
-                </span>
-                <button
-                  onClick={() => setCurrentVerseIndex(Math.min(verses.length - 1, currentVerseIndex + 1))}
-                  disabled={currentVerseIndex === verses.length - 1}
-                  className="p-2 bg-white/80 hover:bg-white rounded-full shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronDown className="w-5 h-5" />
+                  Go to Home
                 </button>
               </div>
             )}
@@ -527,7 +637,7 @@ const App: React.FC = () => {
         {activeTab === 'bible' && (
           <div className="space-y-6">
             {/* Bible Search */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-200">
+            <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
               <h2 className="text-xl font-bold mb-4 flex items-center">
                 <Search className="w-5 h-5 mr-2 text-purple-600" />
                 Bible Search
@@ -560,7 +670,7 @@ const App: React.FC = () => {
                 <button
                   onClick={searchBible}
                   disabled={isLoading || !searchQuery.trim()}
-                  className="button-primary px-6 py-3 text-white rounded-xl font-medium disabled:opacity-50"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   <Search className="w-4 h-4" />
                 </button>
@@ -569,7 +679,7 @@ const App: React.FC = () => {
 
             {/* Search Results */}
             {searchResults.length > 0 && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-200">
+              <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
                 <h3 className="text-lg font-semibold mb-4">Search Results</h3>
                 {searchResults.map((result, index) => (
                   <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
@@ -594,11 +704,11 @@ const App: React.FC = () => {
                 { label: 'Current Streak', value: `${userStats.currentStreak} days`, icon: Flame, color: 'orange' },
                 { label: 'Average Accuracy', value: `${Math.round(userStats.averageAccuracy)}%`, icon: Target, color: 'green' }
               ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-200">
+                <div key={label} className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600 mb-1">{label}</p>
-                      <p className="text-2xl font-bold animate-count-up">{value}</p>
+                      <p className="text-2xl font-bold">{value}</p>
                     </div>
                     <div className={`p-3 rounded-xl bg-${color}-100`}>
                       <Icon className={`w-6 h-6 text-${color}-600`} />
@@ -609,7 +719,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Weekly Progress */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-purple-200">
+            <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200">
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <Calendar className="w-5 h-5 mr-2 text-purple-600" />
                 Weekly Progress
@@ -621,7 +731,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div 
-                    className="progress-bar bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full"
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, (userStats.versesMemorized / userStats.weeklyGoal) * 100)}%` }}
                   ></div>
                 </div>
@@ -632,7 +742,7 @@ const App: React.FC = () => {
 
         {/* Chat Tab */}
         {activeTab === 'chat' && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-purple-200 h-96 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl border border-purple-200 h-96 flex flex-col">
             <div className="p-6 border-b border-purple-200">
               <h2 className="text-xl font-bold flex items-center">
                 <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
@@ -692,7 +802,7 @@ const App: React.FC = () => {
                 <button
                   onClick={sendChatMessage}
                   disabled={!chatInput.trim() || isChatLoading}
-                  className="button-primary px-6 py-3 text-white rounded-xl font-medium disabled:opacity-50"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   Send
                 </button>
@@ -705,7 +815,7 @@ const App: React.FC = () => {
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="settings-modal bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold">Settings</h2>
@@ -734,21 +844,6 @@ const App: React.FC = () => {
                       {bible.abbreviation} - {bible.name}
                     </option>
                   ))}
-                </select>
-              </div>
-
-              {/* Verse Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Verse Type
-                </label>
-                <select
-                  value={settings.verseType}
-                  onChange={(e) => setSettings(prev => ({ ...prev, verseType: e.target.value as 'commission' | 'help' }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="commission">Commission (Evangelism)</option>
-                  <option value="help">Help & Comfort</option>
                 </select>
               </div>
 
@@ -783,7 +878,7 @@ const App: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                    className={`toggle-switch relative inline-flex h-6 w-11 items-center rounded-full ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       settings[key as keyof typeof settings] ? 'bg-purple-600' : 'bg-gray-300'
                     }`}
                   >
