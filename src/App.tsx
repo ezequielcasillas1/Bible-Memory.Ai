@@ -35,7 +35,8 @@ import {
   Minus,
   Home,
   Book,
-  User
+  User,
+  Bell
 } from 'lucide-react';
 import { OpenAIService, type VerseResponse, type ImprovementSuggestion } from './services/openai';
 import { fetchEnglishBiblesByAbbrev, searchPassageByQuery, type ApiBibleSummary } from './services/apiBible';

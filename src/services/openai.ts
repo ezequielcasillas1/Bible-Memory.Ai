@@ -27,6 +27,12 @@ export interface ImprovementSuggestion {
 
 export class OpenAIService {
   static async generateVerses(type: 'commission' | 'help', bibleVersion?: string): Promise<VerseResponse> {
+    // Check if API key is available
+    if (!import.meta.env.VITE_OPENAI_API_KEY) {
+      console.warn('OpenAI API key not found, using fallback data');
+      return this.getFallbackVerses(type);
+    }
+
     // First, try to get real Bible verses from the API
     try {
       const verse1 = await BibleApiService.getRandomVerse(type, bibleVersion);
@@ -204,8 +210,12 @@ Return in this exact JSON format:
       return JSON.parse(content);
     } catch (error) {
       console.error('Error generating verses:', error);
-      // Fallback to sample data if API fails
-      return type === 'commission' ? {
+      return this.getFallbackVerses(type);
+    }
+  }
+
+  private static getFallbackVerses(type: 'commission' | 'help'): VerseResponse {
+    return type === 'commission' ? {
         oldTestament: {
           text: "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope.",
           reference: "Jeremiah 29:11",
@@ -230,8 +240,6 @@ Return in this exact JSON format:
         },
         connection: "These verses work together to show that God cares deeply about our struggles and offers genuine rest and support."
       };
-    }
-  }
 
   static async generateImprovementSuggestions(userStats: {
     totalPoints: number;
