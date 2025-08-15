@@ -2,15 +2,10 @@ import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
-const API_KEY = import.meta.env.VITE_SCRIPTURE_API_KEY || '6d078a413735440025d1f98883a8d372';
+const API_KEY = '6d078a413735440025d1f98883a8d372';
 
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, limit: number = 20): Promise<SearchResult[]> {
-    // If no API key is available, use fallback search immediately
-    if (!API_KEY || API_KEY === 'your_api_key_here') {
-      return this.fallbackSearch(query);
-    }
-    
     try {
       const response = await fetch(
         `${SCRIPTURE_API_BASE}/bibles/${versionId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
@@ -22,13 +17,18 @@ export class BibleSearchService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to search verses');
+        console.warn('API request failed, using fallback search');
+        return this.fallbackSearch(query);
       }
 
       const data = await response.json();
       const version = getVersionById(versionId);
       
-      return data.data.passages?.map((passage: any) => ({
+      if (!data.data || !data.data.passages) {
+        return this.fallbackSearch(query);
+      }
+      
+      return data.data.passages.map((passage: any) => ({
         id: `search-${passage.id}`,
         text: this.cleanVerseText(passage.content),
         reference: passage.reference,
@@ -37,7 +37,7 @@ export class BibleSearchService {
         chapter: this.extractChapter(passage.reference),
         verse: this.extractVerse(passage.reference),
         version: version?.abbreviation || 'KJV'
-      })) || [];
+      }));
     } catch (error) {
       console.error('Bible search failed:', error);
       return this.fallbackSearch(query);
