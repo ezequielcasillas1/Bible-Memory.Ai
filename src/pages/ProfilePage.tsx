@@ -1,12 +1,14 @@
 import React from 'react';
 import { Trophy, BookOpen, Flame, Target, Calendar, TrendingUp, Award, Star } from 'lucide-react';
 import { UserStats } from '../types';
+import { BibleVersion } from '../services/BibleAPI';
 
 interface ProfilePageProps {
   userStats: UserStats;
+  availableBibleVersions: BibleVersion[];
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userStats }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ userStats, availableBibleVersions }) => {
   const achievements = [
     { id: '1', name: 'First Verse', description: 'Memorized your first verse', icon: '🏆', unlocked: userStats.versesMemorized >= 1 },
     { id: '2', name: '7-Day Streak', description: 'Practiced for 7 days in a row', icon: '⭐', unlocked: userStats.currentStreak >= 7 },

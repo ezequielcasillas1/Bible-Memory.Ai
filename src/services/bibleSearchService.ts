@@ -1,16 +1,17 @@
 import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
+import { BibleVersion } from './BibleAPI';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
 const API_KEY = '6d078a413735440025d1f98883a8d372';
 
 export class BibleSearchService {
-  static async searchVerses(query: string, versionId: string, limit: number = 20): Promise<SearchResult[]> {
+  static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], limit: number = 20): Promise<SearchResult[]> {
     try {
       // Check if we have a valid API key
       if (!API_KEY) {
         console.warn('No Scripture API key available, using fallback search');
-        return this.fallbackSearch(query);
+        return this.fallbackSearch(query, versionId, availableVersions);
       }
 
       const response = await fetch(
@@ -31,14 +32,14 @@ export class BibleSearchService {
           console.warn(`API request failed with status ${response.status}, using fallback search`);
         }
         
-        return this.fallbackSearch(query, versionId);
+        return this.fallbackSearch(query, versionId, availableVersions);
       }
 
       const data = await response.json();
-      const version = getVersionById(versionId);
+      const version = getVersionById(versionId, availableVersions);
       
       if (!data.data || !data.data.passages) {
-        return this.fallbackSearch(query, versionId);
+        return this.fallbackSearch(query, versionId, availableVersions);
       }
       
       return data.data.passages.map((passage: any) => ({
@@ -53,13 +54,13 @@ export class BibleSearchService {
       }));
     } catch (error) {
       console.error('Bible search failed:', error);
-      return this.fallbackSearch(query, versionId);
+      return this.fallbackSearch(query, versionId, availableVersions);
     }
   }
 
-  static async getVerseByReference(reference: string, versionId: string): Promise<SearchResult | null> {
+  static async getVerseByReference(reference: string, versionId: string, availableVersions: BibleVersion[]): Promise<SearchResult | null> {
     try {
-      const searchResults = await this.searchVerses(reference, versionId, 1);
+      const searchResults = await this.searchVerses(reference, versionId, availableVersions, 1);
       return searchResults[0] || null;
     } catch (error) {
       console.error('Failed to get verse by reference:', error);
@@ -104,9 +105,9 @@ export class BibleSearchService {
     return parseInt(versePart?.split('-')[0] || '1');
   }
 
-  private static fallbackSearch(query: string, versionId?: string): SearchResult[] {
+  private static fallbackSearch(query: string, versionId?: string, availableVersions?: BibleVersion[]): SearchResult[] {
     // Expanded fallback with popular verses that might match the query
-    const version = versionId ? getVersionById(versionId)?.abbreviation || 'KJV' : 'KJV';
+    const version = versionId && availableVersions ? getVersionById(versionId, availableVersions)?.abbreviation || 'KJV' : 'KJV';
     const fallbackVerses = [
       {
         id: 'fallback-1',

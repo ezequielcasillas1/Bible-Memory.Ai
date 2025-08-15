@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, BookOpen, Trash2, Tag, Calendar, Filter } from 'lucide-react';
 import { FavoriteVerse, SearchResult, AppSettings } from '../types';
+import { BibleVersion } from '../services/BibleAPI';
 
 interface FavoritesPageProps {
   settings: AppSettings;
   onMemorizeVerse: (verse: any) => void;
+  availableBibleVersions: BibleVersion[];
 }
 
-const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse }) => {
+const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions }) => {
   const [favorites, setFavorites] = useState<FavoriteVerse[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);

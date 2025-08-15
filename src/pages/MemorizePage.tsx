@@ -5,6 +5,7 @@ import { calculateAccuracy, generateFeedback } from '../utils/scoring';
 import { AIService } from '../services/aiService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
 import { getVersionById } from '../data/bibleVersions';
+import { BibleVersion } from '../services/BibleAPI';
 import CountdownTimer from '../components/CountdownTimer';
 
 interface MemorizePageProps {
@@ -13,6 +14,7 @@ interface MemorizePageProps {
   onComplete: (points: number) => void;
   onBackToGenerator: () => void;
   userStats: any;
+  availableBibleVersions: BibleVersion[];
 }
 
 type MemorizationPhase = 'study' | 'input' | 'feedback';
@@ -22,7 +24,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   studyTime, 
   onComplete, 
   onBackToGenerator,
-  userStats
+  userStats,
+  availableBibleVersions
 }) => {
   const [phase, setPhase] = useState<MemorizationPhase>('study');
   const [timeLeft, setTimeLeft] = useState(studyTime);
@@ -135,7 +138,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     setIsLoadingFeedback(true);
     
     // Get Bible version info
-    const bibleVersion = getVersionById(userStats.preferredVersion);
+    const bibleVersion = getVersionById(userStats.preferredVersion, availableBibleVersions);
     const versionName = bibleVersion?.name || 'King James Version';
     
     // First get verse comparison
@@ -444,7 +447,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                         Interactive Verse Comparison
                       </span>
                       <span className="text-sm font-normal text-gray-600">
-                        {getVersionById(userStats.preferredVersion)?.name || 'KJV'}
+                        {getVersionById(userStats.preferredVersion, availableBibleVersions)?.name || 'KJV'}
                       </span>
                     </h3>
                   </div>

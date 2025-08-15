@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { bibleVersions } from '../data/bibleVersions';
+import { BibleVersion } from '../services/BibleAPI';
 import { AppSettings } from '../types';
 
 interface SettingsModalProps {
@@ -8,13 +8,17 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
+  availableBibleVersions: BibleVersion[];
+  isLoadingVersions: boolean;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
   onClose, 
   settings,
-  onSettingsChange
+  onSettingsChange,
+  availableBibleVersions,
+  isLoadingVersions
 }) => {
   if (!isOpen) return null;
 
@@ -69,17 +73,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Preferred Bible Version
             </label>
-            <select
-              value={settings.preferredVersion}
-              onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              {bibleVersions.map((version) => (
-                <option key={version.id} value={version.id}>
-                  {version.abbreviation} – {version.name}
-                </option>
-              ))}
-            </select>
+            {isLoadingVersions ? (
+              <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                Loading Bible versions...
+              </div>
+            ) : (
+              <select
+                value={settings.preferredVersion}
+                onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                {availableBibleVersions.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.abbreviation} – {version.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Bible Memory Career Settings Placeholder */}

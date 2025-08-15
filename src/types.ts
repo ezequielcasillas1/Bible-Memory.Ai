@@ -41,14 +41,7 @@ export interface MemorizationSession {
 }
 
 export type Tab = 'generator' | 'memorize' | 'profile';
-export type Tab = 'generator' | 'memorize' | 'search' | 'favorites' | 'history' | 'profile';
 export type VerseType = 'commission' | 'help';
-
-export interface BibleVersion {
-  id: string;
-  name: string;
-  abbreviation: string;
-}
 
 export interface AppSettings {
   studyTime: number;

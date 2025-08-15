@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { History, TrendingUp, Target, Clock, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
 import { MemorizationHistory, ImprovementPlan, AppSettings } from '../types';
+import { BibleVersion } from '../services/BibleAPI';
 
 interface HistoryPageProps {
   settings: AppSettings;
   userStats: any;
   onMemorizeVerse: (verse: any) => void;
+  availableBibleVersions: BibleVersion[];
 }
 
-const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemorizeVerse }) => {
+const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemorizeVerse, availableBibleVersions }) => {
   const [history, setHistory] = useState<MemorizationHistory[]>([]);
   const [improvementPlans, setImprovementPlans] = useState<ImprovementPlan[]>([]);
   const [showCreatePlan, setShowCreatePlan] = useState(false);

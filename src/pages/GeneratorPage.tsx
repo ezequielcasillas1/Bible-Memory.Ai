@@ -5,14 +5,16 @@ import { commissionVerses, helpVerses, connections } from '../data/verses';
 import { AIService } from '../services/aiService';
 import { ScriptureApiService } from '../services/scriptureApiService';
 import { getVersionById } from '../data/bibleVersions';
+import { BibleVersion } from '../services/BibleAPI';
 import VerseCard from '../components/VerseCard';
 
 interface GeneratorPageProps {
   onMemorizeVerse: (verse: Verse) => void;
   settings: AppSettings;
+  availableBibleVersions: BibleVersion[];
 }
 
-const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings }) => {
+const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings, availableBibleVersions }) => {
   const [verseType, setVerseType] = useState<VerseType>('commission');
   const [currentVerses, setCurrentVerses] = useState({
     oldTestament: commissionVerses.find(v => v.testament === 'OT'),
@@ -54,7 +56,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
       ]);
       
       if (otVerse && ntVerse) {
-        const version = getVersionById(settings.preferredVersion);
+        const version = getVersionById(settings.preferredVersion, availableBibleVersions);
         setCurrentVerses({
           oldTestament: { ...otVerse, version: version?.abbreviation },
           newTestament: { ...ntVerse, version: version?.abbreviation }
@@ -73,7 +75,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
 
   const generateAIVerses = async () => {
     try {
-      const version = getVersionById(settings.preferredVersion);
+      const version = getVersionById(settings.preferredVersion, availableBibleVersions);
       const [otVerse, ntVerse] = await Promise.all([
         AIService.generateVerse(verseType, 'OT', version?.name),
         AIService.generateVerse(verseType, 'NT', version?.name)
@@ -96,7 +98,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     const otVerses = verses.filter(v => v.testament === 'OT');
     const ntVerses = verses.filter(v => v.testament === 'NT');
     
-    const version = getVersionById(settings.preferredVersion);
+    const version = getVersionById(settings.preferredVersion, availableBibleVersions);
     setCurrentVerses({
       oldTestament: { ...otVerses[Math.floor(Math.random() * otVerses.length)], version: version?.abbreviation },
       newTestament: { ...ntVerses[Math.floor(Math.random() * ntVerses.length)], version: version?.abbreviation }
@@ -106,7 +108,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
   const handleVerseTypeChange = (type: VerseType) => {
     setVerseType(type);
     const verses = type === 'commission' ? commissionVerses : helpVerses;
-    const version = getVersionById(settings.preferredVersion);
+    const version = getVersionById(settings.preferredVersion, availableBibleVersions);
     setCurrentVerses({
       oldTestament: { ...verses.find(v => v.testament === 'OT')!, version: version?.abbreviation },
       newTestament: { ...verses.find(v => v.testament === 'NT')!, version: version?.abbreviation }
@@ -125,7 +127,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
         <div className="flex justify-center space-x-4 mb-8">
           <div className="flex items-center space-x-2 mb-4">
             <span className="text-sm font-medium text-gray-700">
-              Version: {getVersionById(settings.preferredVersion)?.abbreviation || 'KJV'}
+              Version: {getVersionById(settings.preferredVersion, availableBibleVersions)?.abbreviation || 'Loading...'}
             </span>
           </div>
         </div>

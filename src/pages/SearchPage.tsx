@@ -3,13 +3,15 @@ import { Search, BookOpen, Plus, Edit3, Tag, Clock, Heart } from 'lucide-react';
 import { SearchResult, VerseNote, AppSettings } from '../types';
 import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
+import { BibleVersion } from '../services/BibleAPI';
 
 interface SearchPageProps {
   settings: AppSettings;
   onMemorizeVerse: (verse: any) => void;
+  availableBibleVersions: BibleVersion[];
 }
 
-const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse }) => {
+const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -37,7 +39,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse }) =>
     
     setIsSearching(true);
     try {
-      const results = await BibleSearchService.searchVerses(searchQuery, settings.preferredVersion);
+      const results = await BibleSearchService.searchVerses(searchQuery, settings.preferredVersion, availableBibleVersions);
       setSearchResults(results);
     } catch (error) {
       console.error('Search failed:', error);
@@ -144,7 +146,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse }) =>
         </div>
 
         <div className="mt-4 text-sm text-gray-600">
-          <span className="font-medium">Version: {getVersionById(settings.preferredVersion)?.name || 'King James Version'}</span>
+          <span className="font-medium">Version: {getVersionById(settings.preferredVersion, availableBibleVersions)?.name || 'King James Version'}</span>
         </div>
       </div>
 
