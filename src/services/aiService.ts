@@ -53,15 +53,31 @@ export class AIService {
 
       if (!response.ok) {
         throw new Error('Failed to get AI feedback');
+      if (!response.ok && !data.fallback) {
+
+      // Return fallback feedback if API key is not configured
+      if (data.fallback) {
+        return {
+          feedback: data.feedback,
+          suggestions: data.suggestions
+        };
       }
 
-      return await response.json();
+      return data;
     } catch (error) {
       console.error('AI feedback failed:', error);
       // Fallback to static feedback
       return {
         feedback: accuracy >= 90 ? "Excellent work!" : accuracy >= 70 ? "Good job!" : "Keep practicing!",
-        suggestions: ["Try reading the verse aloud", "Break it into smaller chunks", "Practice daily for better retention"]
+      console.warn('AI feedback not available, using fallback');
+      // Return fallback feedback when AI is not available
+      return {
+        feedback: "Great effort on your memorization! Keep practicing to improve your accuracy.",
+        suggestions: [
+          "Try breaking the verse into smaller chunks",
+          "Practice reading the verse aloud several times", 
+          "Focus on understanding the meaning to help with recall"
+        ]
       };
     }
   }

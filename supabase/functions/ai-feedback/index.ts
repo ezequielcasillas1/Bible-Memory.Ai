@@ -16,7 +16,25 @@ serve(async (req) => {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
     if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured')
+      return new Response(
+        JSON.stringify({ 
+          error: 'OpenAI API key not configured',
+          fallback: true,
+          feedback: "Great effort on your memorization! Keep practicing to improve your accuracy.",
+          suggestions: [
+            "Try breaking the verse into smaller chunks",
+            "Practice reading the verse aloud several times",
+            "Focus on understanding the meaning to help with recall"
+          ]
+        }),
+        { 
+          status: 200,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
