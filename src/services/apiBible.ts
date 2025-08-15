@@ -23,7 +23,7 @@ export async function fetchEnglishBiblesByAbbrev(abbrevs: string[]): Promise<Api
   }
 
   const url = abbrevs.length > 0 
-    ? `${API}/bibles?language=eng&abbreviation=${encodeURIComponent(abbrevs.join(','))}&include-full-details=true`
+    ? `${API}/bibles?language=eng&${abbrevs.map(abbrev => `abbreviation=${encodeURIComponent(abbrev)}`).join('&')}&include-full-details=true`
     : `${API}/bibles?language=eng&include-full-details=true`;
   const res = await fetch(url, {
     headers: { 'accept': 'application/json', 'api-key': key }
