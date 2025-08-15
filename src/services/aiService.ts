@@ -53,7 +53,9 @@ export class AIService {
 
       if (!response.ok) {
         throw new Error('Failed to get AI feedback');
+      }
       if (!response.ok && !data.fallback) {
+      }
 
       // Return fallback feedback if API key is not configured
       if (data.fallback) {
@@ -69,6 +71,7 @@ export class AIService {
       // Fallback to static feedback
       return {
         feedback: accuracy >= 90 ? "Excellent work!" : accuracy >= 70 ? "Good job!" : "Keep practicing!",
+      }
       console.warn('AI feedback not available, using fallback');
       // Return fallback feedback when AI is not available
       return {
