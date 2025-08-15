@@ -42,6 +42,7 @@ const App: React.FC = () => {
       setIsLoadingVersions(true);
       try {
         const versions = await getBibleVersions();
+        console.log('Loaded Bible versions:', versions); // Debug log
         setAvailableBibleVersions(versions);
         
         // Set default version to first available version (should be KJV)
@@ -60,6 +61,7 @@ const App: React.FC = () => {
           { id: '90c8a4bdc6b54c6b-01', name: 'English Standard Version', abbreviation: 'ESV' },
           { id: '685d1470fe4d5361-01', name: 'American Standard Version', abbreviation: 'ASV' }
         ];
+        console.log('Using fallback versions:', fallbackVersions); // Debug log
         setAvailableBibleVersions(fallbackVersions);
         if (!settings.preferredVersion) {
           setSettings(prev => ({ ...prev, preferredVersion: fallbackVersions[0].id }));
@@ -71,7 +73,7 @@ const App: React.FC = () => {
     };
 
     loadBibleVersions();
-  }, []);
+  }, [settings.preferredVersion]);
 
   // Load user data from localStorage on mount
   useEffect(() => {

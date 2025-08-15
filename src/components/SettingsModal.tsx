@@ -77,7 +77,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                 Loading Bible versions...
               </div>
-            ) : (
+            ) : availableBibleVersions.length > 0 ? (
               <select
                 value={settings.preferredVersion}
                 onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
@@ -89,6 +89,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </option>
                 ))}
               </select>
+            ) : (
+              <div className="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 text-yellow-700">
+                No Bible versions available. Please check your internet connection.
+              </div>
             )}
           </div>
 

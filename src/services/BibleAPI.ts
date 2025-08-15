@@ -20,6 +20,8 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     const apiKey = requiredEnv("VITE_BIBLE_API_KEY");
     const url = `${API_BASE}/bibles?abbreviation=KJV,NKJV,NLT,ESV,ASV&include-full-details=true`;
 
+    console.log('Fetching Bible versions from:', url); // Debug log
+    
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -35,15 +37,19 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     }
 
     const json = await res.json();
+    console.log('API response:', json); // Debug log
     const data = Array.isArray(json?.data) ? json.data : [];
 
     // Map to the strict shape
-    return data.map((b: any) => ({
+    const versions = data.map((b: any) => ({
       id: String(b.id),
       abbreviation: String(b.abbreviation),
       name: String(b.name),
       description: b.description ? String(b.description) : undefined,
     })) as BibleVersion[];
+    
+    console.log('Mapped versions:', versions); // Debug log
+    return versions;
   } catch (error) {
     console.error("Failed to fetch Bible versions:", error);
     return [];
