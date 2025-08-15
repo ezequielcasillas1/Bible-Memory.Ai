@@ -240,6 +240,7 @@ Return in this exact JSON format:
         },
         connection: "These verses work together to show that God cares deeply about our struggles and offers genuine rest and support."
       };
+  }
 
   static async generateImprovementSuggestions(userStats: {
     totalPoints: number;
