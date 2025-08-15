@@ -52,7 +52,6 @@ export interface BibleVersion {
 export interface AppSettings {
   studyTime: number;
   preferredVersion: string;
-  useAI: boolean;
 }
 
 export interface WordComparison {

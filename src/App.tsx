@@ -16,7 +16,6 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: bibleVersions[0].id, // Default to KJV
-    useAI: false
   });
   
   const [userStats, setUserStats] = useState<UserStats>({

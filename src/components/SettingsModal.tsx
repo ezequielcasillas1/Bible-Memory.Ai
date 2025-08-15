@@ -82,22 +82,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </select>
           </div>
 
-          {/* AI Features Toggle */}
-          <div>
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.useAI}
-                onChange={(e) => handleSettingChange('useAI', e.target.checked)}
-                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-              />
-              <div>
-                <span className="text-sm font-medium text-gray-700">Enable AI Features</span>
-                <p className="text-xs text-gray-500">Use AI for verse generation and personalized feedback</p>
-              </div>
-            </label>
-          </div>
-
           {/* Bible Memory Career Settings Placeholder */}
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="font-medium text-gray-800 mb-2">📚 Bible Memory Career Settings</h3>

@@ -25,7 +25,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     
     // Simulate loading delay for better UX
     setTimeout(() => {
-      if (settings.useAI) {
+      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
         generateAIVerses();
       } else if (import.meta.env.VITE_SCRIPTURE_API_KEY) {
         generateScriptureApiVerses();
