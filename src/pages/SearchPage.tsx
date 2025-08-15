@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, Plus, Edit3, Tag, Clock } from 'lucide-react';
+import { Search, BookOpen, Plus, Edit3, Tag, Clock, Heart } from 'lucide-react';
 import { SearchResult, VerseNote, AppSettings } from '../types';
 import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
