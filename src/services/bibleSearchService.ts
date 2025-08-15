@@ -2,7 +2,7 @@ import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
-const API_KEY = '6d078a413735440025d1f98883a8d372';
+const API_KEY = import.meta.env.VITE_SCRIPTURE_API_KEY;
 
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, limit: number = 20): Promise<SearchResult[]> {
