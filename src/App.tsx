@@ -318,7 +318,7 @@ const App: React.FC = () => {
   const currentVerse = verses[currentVerseIndex];
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${settings.darkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100'}`}>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">

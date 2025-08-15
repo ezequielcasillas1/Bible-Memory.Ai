@@ -20,13 +20,13 @@
 }
 
 * {
-  border-color: hsl(var(--border));
+  border-color: rgb(209 213 219);
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: rgb(248 250 252);
+  color: rgb(15 23 42);
 }
 
 .animate-fade-in {
@@ -126,12 +126,12 @@ body {
 }
 
 .nav-tab.active {
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, rgb(147 51 234), rgb(59 130 246));
+  color: white;
 }
 
 .button-primary {
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  background: linear-gradient(135deg, rgb(147 51 234), rgb(59 130 246));
   transition: all 0.2s ease;
 }
 
@@ -191,7 +191,7 @@ body {
 
 .typewriter {
   overflow: hidden;
-  border-right: 2px solid hsl(var(--primary));
+  border-right: 2px solid rgb(147 51 234);
   white-space: nowrap;
   animation: typing 2s steps(40, end), blink 0.75s step-end infinite;
 }
@@ -210,6 +210,6 @@ body {
     border-color: transparent;
   }
   50% {
-    border-color: hsl(var(--primary));
+    border-color: rgb(147 51 234);
   }
 }
