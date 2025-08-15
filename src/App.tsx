@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, Verse, UserStats } from './types';
+import { Tab, Verse, UserStats, AppSettings } from './types';
+import { bibleVersions } from './data/bibleVersions';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
 import SettingsModal from './components/SettingsModal';
@@ -11,7 +12,12 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('generator');
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [studyTime, setStudyTime] = useState(10);
+  
+  const [settings, setSettings] = useState<AppSettings>({
+    studyTime: 10,
+    preferredVersion: bibleVersions[0].id, // Default to KJV
+    useAI: false
+  });
   
   const [userStats, setUserStats] = useState<UserStats>({
     totalPoints: 1247,
@@ -22,19 +28,20 @@ const App: React.FC = () => {
     totalPracticeTime: 0,
     achievements: [],
     weeklyGoal: 7,
-    dailyGoal: 1
+    dailyGoal: 1,
+    preferredVersion: bibleVersions[0].id
   });
 
   // Load user data from localStorage on mount
   useEffect(() => {
     const savedStats = localStorage.getItem('bibleMemoryStats');
-    const savedStudyTime = localStorage.getItem('studyTime');
+    const savedSettings = localStorage.getItem('bibleMemorySettings');
     
     if (savedStats) {
       setUserStats(JSON.parse(savedStats));
     }
-    if (savedStudyTime) {
-      setStudyTime(parseInt(savedStudyTime));
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
     }
   }, []);
 
@@ -44,8 +51,18 @@ const App: React.FC = () => {
   }, [userStats]);
 
   useEffect(() => {
-    localStorage.setItem('studyTime', studyTime.toString());
-  }, [studyTime]);
+    localStorage.setItem('bibleMemorySettings', JSON.stringify(settings));
+  }, [settings]);
+
+  // Sync preferred version between settings and user stats
+  useEffect(() => {
+    if (settings.preferredVersion !== userStats.preferredVersion) {
+      setUserStats(prev => ({
+        ...prev,
+        preferredVersion: settings.preferredVersion
+      }));
+    }
+  }, [settings.preferredVersion, userStats.preferredVersion]);
 
   const handleMemorizeVerse = (verse: Verse) => {
     setSelectedVerse(verse);
@@ -80,13 +97,13 @@ const App: React.FC = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {activeTab === 'generator' && (
-          <GeneratorPage onMemorizeVerse={handleMemorizeVerse} />
+          <GeneratorPage onMemorizeVerse={handleMemorizeVerse} settings={settings} />
         )}
         
         {activeTab === 'memorize' && (
           <MemorizePage
             selectedVerse={selectedVerse}
-            studyTime={studyTime}
+            studyTime={settings.studyTime}
             onComplete={handleMemorizationComplete}
             onBackToGenerator={handleBackToGenerator}
             userStats={userStats}
@@ -101,8 +118,8 @@ const App: React.FC = () => {
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
-        studyTime={studyTime}
-        onStudyTimeChange={setStudyTime}
+        settings={settings}
+        onSettingsChange={setSettings}
       />
     </div>
   );

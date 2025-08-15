@@ -4,6 +4,7 @@ export interface Verse {
   reference: string;
   testament: 'OT' | 'NT';
   reason?: string;
+  version?: string;
 }
 
 export interface UserStats {
@@ -16,6 +17,7 @@ export interface UserStats {
   achievements: Achievement[];
   weeklyGoal: number;
   dailyGoal: number;
+  preferredVersion: string;
 }
 
 export interface Achievement {
@@ -37,3 +39,15 @@ export interface MemorizationSession {
 
 export type Tab = 'generator' | 'memorize' | 'profile';
 export type VerseType = 'commission' | 'help';
+
+export interface BibleVersion {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
+
+export interface AppSettings {
+  studyTime: number;
+  preferredVersion: string;
+  useAI: boolean;
+}

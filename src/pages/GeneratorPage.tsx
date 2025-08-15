@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import { RefreshCw, Heart, Sparkles } from 'lucide-react';
-import { VerseType, Verse } from '../types';
+import { VerseType, Verse, AppSettings } from '../types';
 import { commissionVerses, helpVerses, connections } from '../data/verses';
 import { AIService } from '../services/aiService';
+import { ScriptureApiService } from '../services/scriptureApiService';
+import { getVersionById } from '../data/bibleVersions';
 import VerseCard from '../components/VerseCard';
 
 interface GeneratorPageProps {
   onMemorizeVerse: (verse: Verse) => void;
+  settings: AppSettings;
 }
 
-const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
+const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings }) => {
   const [verseType, setVerseType] = useState<VerseType>('commission');
   const [currentVerses, setCurrentVerses] = useState({
     oldTestament: commissionVerses.find(v => v.testament === 'OT'),
     newTestament: commissionVerses.find(v => v.testament === 'NT')
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [useAI, setUseAI] = useState(false);
 
   const generateNewVerses = () => {
     setIsLoading(true);
     
     // Simulate loading delay for better UX
     setTimeout(() => {
-      if (useAI) {
+      if (settings.useAI) {
         generateAIVerses();
+      } else if (import.meta.env.VITE_SCRIPTURE_API_KEY) {
+        generateScriptureApiVerses();
       } else {
         const verses = verseType === 'commission' ? commissionVerses : helpVerses;
         const otVerses = verses.filter(v => v.testament === 'OT');
@@ -42,11 +46,37 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
     }, 800);
   };
 
-  const generateAIVerses = async () => {
+  const generateScriptureApiVerses = async () => {
     try {
       const [otVerse, ntVerse] = await Promise.all([
-        AIService.generateVerse(verseType, 'OT'),
-        AIService.generateVerse(verseType, 'NT')
+        ScriptureApiService.getRandomVerse(settings.preferredVersion, 'OT'),
+        ScriptureApiService.getRandomVerse(settings.preferredVersion, 'NT')
+      ]);
+      
+      if (otVerse && ntVerse) {
+        const version = getVersionById(settings.preferredVersion);
+        setCurrentVerses({
+          oldTestament: { ...otVerse, version: version?.abbreviation },
+          newTestament: { ...ntVerse, version: version?.abbreviation }
+        });
+      } else {
+        // Fallback to static verses
+        fallbackToStaticVerses();
+      }
+    } catch (error) {
+      console.error('Scripture API failed:', error);
+      fallbackToStaticVerses();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateAIVerses = async () => {
+    try {
+      const version = getVersionById(settings.preferredVersion);
+      const [otVerse, ntVerse] = await Promise.all([
+        AIService.generateVerse(verseType, 'OT', version?.name),
+        AIService.generateVerse(verseType, 'NT', version?.name)
       ]);
       
       setCurrentVerses({
@@ -55,24 +85,31 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
       });
     } catch (error) {
       // Fallback to static verses
-      const verses = verseType === 'commission' ? commissionVerses : helpVerses;
-      const otVerses = verses.filter(v => v.testament === 'OT');
-      const ntVerses = verses.filter(v => v.testament === 'NT');
-      
-      setCurrentVerses({
-        oldTestament: otVerses[Math.floor(Math.random() * otVerses.length)],
-        newTestament: ntVerses[Math.floor(Math.random() * ntVerses.length)]
-      });
+      fallbackToStaticVerses();
     } finally {
       setIsLoading(false);
     }
   };
+
+  const fallbackToStaticVerses = () => {
+    const verses = verseType === 'commission' ? commissionVerses : helpVerses;
+    const otVerses = verses.filter(v => v.testament === 'OT');
+    const ntVerses = verses.filter(v => v.testament === 'NT');
+    
+    const version = getVersionById(settings.preferredVersion);
+    setCurrentVerses({
+      oldTestament: { ...otVerses[Math.floor(Math.random() * otVerses.length)], version: version?.abbreviation },
+      newTestament: { ...ntVerses[Math.floor(Math.random() * ntVerses.length)], version: version?.abbreviation }
+    });
+  };
+
   const handleVerseTypeChange = (type: VerseType) => {
     setVerseType(type);
     const verses = type === 'commission' ? commissionVerses : helpVerses;
+    const version = getVersionById(settings.preferredVersion);
     setCurrentVerses({
-      oldTestament: verses.find(v => v.testament === 'OT'),
-      newTestament: verses.find(v => v.testament === 'NT')
+      oldTestament: { ...verses.find(v => v.testament === 'OT')!, version: version?.abbreviation },
+      newTestament: { ...verses.find(v => v.testament === 'NT')!, version: version?.abbreviation }
     });
   };
 
@@ -88,17 +125,18 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
         <div className="flex justify-center space-x-4 mb-8">
           <div className="flex items-center space-x-2 mb-4">
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useAI}
-                onChange={(e) => setUseAI(e.target.checked)}
-                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-              />
-              <span className="flex items-center space-x-1 text-sm font-medium text-gray-700">
+              <span className={`flex items-center space-x-1 text-sm font-medium ${
+                settings.useAI ? 'text-purple-600' : 'text-gray-500'
+              }`}>
                 <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>AI Generated</span>
+                <span>{settings.useAI ? 'AI Enabled' : 'AI Disabled'}</span>
               </span>
             </label>
+          </div>
+          <div className="flex items-center space-x-2 mb-4">
+            <span className="text-sm font-medium text-gray-700">
+              Version: {getVersionById(settings.preferredVersion)?.abbreviation || 'KJV'}
+            </span>
           </div>
         </div>
         

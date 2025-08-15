@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { verseType, testament } = await req.json()
+    const { verseType, testament, bibleVersion } = await req.json()
     
     // Get OpenAI API key from Supabase secrets (set via dashboard)
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
@@ -38,13 +38,14 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Generate a ${testament} ${verseType} verse with reference and explanation of why it's meaningful for ${verseType === 'commission' ? 'encouraging believers in their faith journey' : 'helping people in difficult times'}.
+            content: `Generate a ${testament} ${verseType} verse from the ${bibleVersion || 'King James Version'} with reference and explanation of why it's meaningful for ${verseType === 'commission' ? 'encouraging believers in their faith journey' : 'helping people in difficult times'}.
 
             Return JSON format:
             {
               "text": "verse text",
               "reference": "Book Chapter:Verse",
-              "reason": "explanation of why this verse is meaningful"
+              "reason": "explanation of why this verse is meaningful",
+              "version": "${bibleVersion || 'KJV'}"
             }`
           }
         ],

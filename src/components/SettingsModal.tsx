@@ -1,20 +1,29 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { bibleVersions } from '../data/bibleVersions';
+import { AppSettings } from '../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  studyTime: number;
-  onStudyTimeChange: (time: number) => void;
+  settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
   onClose, 
-  studyTime, 
-  onStudyTimeChange 
+  settings,
+  onSettingsChange
 }) => {
   if (!isOpen) return null;
+
+  const handleSettingChange = (key: keyof AppSettings, value: any) => {
+    onSettingsChange({
+      ...settings,
+      [key]: value
+    });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -43,16 +52,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 min="5"
                 max="60"
                 step="5"
-                value={studyTime}
-                onChange={(e) => onStudyTimeChange(parseInt(e.target.value))}
+                value={settings.studyTime}
+                onChange={(e) => handleSettingChange('studyTime', parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-sm text-gray-600">
                 <span>5s</span>
-                <span className="font-medium text-purple-600">{studyTime}s</span>
+                <span className="font-medium text-purple-600">{settings.studyTime}s</span>
                 <span>60s</span>
               </div>
             </div>
+          </div>
+
+          {/* Bible Version Setting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preferred Bible Version
+            </label>
+            <select
+              value={settings.preferredVersion}
+              onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              {bibleVersions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  {version.abbreviation} – {version.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* AI Features Toggle */}
+          <div>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.useAI}
+                onChange={(e) => handleSettingChange('useAI', e.target.checked)}
+                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-700">Enable AI Features</span>
+                <p className="text-xs text-gray-500">Use AI for verse generation and personalized feedback</p>
+              </div>
+            </label>
           </div>
 
           {/* Bible Memory Career Settings Placeholder */}

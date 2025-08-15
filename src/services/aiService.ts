@@ -3,7 +3,7 @@ import { Verse, UserStats } from '../types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export class AIService {
-  static async generateVerse(verseType: 'commission' | 'help', testament: 'OT' | 'NT'): Promise<Verse> {
+  static async generateVerse(verseType: 'commission' | 'help', testament: 'OT' | 'NT', bibleVersion?: string): Promise<Verse> {
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-verse-generator`, {
         method: 'POST',
@@ -11,7 +11,7 @@ export class AIService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ verseType, testament }),
+        body: JSON.stringify({ verseType, testament, bibleVersion }),
       });
 
       if (!response.ok) {
@@ -26,6 +26,7 @@ export class AIService {
         reference: verseData.reference,
         testament,
         reason: verseData.reason,
+        version: verseData.version || bibleVersion,
       };
     } catch (error) {
       console.error('AI verse generation failed:', error);

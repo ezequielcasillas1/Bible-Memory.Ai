@@ -26,9 +26,16 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize }) => {
         <p className="text-lg leading-relaxed text-gray-700 mb-4 italic">
           "{verse.text}"
         </p>
-        <p className="text-purple-600 font-medium">
-          {verse.reference}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-purple-600 font-medium">
+            {verse.reference}
+          </p>
+          {verse.version && (
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {verse.version}
+            </span>
+          )}
+        </div>
         {verse.reason && (
           <p className="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-lg">
             💡 {verse.reason}
