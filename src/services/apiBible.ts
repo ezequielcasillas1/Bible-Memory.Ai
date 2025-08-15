@@ -22,16 +22,57 @@ export async function fetchEnglishBiblesByAbbrev(abbrevs: string[]): Promise<Api
     ];
   }
 
-  const url = abbrevs.length > 0 
-    ? `${API}/bibles?language=eng&${abbrevs.map(abbrev => `abbreviation=${encodeURIComponent(abbrev)}`).join('&')}&include-full-details=true`
-    : `${API}/bibles?language=eng&include-full-details=true`;
-  const res = await fetch(url, {
-    headers: { 'accept': 'application/json', 'api-key': key }
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`API.Bible error ${res.status}: ${text}`);
-    // Return fallback data instead of throwing
+  if (abbrevs.length === 0) {
+    const url = `${API}/bibles?language=eng&include-full-details=true`;
+    const res = await fetch(url, {
+      headers: { 'accept': 'application/json', 'api-key': key }
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`API.Bible error ${res.status}: ${text}`);
+      return [
+        { id: 'kjv', abbreviation: 'KJV', name: 'King James Version', language: { id: 'eng', name: 'English' } },
+        { id: 'nkjv', abbreviation: 'NKJV', name: 'New King James Version', language: { id: 'eng', name: 'English' } },
+        { id: 'nlt', abbreviation: 'NLT', name: 'New Living Translation', language: { id: 'eng', name: 'English' } },
+        { id: 'esv', abbreviation: 'ESV', name: 'English Standard Version', language: { id: 'eng', name: 'English' } },
+        { id: 'asv', abbreviation: 'ASV', name: 'American Standard Version', language: { id: 'eng', name: 'English' } }
+      ];
+    }
+    const json = await res.json();
+    const list = (json?.data ?? []) as any[];
+    return list.map(b => ({
+      id: b.id,
+      abbreviation: (b.abbreviation || '').toUpperCase(),
+      name: b.name || b.abbreviation,
+      language: { id: b.language?.id, name: b.language?.name }
+    }));
+  }
+
+  // Make individual requests for each abbreviation
+  const results: ApiBibleSummary[] = [];
+  for (const abbrev of abbrevs) {
+    const url = `${API}/bibles?language=eng&abbreviation=${encodeURIComponent(abbrev)}&include-full-details=true`;
+    const res = await fetch(url, {
+      headers: { 'accept': 'application/json', 'api-key': key }
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`API.Bible error ${res.status} for ${abbrev}: ${text}`);
+      continue; // Skip this abbreviation and continue with others
+    }
+    const json = await res.json();
+    const list = (json?.data ?? []) as any[];
+    const mapped = list.map(b => ({
+      id: b.id,
+      abbreviation: (b.abbreviation || '').toUpperCase(),
+      name: b.name || b.abbreviation,
+      language: { id: b.language?.id, name: b.language?.name }
+    }));
+    results.push(...mapped);
+  }
+
+  // If no results were found, return fallback data
+  if (results.length === 0) {
     return [
       { id: 'kjv', abbreviation: 'KJV', name: 'King James Version', language: { id: 'eng', name: 'English' } },
       { id: 'nkjv', abbreviation: 'NKJV', name: 'New King James Version', language: { id: 'eng', name: 'English' } },
@@ -40,14 +81,8 @@ export async function fetchEnglishBiblesByAbbrev(abbrevs: string[]): Promise<Api
       { id: 'asv', abbreviation: 'ASV', name: 'American Standard Version', language: { id: 'eng', name: 'English' } }
     ];
   }
-  const json = await res.json();
-  const list = (json?.data ?? []) as any[];
-  return list.map(b => ({
-    id: b.id,
-    abbreviation: (b.abbreviation || '').toUpperCase(),
-    name: b.name || b.abbreviation,
-    language: { id: b.language?.id, name: b.language?.name }
-  }));
+
+  return results;
 }
 
 export async function searchPassageByQuery(bibleId: string, query: string): Promise<{ text: string; html?: string }> {
