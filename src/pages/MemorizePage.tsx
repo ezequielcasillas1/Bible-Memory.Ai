@@ -27,6 +27,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   const [isActive, setIsActive] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [session, setSession] = useState<MemorizationSession | null>(null);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [result, setResult] = useState<{
     accuracy: number;
     feedback: string;
@@ -83,6 +85,37 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     return () => clearInterval(interval);
   }, [phase]);
 
+  // Loading messages for AI feedback
+  const encouragingMessages = [
+    "🙏 The Lord is analyzing your heart's work...",
+    "✨ God's wisdom is reviewing your faithful effort...",
+    "📖 His Word is being treasured in your heart...",
+    "💝 Every verse memorized is a gift to your soul...",
+    "🌟 The Holy Spirit is preparing personalized guidance...",
+    "⭐ Your dedication to Scripture brings Him joy...",
+    "🕊️ God sees your commitment to His Word...",
+    "💎 You're storing up treasures in heaven...",
+    "🌱 His Word is taking root in your heart...",
+    "🔥 The Scripture you're learning will never return void...",
+    "👑 You're becoming more like Christ through His Word...",
+    "🎯 God is preparing the perfect encouragement for you..."
+  ];
+
+  // Cycle through encouraging messages during loading
+  useEffect(() => {
+    if (isLoadingFeedback) {
+      let messageIndex = 0;
+      setLoadingMessage(encouragingMessages[0]);
+      
+      const messageInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % encouragingMessages.length;
+        setLoadingMessage(encouragingMessages[messageIndex]);
+      }, 2000);
+      
+      return () => clearInterval(messageInterval);
+    }
+  }, [isLoadingFeedback]);
+
   const startStudy = () => {
     setIsActive(true);
     setTimeLeft(studyTime);
@@ -95,6 +128,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   const checkAnswer = () => {
     if (!session || !userInput.trim()) return;
 
+    setIsLoadingFeedback(true);
     const accuracy = calculateAccuracy(userInput, session.verse.text);
     
     // Try to get AI feedback, fallback to static feedback
@@ -109,6 +143,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
           nextSteps: aiResponse.nextSteps,
           encouragement: aiResponse.encouragement
         });
+        setIsLoadingFeedback(false);
+        setPhase('feedback');
       })
       .catch(() => {
         const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
@@ -121,6 +157,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
           nextSteps: "Try practicing again tomorrow.",
           encouragement: "You're making progress!"
         });
+        setIsLoadingFeedback(false);
+        setPhase('feedback');
       });
     
     const updatedSession = {
@@ -131,7 +169,6 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     };
     
     setSession(updatedSession);
-    setPhase('feedback');
     
     // Award points based on accuracy
     const points = Math.round(accuracy * 1.5);
@@ -144,6 +181,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     setIsActive(false);
     setUserInput('');
     setResult(null);
+    setIsLoadingFeedback(false);
     setPracticeTime(0);
   };
 
@@ -255,8 +293,64 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
           </>
         )}
 
+        {/* Loading Phase */}
+        {isLoadingFeedback && (
+          <>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">Analyzing Your Heart's Work</h2>
+              <p className="text-gray-600">Our AI is prayerfully reviewing your memorization with God's wisdom</p>
+            </div>
+
+            {/* Animated Loading Circle */}
+            <div className="flex justify-center mb-8">
+              <div className="relative w-32 h-32">
+                <div className="absolute inset-0 border-8 border-purple-200 rounded-full"></div>
+                <div className="absolute inset-0 border-8 border-purple-600 rounded-full border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-4xl animate-pulse">📖</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Encouraging Message */}
+            <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 rounded-2xl p-8 text-center border-2 border-purple-200">
+              <div className="animate-fade-in">
+                <p className="text-xl font-medium text-gray-800 mb-4">
+                  {loadingMessage}
+                </p>
+                <div className="flex justify-center space-x-2 mb-4">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <p className="text-sm text-gray-600 italic">
+                  "Thy word have I hid in mine heart, that I might not sin against thee." - Psalm 119:11
+                </p>
+              </div>
+            </div>
+
+            {/* Progress Indicators */}
+            <div className="mt-8 space-y-4">
+              <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Calculating accuracy</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  <span>Generating personalized feedback</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+                  <span>Preparing spiritual insights</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Feedback Phase */}
-        {phase === 'feedback' && result && (
+        {phase === 'feedback' && result && !isLoadingFeedback && (
           <>
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">Your Results</h2>
