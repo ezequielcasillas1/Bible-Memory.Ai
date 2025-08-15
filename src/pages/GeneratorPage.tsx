@@ -124,16 +124,6 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
         {/* Verse Type Toggle */}
         <div className="flex justify-center space-x-4 mb-8">
           <div className="flex items-center space-x-2 mb-4">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <span className={`flex items-center space-x-1 text-sm font-medium ${
-                settings.useAI ? 'text-purple-600' : 'text-gray-500'
-              }`}>
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>{settings.useAI ? 'AI Enabled' : 'AI Disabled'}</span>
-              </span>
-            </label>
-          </div>
-          <div className="flex items-center space-x-2 mb-4">
             <span className="text-sm font-medium text-gray-700">
               Version: {getVersionById(settings.preferredVersion)?.abbreviation || 'KJV'}
             </span>
