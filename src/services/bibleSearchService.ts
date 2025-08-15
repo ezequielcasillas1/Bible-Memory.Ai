@@ -1,5 +1,4 @@
 import { SearchResult } from '../types';
-import { getVersionById } from '../data/bibleVersions';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
 const API_KEY = '6d078a413735440025d1f98883a8d372';
@@ -7,6 +6,12 @@ const API_KEY = '6d078a413735440025d1f98883a8d372';
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, limit: number = 20): Promise<SearchResult[]> {
     try {
+      // Check if we have a valid API key
+      if (!API_KEY) {
+        console.warn('No Scripture API key available, using fallback search');
+        return this.fallbackSearch(query);
+      }
+
       const response = await fetch(
         `${SCRIPTURE_API_BASE}/bibles/${versionId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
         {
@@ -17,15 +22,22 @@ export class BibleSearchService {
       );
 
       if (!response.ok) {
-        console.warn('API request failed, using fallback search');
-        return this.fallbackSearch(query);
+        if (response.status === 401) {
+          console.warn('API key unauthorized, using fallback search');
+        } else if (response.status === 404) {
+          console.warn(`Bible version ${versionId} not found, using fallback search`);
+        } else {
+          console.warn(`API request failed with status ${response.status}, using fallback search`);
+        }
+        
+        return this.fallbackSearch(query, versionId);
       }
 
       const data = await response.json();
       const version = getVersionById(versionId);
       
       if (!data.data || !data.data.passages) {
-        return this.fallbackSearch(query);
+        return this.fallbackSearch(query, versionId);
       }
       
       return data.data.passages.map((passage: any) => ({
@@ -40,7 +52,7 @@ export class BibleSearchService {
       }));
     } catch (error) {
       console.error('Bible search failed:', error);
-      return this.fallbackSearch(query);
+      return this.fallbackSearch(query, versionId);
     }
   }
 
@@ -91,8 +103,9 @@ export class BibleSearchService {
     return parseInt(versePart?.split('-')[0] || '1');
   }
 
-  private static fallbackSearch(query: string): SearchResult[] {
+  private static fallbackSearch(query: string, versionId?: string): SearchResult[] {
     // Expanded fallback with popular verses that might match the query
+    const version = versionId ? getVersionById(versionId)?.abbreviation || 'KJV' : 'KJV';
     const fallbackVerses = [
       {
         id: 'fallback-1',
@@ -102,7 +115,7 @@ export class BibleSearchService {
         book: 'John',
         chapter: 3,
         verse: 16,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-2',
@@ -112,7 +125,7 @@ export class BibleSearchService {
         book: 'Proverbs',
         chapter: 3,
         verse: 5,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-3',
@@ -122,7 +135,7 @@ export class BibleSearchService {
         book: 'Philippians',
         chapter: 4,
         verse: 13,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-4',
@@ -132,7 +145,7 @@ export class BibleSearchService {
         book: 'Romans',
         chapter: 8,
         verse: 28,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-5',
@@ -142,7 +155,7 @@ export class BibleSearchService {
         book: 'Psalm',
         chapter: 23,
         verse: 1,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-6',
@@ -152,7 +165,7 @@ export class BibleSearchService {
         book: 'Jeremiah',
         chapter: 29,
         verse: 11,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-7',
@@ -162,7 +175,7 @@ export class BibleSearchService {
         book: 'Joshua',
         chapter: 1,
         verse: 9,
-        version: 'KJV'
+        version
       },
       {
         id: 'fallback-8',
@@ -172,7 +185,7 @@ export class BibleSearchService {
         book: 'Matthew',
         chapter: 11,
         verse: 28,
-        version: 'KJV'
+        version
       }
     ];
 
