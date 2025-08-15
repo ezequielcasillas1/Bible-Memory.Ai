@@ -9,7 +9,7 @@ export interface BibleVersion {
 const API_BASE = "https://api.scripture.api.bible/v1";
 
 function requiredEnv(name: string): string {
-  const v = import.meta.env[name];
+  const v = import.meta.env.VITE_BIBLE_API_KEY;
   if (!v) throw new Error(`Missing env var: ${name}`);
   return v;
 }
@@ -17,10 +17,17 @@ function requiredEnv(name: string): string {
 /** Fetch the 5 requested English Bible versions (KJV, NKJV, NLT, ESV, ASV). */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    const apiKey = requiredEnv("VITE_BIBLE_API_KEY");
+    const apiKey = import.meta.env.VITE_BIBLE_API_KEY;
+    
+    if (!apiKey) {
+      console.error('VITE_BIBLE_API_KEY not found in environment variables');
+      throw new Error('Missing env var: VITE_BIBLE_API_KEY');
+    }
+    
     const url = `${API_BASE}/bibles?abbreviation=KJV,NKJV,NLT,ESV,ASV&include-full-details=true`;
 
     console.log('Fetching Bible versions from:', url); // Debug log
+    console.log('Using API key:', apiKey ? 'Present' : 'Missing'); // Debug log
     
     const res = await fetch(url, {
       method: "GET",
@@ -33,7 +40,7 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error("Scripture API /bibles error:", res.status, text);
-      return [];
+      throw new Error(`API request failed with status ${res.status}: ${text}`);
     }
 
     const json = await res.json();
@@ -52,14 +59,16 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     return versions;
   } catch (error) {
     console.error("Failed to fetch Bible versions:", error);
-    return [];
+    throw error;
   }
 }
 
 /** Helper: fetch a passage by Bible ID and reference, e.g. "John 3:16". */
 export async function getPassageByReference(bibleId: string, reference: string): Promise<any> {
   try {
-    const apiKey = requiredEnv("VITE_BIBLE_API_KEY");
+    const apiKey = import.meta.env.VITE_BIBLE_API_KEY;
+    if (!apiKey) throw new Error('Missing env var: VITE_BIBLE_API_KEY');
+    
     // Encoded reference for safety
     const url = `${API_BASE}/bibles/${encodeURIComponent(bibleId)}/passages?search=${encodeURIComponent(reference)}&content-type=text&include-notes=false`;
     const res = await fetch(url, {
