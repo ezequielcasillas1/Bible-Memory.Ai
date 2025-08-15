@@ -439,12 +439,6 @@ const App: React.FC = () => {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-2 text-red-500 hover:text-red-700"
-            >
-              <X className="w-4 h-4 inline" />
-            </button>
           </div>
         )}
 
