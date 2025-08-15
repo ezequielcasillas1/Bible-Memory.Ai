@@ -191,6 +191,68 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const renderComparisonText = (userText: string, originalText: string, type: 'user' | 'original') => {
+    const normalizeText = (text: string) => 
+      text.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+    const userWords = normalizeText(userText).split(' ');
+    const originalWords = normalizeText(originalText).split(' ');
+    
+    if (type === 'user') {
+      return userWords.map((word, index) => {
+        const originalWord = originalWords[index];
+        let className = '';
+        let displayText = word;
+        
+        if (!originalWord) {
+          // Extra word
+          className = 'bg-yellow-200 text-yellow-800 px-1 rounded';
+          displayText = `+${word}`;
+        } else if (word === originalWord) {
+          // Correct word
+          className = 'bg-green-200 text-green-800 px-1 rounded';
+        } else {
+          // Incorrect word
+          className = 'bg-red-200 text-red-800 px-1 rounded';
+          displayText = `${word}→${originalWord}`;
+        }
+        
+        return (
+          <span key={index} className={`${className} mr-1 inline-block mb-1`}>
+            {displayText}
+          </span>
+        );
+      });
+    } else {
+      // Original version with highlighting
+      return originalWords.map((word, index) => {
+        const userWord = userWords[index];
+        let className = '';
+        let displayText = word;
+        
+        if (!userWord) {
+          // Missing word
+          className = 'bg-red-200 text-red-800 px-1 rounded';
+          displayText = `[${word}]`;
+        } else if (word === userWord) {
+          // Correct word
+          className = 'bg-green-200 text-green-800 px-1 rounded';
+        } else {
+          // User got it wrong
+          className = 'bg-red-200 text-red-800 px-1 rounded';
+        }
+        
+        return (
+          <span key={index} className={`${className} mr-1 inline-block mb-1`}>
+            {displayText}
+          </span>
+        );
+      });
+    }
+  };
   if (!selectedVerse) {
     return (
       <div className="text-center py-12 animate-fade-in">
