@@ -788,52 +788,6 @@ const App: React.FC = () => {
             )}
           </div>
         )}
-                        </p>
-                      </div>
-                    )}
-
-                    <textarea
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      placeholder="Type the verse from memory..."
-                      className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                      rows={4}
-                    />
-                    
-                    <div className="flex items-center justify-center space-x-4">
-                      <button
-                        onClick={() => setIsPaused(!isPaused)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                      >
-                        {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                      </button>
-                      
-                      <button
-                        onClick={checkMemorization}
-                        disabled={!userInput.trim()}
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
-                      >
-                        Check Answer
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Verse Selected</h3>
-                <p className="text-gray-500 mb-6">Choose a verse from the Home tab to start memorizing</p>
-                <button
-                  onClick={() => setActiveTab('home')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all"
-                >
-                  Go to Home
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Bible Tab */}
         {activeTab === 'bible' && (
