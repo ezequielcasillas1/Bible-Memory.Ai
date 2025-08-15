@@ -89,6 +89,7 @@ const App: React.FC = () => {
             studyTime={studyTime}
             onComplete={handleMemorizationComplete}
             onBackToGenerator={handleBackToGenerator}
+            userStats={userStats}
           />
         )}
         

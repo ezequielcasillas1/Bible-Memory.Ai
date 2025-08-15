@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain } from 'lucide-react';
 import { Verse, MemorizationSession } from '../types';
 import { calculateAccuracy, generateFeedback } from '../utils/scoring';
+import { AIService } from '../services/aiService';
 import CountdownTimer from '../components/CountdownTimer';
 
 interface MemorizePageProps {
@@ -9,6 +10,7 @@ interface MemorizePageProps {
   studyTime: number;
   onComplete: (points: number) => void;
   onBackToGenerator: () => void;
+  userStats: any;
 }
 
 type MemorizationPhase = 'study' | 'input' | 'feedback';
@@ -17,7 +19,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   selectedVerse, 
   studyTime, 
   onComplete, 
-  onBackToGenerator 
+  onBackToGenerator,
+  userStats
 }) => {
   const [phase, setPhase] = useState<MemorizationPhase>('study');
   const [timeLeft, setTimeLeft] = useState(studyTime);
@@ -89,9 +92,16 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     if (!session || !userInput.trim()) return;
 
     const accuracy = calculateAccuracy(userInput, session.verse.text);
-    const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
     
-    setResult({ accuracy, feedback, suggestions });
+    // Try to get AI feedback, fallback to static feedback
+    AIService.getPersonalizedFeedback(userInput, session.verse.text, accuracy, userStats)
+      .then(({ feedback, suggestions }) => {
+        setResult({ accuracy, feedback, suggestions });
+      })
+      .catch(() => {
+        const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
+        setResult({ accuracy, feedback, suggestions });
+      });
     
     const updatedSession = {
       ...session,

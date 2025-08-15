@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RefreshCw, Heart } from 'lucide-react';
 import { VerseType, Verse } from '../types';
 import { commissionVerses, helpVerses, connections } from '../data/verses';
+import { AIService } from '../services/aiService';
 import VerseCard from '../components/VerseCard';
 
 interface GeneratorPageProps {
@@ -15,27 +16,57 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
     newTestament: commissionVerses.find(v => v.testament === 'NT')
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [useAI, setUseAI] = useState(false);
 
   const generateNewVerses = () => {
     setIsLoading(true);
     
     // Simulate loading delay for better UX
     setTimeout(() => {
+      if (useAI) {
+        generateAIVerses();
+      } else {
+        const verses = verseType === 'commission' ? commissionVerses : helpVerses;
+        const otVerses = verses.filter(v => v.testament === 'OT');
+        const ntVerses = verses.filter(v => v.testament === 'NT');
+        
+        const randomOT = otVerses[Math.floor(Math.random() * otVerses.length)];
+        const randomNT = ntVerses[Math.floor(Math.random() * ntVerses.length)];
+        
+        setCurrentVerses({
+          oldTestament: randomOT,
+          newTestament: randomNT
+        });
+        setIsLoading(false);
+      }
+    }, 800);
+  };
+
+  const generateAIVerses = async () => {
+    try {
+      const [otVerse, ntVerse] = await Promise.all([
+        AIService.generateVerse(verseType, 'OT'),
+        AIService.generateVerse(verseType, 'NT')
+      ]);
+      
+      setCurrentVerses({
+        oldTestament: otVerse,
+        newTestament: ntVerse
+      });
+    } catch (error) {
+      // Fallback to static verses
       const verses = verseType === 'commission' ? commissionVerses : helpVerses;
       const otVerses = verses.filter(v => v.testament === 'OT');
       const ntVerses = verses.filter(v => v.testament === 'NT');
       
-      const randomOT = otVerses[Math.floor(Math.random() * otVerses.length)];
-      const randomNT = ntVerses[Math.floor(Math.random() * ntVerses.length)];
-      
       setCurrentVerses({
-        oldTestament: randomOT,
-        newTestament: randomNT
+        oldTestament: otVerses[Math.floor(Math.random() * otVerses.length)],
+        newTestament: ntVerses[Math.floor(Math.random() * ntVerses.length)]
       });
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
-
   const handleVerseTypeChange = (type: VerseType) => {
     setVerseType(type);
     const verses = type === 'commission' ? commissionVerses : helpVerses;
@@ -54,6 +85,23 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse }) => {
         </h1>
         
         {/* Verse Type Toggle */}
+        <div className="flex justify-center space-x-4 mb-8">
+          <div className="flex items-center space-x-2 mb-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useAI}
+                onChange={(e) => setUseAI(e.target.checked)}
+                className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+              />
+              <span className="flex items-center space-x-1 text-sm font-medium text-gray-700">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span>AI Generated</span>
+              </span>
+            </label>
+          </div>
+        </div>
+        
         <div className="flex justify-center space-x-4 mb-8">
           <button
             onClick={() => handleVerseTypeChange('commission')}
