@@ -3,14 +3,9 @@ import { Verse } from '../types';
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
 
 export class ScriptureApiService {
-  private static apiKey = import.meta.env.VITE_SCRIPTURE_API_KEY;
+  private static apiKey = '6d078a413735440025d1f98883a8d372';
 
   static async getVerse(reference: string, versionId: string): Promise<Verse | null> {
-    if (!this.apiKey) {
-      console.warn('Scripture API key not configured');
-      return null;
-    }
-
     try {
       // First, search for the passage to get the correct ID
       const searchResponse = await fetch(

@@ -2,27 +2,27 @@ import { BibleVersion } from '../types';
 
 export const bibleVersions: BibleVersion[] = [
   {
-    id: 'de4e12af7f28f599-02',
+    id: 'de4e12af7f28f599-01',
     name: 'King James Version',
     abbreviation: 'KJV'
   },
   {
-    id: 'c315fa9f71d4af3a-01',
+    id: '114c1c4e4b214513-01',
     name: 'New King James Version',
     abbreviation: 'NKJV'
   },
   {
-    id: '71c6eab17ae5b667-01',
+    id: '7142879509583d59-01',
     name: 'New Living Translation',
     abbreviation: 'NLT'
   },
   {
-    id: 'f421fe261da7624f-01',
+    id: '90c8a4bdc6b54c6b-01',
     name: 'English Standard Version',
     abbreviation: 'ESV'
   },
   {
-    id: '06125adad2d5898a-01',
+    id: '685d1470fe4d5361-01',
     name: 'American Standard Version',
     abbreviation: 'ASV'
   }
