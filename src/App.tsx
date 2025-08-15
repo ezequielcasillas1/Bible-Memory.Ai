@@ -71,6 +71,15 @@ interface Achievement {
   unlockedAt?: Date;
 }
 
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+}
+
+type Page = 'generator' | 'memorize' | 'profile' | 'chat' | 'history' | 'favorites';
+
 interface MemorizationSession {
   verse: Verse;
   startTime: Date;
