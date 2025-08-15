@@ -2,10 +2,15 @@ import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
-const API_KEY = import.meta.env.VITE_SCRIPTURE_API_KEY;
+const API_KEY = import.meta.env.VITE_SCRIPTURE_API_KEY || '6d078a413735440025d1f98883a8d372';
 
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, limit: number = 20): Promise<SearchResult[]> {
+    // If no API key is available, use fallback search immediately
+    if (!API_KEY || API_KEY === 'your_api_key_here') {
+      return this.fallbackSearch(query);
+    }
+    
     try {
       const response = await fetch(
         `${SCRIPTURE_API_BASE}/bibles/${versionId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
@@ -87,7 +92,7 @@ export class BibleSearchService {
   }
 
   private static fallbackSearch(query: string): SearchResult[] {
-    // Fallback with some popular verses that might match the query
+    // Expanded fallback with popular verses that might match the query
     const fallbackVerses = [
       {
         id: 'fallback-1',
@@ -108,12 +113,73 @@ export class BibleSearchService {
         chapter: 3,
         verse: 5,
         version: 'KJV'
+      },
+      {
+        id: 'fallback-3',
+        text: 'I can do all things through Christ which strengtheneth me.',
+        reference: 'Philippians 4:13',
+        testament: 'NT' as const,
+        book: 'Philippians',
+        chapter: 4,
+        verse: 13,
+        version: 'KJV'
+      },
+      {
+        id: 'fallback-4',
+        text: 'And we know that all things work together for good to them that love God, to them who are the called according to his purpose.',
+        reference: 'Romans 8:28',
+        testament: 'NT' as const,
+        book: 'Romans',
+        chapter: 8,
+        verse: 28,
+        version: 'KJV'
+      },
+      {
+        id: 'fallback-5',
+        text: 'The Lord is my shepherd; I shall not want.',
+        reference: 'Psalm 23:1',
+        testament: 'OT' as const,
+        book: 'Psalm',
+        chapter: 23,
+        verse: 1,
+        version: 'KJV'
+      },
+      {
+        id: 'fallback-6',
+        text: 'For I know the thoughts that I think toward you, saith the Lord, thoughts of peace, and not of evil, to give you an expected end.',
+        reference: 'Jeremiah 29:11',
+        testament: 'OT' as const,
+        book: 'Jeremiah',
+        chapter: 29,
+        verse: 11,
+        version: 'KJV'
+      },
+      {
+        id: 'fallback-7',
+        text: 'Be strong and of a good courage; be not afraid, neither be thou dismayed: for the Lord thy God is with thee whithersoever thou goest.',
+        reference: 'Joshua 1:9',
+        testament: 'OT' as const,
+        book: 'Joshua',
+        chapter: 1,
+        verse: 9,
+        version: 'KJV'
+      },
+      {
+        id: 'fallback-8',
+        text: 'Come unto me, all ye that labour and are heavy laden, and I will give you rest.',
+        reference: 'Matthew 11:28',
+        testament: 'NT' as const,
+        book: 'Matthew',
+        chapter: 11,
+        verse: 28,
+        version: 'KJV'
       }
     ];
 
     return fallbackVerses.filter(verse => 
       verse.text.toLowerCase().includes(query.toLowerCase()) ||
-      verse.reference.toLowerCase().includes(query.toLowerCase())
+      verse.reference.toLowerCase().includes(query.toLowerCase()) ||
+      verse.book.toLowerCase().includes(query.toLowerCase())
     );
   }
 }
