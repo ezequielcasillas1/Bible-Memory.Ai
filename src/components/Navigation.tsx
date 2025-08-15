@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Brain, User } from 'lucide-react';
+import { Home, Brain, Search, Heart, History, User } from 'lucide-react';
 import { Tab } from '../types';
 
 interface NavigationProps {
@@ -11,6 +11,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'generator' as Tab, label: 'Generator', icon: Home },
     { id: 'memorize' as Tab, label: 'Memorize', icon: Brain },
+    { id: 'search' as Tab, label: 'Search', icon: Search },
+    { id: 'favorites' as Tab, label: 'Favorites', icon: Heart },
+    { id: 'history' as Tab, label: 'History', icon: History },
     { id: 'profile' as Tab, label: 'Profile', icon: User }
   ];
 

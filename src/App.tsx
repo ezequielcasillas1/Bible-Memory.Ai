@@ -6,6 +6,9 @@ import Navigation from './components/Navigation';
 import SettingsModal from './components/SettingsModal';
 import GeneratorPage from './pages/GeneratorPage';
 import MemorizePage from './pages/MemorizePage';
+import SearchPage from './pages/SearchPage';
+import FavoritesPage from './pages/FavoritesPage';
+import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
 
 const App: React.FC = () => {
@@ -106,6 +109,28 @@ const App: React.FC = () => {
             onComplete={handleMemorizationComplete}
             onBackToGenerator={handleBackToGenerator}
             userStats={userStats}
+          />
+        )}
+        
+        {activeTab === 'search' && (
+          <SearchPage 
+            settings={settings}
+            onMemorizeVerse={handleMemorizeVerse}
+          />
+        )}
+        
+        {activeTab === 'favorites' && (
+          <FavoritesPage 
+            settings={settings}
+            onMemorizeVerse={handleMemorizeVerse}
+          />
+        )}
+        
+        {activeTab === 'history' && (
+          <HistoryPage 
+            settings={settings}
+            userStats={userStats}
+            onMemorizeVerse={handleMemorizeVerse}
           />
         )}
         
