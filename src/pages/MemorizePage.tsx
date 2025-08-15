@@ -439,6 +439,58 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
 
             {/* Improvement Suggestions */}
             <div className="space-y-6">
+              {/* Verse Comparison */}
+              <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <span className="mr-2">📝</span>
+                    Verse Comparison
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                  {/* User's Version */}
+                  <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-200">
+                    <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                      Your Version
+                    </h4>
+                    <div className="text-sm leading-relaxed">
+                      {renderComparisonText(userInput, selectedVerse.text, 'user')}
+                    </div>
+                  </div>
+                  
+                  {/* Original Version */}
+                  <div className="p-6">
+                    <h4 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                      Original Verse
+                    </h4>
+                    <div className="text-sm leading-relaxed">
+                      {renderComparisonText(userInput, selectedVerse.text, 'original')}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Legend */}
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                  <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+                    <div className="flex items-center space-x-1">
+                      <span className="w-3 h-3 bg-green-200 rounded"></span>
+                      <span>Correct</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="w-3 h-3 bg-red-200 rounded"></span>
+                      <span>Incorrect/Missing</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <span className="w-3 h-3 bg-yellow-200 rounded"></span>
+                      <span>Extra Words</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Analysis */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
