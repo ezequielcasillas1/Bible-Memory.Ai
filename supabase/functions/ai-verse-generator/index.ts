@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +6,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -15,14 +13,12 @@ serve(async (req) => {
   try {
     const { verseType, testament, bibleVersion } = await req.json()
     
-    // Get OpenAI API key from Supabase secrets (set via dashboard)
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
     if (!openaiApiKey) {
       throw new Error('OpenAI API key not configured')
     }
 
-    // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -34,22 +30,42 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a Bible verse expert. Generate meaningful Bible verses for memorization.`
+            content: `You are a Bible scholar and memorization expert. Generate meaningful, well-known Bible verses that are excellent for memorization. Focus on verses that are:
+            1. Theologically significant
+            2. Practically applicable to daily life
+            3. Memorable and quotable
+            4. Appropriate length for memorization (not too long)
+            5. Well-known and beloved by Christians`
           },
           {
             role: 'user',
-            content: `Generate a ${testament} ${verseType} verse from the ${bibleVersion || 'King James Version'} with reference and explanation of why it's meaningful for ${verseType === 'commission' ? 'encouraging believers in their faith journey' : 'helping people in difficult times'}.
+            content: `Generate a ${testament === 'OT' ? 'Old Testament' : 'New Testament'} verse perfect for memorization that serves as a ${verseType === 'commission' ? 'commission/encouragement verse - something that builds faith, provides hope, or encourages believers in their spiritual journey' : 'help/comfort verse - something that provides comfort, strength, or guidance during difficult times'}.
 
-            Return JSON format:
-            {
-              "text": "verse text",
-              "reference": "Book Chapter:Verse",
-              "reason": "explanation of why this verse is meaningful",
-              "version": "${bibleVersion || 'KJV'}"
-            }`
+Requirements:
+- Use ${bibleVersion || 'King James Version'} translation
+- Choose a well-known, beloved verse
+- Verse should be 1-3 verses long (good for memorization)
+- Must be from the ${testament === 'OT' ? 'Old Testament' : 'New Testament'}
+
+Provide detailed explanation of:
+1. Why this verse is meaningful for ${verseType === 'commission' ? 'encouraging believers' : 'helping people in difficult times'}
+2. Historical/theological context
+3. Practical application for daily life
+4. Memory techniques that could help with this specific verse
+
+Return JSON format:
+{
+  "text": "exact verse text from ${bibleVersion || 'KJV'}",
+  "reference": "Book Chapter:Verse",
+  "reason": "Detailed explanation of why this verse is meaningful and applicable",
+  "context": "Brief historical/theological context",
+  "application": "How this verse applies to daily Christian life",
+  "memoryTips": "Specific techniques for memorizing this particular verse",
+  "version": "${bibleVersion || 'KJV'}"
+}`
           }
         ],
-        max_tokens: 300,
+        max_tokens: 600,
         temperature: 0.7,
       }),
     })

@@ -27,10 +27,12 @@ export class AIService {
         testament,
         reason: verseData.reason,
         version: verseData.version || bibleVersion,
+        context: verseData.context,
+        application: verseData.application,
+        memoryTips: verseData.memoryTips
       };
     } catch (error) {
       console.error('AI verse generation failed:', error);
-      // Fallback to static verses if AI fails
       throw new Error('AI service temporarily unavailable');
     }
   }
@@ -40,7 +42,14 @@ export class AIService {
     originalVerse: string,
     accuracy: number,
     userStats: UserStats
-  ): Promise<{ feedback: string; suggestions: string[] }> {
+  ): Promise<{
+    feedback: string;
+    analysis: string;
+    strategies: string[];
+    spiritualInsight: string;
+    nextSteps: string;
+    encouragement: string;
+  }> {
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-feedback`, {
         method: 'POST',
@@ -54,14 +63,18 @@ export class AIService {
       if (!response.ok) {
         throw new Error('Failed to get AI feedback');
       }
-      if (!response.ok && !data.fallback) {
-      }
+
+      const data = await response.json();
 
       // Return fallback feedback if API key is not configured
       if (data.fallback) {
         return {
           feedback: data.feedback,
-          suggestions: data.suggestions
+          analysis: "Keep practicing to improve your accuracy!",
+          strategies: data.suggestions,
+          spiritualInsight: "Focus on understanding the verse's meaning to help with memorization.",
+          nextSteps: "Try practicing this verse again tomorrow.",
+          encouragement: "You're making great progress!"
         };
       }
 
@@ -70,17 +83,17 @@ export class AIService {
       console.error('AI feedback failed:', error);
       // Fallback to static feedback
       return {
-        feedback: accuracy >= 90 ? "Excellent work!" : accuracy >= 70 ? "Good job!" : "Keep practicing!",
-      }
-      console.warn('AI feedback not available, using fallback');
-      // Return fallback feedback when AI is not available
-      return {
         feedback: "Great effort on your memorization! Keep practicing to improve your accuracy.",
-        suggestions: [
-          "Try breaking the verse into smaller chunks",
-          "Practice reading the verse aloud several times", 
-          "Focus on understanding the meaning to help with recall"
-        ]
+        analysis: "Focus on the areas where you had difficulty and try breaking the verse into smaller parts.",
+        strategies: [
+          "Break the verse into smaller chunks and memorize piece by piece",
+          "Practice reading the verse aloud several times before memorizing",
+          "Focus on understanding the meaning to help with recall",
+          "Use visualization techniques to create mental images of key words"
+        ],
+        spiritualInsight: "Understanding the deeper meaning of Scripture helps with both memorization and spiritual growth.",
+        nextSteps: "Practice this verse again tomorrow, focusing on the parts you found most challenging.",
+        encouragement: "Every verse you memorize is treasure stored in your heart. Keep going!"
       };
     }
   }

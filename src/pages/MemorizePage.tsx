@@ -30,7 +30,11 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   const [result, setResult] = useState<{
     accuracy: number;
     feedback: string;
-    suggestions: string[];
+    analysis: string;
+    strategies: string[];
+    spiritualInsight: string;
+    nextSteps: string;
+    encouragement: string;
   } | null>(null);
   const [practiceTime, setPracticeTime] = useState(0);
 
@@ -95,12 +99,28 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     
     // Try to get AI feedback, fallback to static feedback
     AIService.getPersonalizedFeedback(userInput, session.verse.text, accuracy, userStats)
-      .then(({ feedback, suggestions }) => {
-        setResult({ accuracy, feedback, suggestions });
+      .then((aiResponse) => {
+        setResult({ 
+          accuracy, 
+          feedback: aiResponse.feedback,
+          analysis: aiResponse.analysis,
+          strategies: aiResponse.strategies,
+          spiritualInsight: aiResponse.spiritualInsight,
+          nextSteps: aiResponse.nextSteps,
+          encouragement: aiResponse.encouragement
+        });
       })
       .catch(() => {
         const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
-        setResult({ accuracy, feedback, suggestions });
+        setResult({ 
+          accuracy, 
+          feedback, 
+          analysis: "Keep practicing to improve your accuracy!",
+          strategies: suggestions,
+          spiritualInsight: "Focus on understanding the verse's meaning.",
+          nextSteps: "Try practicing again tomorrow.",
+          encouragement: "You're making progress!"
+        });
       });
     
     const updatedSession = {
@@ -262,22 +282,53 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
             </div>
 
             {/* Improvement Suggestions */}
-            {result.suggestions.length > 0 && (
+            <div className="space-y-6">
+              {/* Analysis */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="mr-2">🔍</span>
+                  Analysis
+                </h3>
+                <p className="text-gray-700">{result.analysis}</p>
+              </div>
+
+              {/* Memorization Strategies */}
+              {result.strategies.length > 0 && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                    <Lightbulb className="w-5 h-5 mr-2 text-yellow-600" />
+                    Memorization Strategies
+                  </h3>
+                  <ul className="space-y-3">
+                    {result.strategies.map((strategy, index) => (
+                      <li key={index} className="flex items-start space-x-3">
+                        <span className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-700">{strategy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Spiritual Insight */}
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="mr-2">✨</span>
+                  Spiritual Insight
+                </h3>
+                <p className="text-gray-700 italic">{result.spiritualInsight}</p>
+              </div>
+
+              {/* Next Steps */}
               <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2 text-yellow-600" />
-                  Improvement Tips
+                  <span className="mr-2">🎯</span>
+                  Next Steps
                 </h3>
-                <ul className="space-y-2">
-                  {result.suggestions.map((suggestion, index) => (
-                    <li key={index} className="flex items-start space-x-2">
-                      <span className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></span>
-                      <span className="text-gray-700">{suggestion}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-gray-700">{result.nextSteps}</p>
               </div>
-            )}
 
             {/* Original Verse */}
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">

@@ -41,6 +41,21 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize }) => {
             💡 {verse.reason}
           </p>
         )}
+        {verse.context && (
+          <p className="text-sm text-gray-600 mt-3 p-3 bg-blue-50 rounded-lg">
+            📚 <strong>Context:</strong> {verse.context}
+          </p>
+        )}
+        {verse.application && (
+          <p className="text-sm text-gray-600 mt-3 p-3 bg-green-50 rounded-lg">
+            🌱 <strong>Application:</strong> {verse.application}
+          </p>
+        )}
+        {verse.memoryTips && (
+          <p className="text-sm text-gray-600 mt-3 p-3 bg-purple-50 rounded-lg">
+            🧠 <strong>Memory Tips:</strong> {verse.memoryTips}
+          </p>
+        )}
       </div>
       
       <button

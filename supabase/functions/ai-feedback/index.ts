@@ -48,27 +48,47 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a Bible memorization coach. Provide encouraging, specific feedback to help users improve their Scripture memorization.`
+            content: `You are an expert Bible memorization coach with deep knowledge of Scripture and proven memorization techniques. You provide detailed, personalized feedback that combines spiritual encouragement with practical memorization strategies. Your responses should be warm, encouraging, and actionable.`
           },
           {
             role: 'user',
-            content: `User attempted to memorize: "${originalVerse}"
-            
-            Their attempt: "${userInput}"
-            Accuracy: ${accuracy}%
-            
-            User stats: ${userStats.versesMemorized} verses memorized, ${userStats.currentStreak} day streak, ${Math.round(userStats.averageAccuracy)}% average accuracy.
-            
-            Provide personalized feedback and 2-3 specific improvement suggestions. Be encouraging and reference their progress.
-            
-            Return JSON format:
-            {
-              "feedback": "encouraging message",
-              "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
-            }`
+            content: `MEMORIZATION ATTEMPT ANALYSIS:
+
+Original Verse: "${originalVerse}"
+User's Attempt: "${userInput}"
+Accuracy Score: ${accuracy}%
+
+USER PROGRESS CONTEXT:
+- Total verses memorized: ${userStats.versesMemorized}
+- Current streak: ${userStats.currentStreak} days
+- Average accuracy: ${Math.round(userStats.averageAccuracy)}%
+- Experience level: ${userStats.versesMemorized < 5 ? 'Beginner' : userStats.versesMemorized < 20 ? 'Intermediate' : 'Advanced'}
+
+PROVIDE COMPREHENSIVE FEEDBACK INCLUDING:
+
+1. PERSONALIZED ENCOURAGEMENT: Reference their progress, streak, and improvement
+2. SPECIFIC ANALYSIS: What they got right, what needs work
+3. MEMORIZATION STRATEGIES: 4-5 detailed, actionable techniques
+4. SPIRITUAL INSIGHT: Brief reflection on the verse's meaning to aid retention
+5. NEXT STEPS: Specific practice recommendations
+
+Return JSON format:
+{
+  "feedback": "Detailed encouraging message that acknowledges their specific progress and effort",
+  "analysis": "Specific analysis of what they got right and what needs improvement",
+  "strategies": [
+    "Detailed memorization technique 1",
+    "Detailed memorization technique 2", 
+    "Detailed memorization technique 3",
+    "Detailed memorization technique 4"
+  ],
+  "spiritualInsight": "Brief insight about the verse's meaning to help with understanding and retention",
+  "nextSteps": "Specific recommendations for their next practice session",
+  "encouragement": "Final motivational message"
+}`
           }
         ],
-        max_tokens: 250,
+        max_tokens: 800,
         temperature: 0.8,
       }),
     })

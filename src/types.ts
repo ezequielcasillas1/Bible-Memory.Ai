@@ -5,6 +5,9 @@ export interface Verse {
   testament: 'OT' | 'NT';
   reason?: string;
   version?: string;
+  context?: string;
+  application?: string;
+  memoryTips?: string;
 }
 
 export interface UserStats {
