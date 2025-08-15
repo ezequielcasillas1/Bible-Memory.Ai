@@ -3,6 +3,8 @@ import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain } from 'lucide-react';
 import { Verse, MemorizationSession } from '../types';
 import { calculateAccuracy, generateFeedback } from '../utils/scoring';
 import { AIService } from '../services/aiService';
+import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
+import { getVersionById } from '../data/bibleVersions';
 import CountdownTimer from '../components/CountdownTimer';
 
 interface MemorizePageProps {
@@ -29,6 +31,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   const [session, setSession] = useState<MemorizationSession | null>(null);
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [selectedWord, setSelectedWord] = useState<{ word: string; suggestion: string } | null>(null);
   const [result, setResult] = useState<{
     accuracy: number;
     feedback: string;
@@ -129,13 +133,22 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     if (!session || !userInput.trim()) return;
 
     setIsLoadingFeedback(true);
-    const accuracy = calculateAccuracy(userInput, session.verse.text);
     
-    // Try to get AI feedback, fallback to static feedback
-    AIService.getPersonalizedFeedback(userInput, session.verse.text, accuracy, userStats)
+    // Get Bible version info
+    const bibleVersion = getVersionById(userStats.preferredVersion);
+    const versionName = bibleVersion?.name || 'King James Version';
+    
+    // First get verse comparison
+    VerseComparisonService.compareVerses(userInput, session.verse.text, versionName)
+      .then((comparison) => {
+        setComparisonResult(comparison);
+        
+        // Then get AI feedback with the accurate comparison data
+        return AIService.getPersonalizedFeedback(userInput, session.verse.text, comparison.accuracy, userStats);
+      })
       .then((aiResponse) => {
         setResult({ 
-          accuracy, 
+          accuracy: comparisonResult?.accuracy || 0, 
           feedback: aiResponse.feedback,
           analysis: aiResponse.analysis,
           strategies: aiResponse.strategies,
@@ -147,6 +160,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         setPhase('feedback');
       })
       .catch(() => {
+        // Fallback if everything fails
+        const accuracy = calculateAccuracy(userInput, session.verse.text);
         const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
         setResult({ 
           accuracy, 
@@ -164,14 +179,14 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     const updatedSession = {
       ...session,
       attempts: session.attempts + 1,
-      accuracy,
-      completed: accuracy >= 70
+      accuracy: comparisonResult?.accuracy || 0,
+      completed: (comparisonResult?.accuracy || 0) >= 70
     };
     
     setSession(updatedSession);
     
     // Award points based on accuracy
-    const points = Math.round(accuracy * 1.5);
+    const points = Math.round((comparisonResult?.accuracy || 0) * 1.5);
     onComplete(points);
   };
 
@@ -181,6 +196,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     setIsActive(false);
     setUserInput('');
     setResult(null);
+    setComparisonResult(null);
+    setSelectedWord(null);
     setIsLoadingFeedback(false);
     setPracticeTime(0);
   };
@@ -191,67 +208,45 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderComparisonText = (userText: string, originalText: string, type: 'user' | 'original') => {
-    const normalizeText = (text: string) => 
-      text.toLowerCase()
-          .replace(/[^\w\s]/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-    const userWords = normalizeText(userText).split(' ');
-    const originalWords = normalizeText(originalText).split(' ');
-    
-    if (type === 'user') {
-      return userWords.map((word, index) => {
-        const originalWord = originalWords[index];
-        let className = '';
-        let displayText = word;
-        
-        if (!originalWord) {
-          // Extra word
-          className = 'bg-yellow-200 text-yellow-800 px-1 rounded';
-          displayText = `+${word}`;
-        } else if (word === originalWord) {
-          // Correct word
-          className = 'bg-green-200 text-green-800 px-1 rounded';
-        } else {
-          // Incorrect word
-          className = 'bg-red-200 text-red-800 px-1 rounded';
-          displayText = `${word}→${originalWord}`;
-        }
-        
-        return (
-          <span key={index} className={`${className} mr-1 inline-block mb-1`}>
-            {displayText}
-          </span>
-        );
-      });
-    } else {
-      // Original version with highlighting
-      return originalWords.map((word, index) => {
-        const userWord = userWords[index];
-        let className = '';
-        let displayText = word;
-        
-        if (!userWord) {
-          // Missing word
-          className = 'bg-red-200 text-red-800 px-1 rounded';
-          displayText = `[${word}]`;
-        } else if (word === userWord) {
-          // Correct word
-          className = 'bg-green-200 text-green-800 px-1 rounded';
-        } else {
-          // User got it wrong
-          className = 'bg-red-200 text-red-800 px-1 rounded';
-        }
-        
-        return (
-          <span key={index} className={`${className} mr-1 inline-block mb-1`}>
-            {displayText}
-          </span>
-        );
-      });
-    }
+  const renderInteractiveComparison = (words: any[], type: 'user' | 'original') => {
+    return words.map((wordData, index) => {
+      const { userWord, originalWord, status, suggestion } = wordData;
+      const displayWord = type === 'user' ? userWord : originalWord;
+      
+      if (!displayWord) return null;
+      
+      let className = 'px-2 py-1 rounded cursor-pointer transition-all hover:scale-105 mr-1 mb-1 inline-block ';
+      
+      switch (status) {
+        case 'correct':
+          className += 'bg-green-200 text-green-800 hover:bg-green-300';
+          break;
+        case 'incorrect':
+          className += 'bg-red-200 text-red-800 hover:bg-red-300';
+          break;
+        case 'missing':
+          className += 'bg-red-200 text-red-800 hover:bg-red-300';
+          break;
+        case 'extra':
+          className += 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300';
+          break;
+        default:
+          className += 'bg-gray-200 text-gray-800';
+      }
+      
+      return (
+        <span
+          key={index}
+          className={className}
+          onClick={() => suggestion && setSelectedWord({ word: displayWord, suggestion })}
+          title={suggestion || 'Click for details'}
+        >
+          {displayWord}
+          {status === 'extra' && type === 'user' && ' (+)'}
+          {status === 'missing' && type === 'original' && ' (missing)'}
+        </span>
+      );
+    });
   };
   if (!selectedVerse) {
     return (
@@ -439,57 +434,127 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
 
             {/* Improvement Suggestions */}
             <div className="space-y-6">
-              {/* Verse Comparison */}
-              <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <span className="mr-2">📝</span>
-                    Verse Comparison
-                  </h3>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                  {/* User's Version */}
-                  <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-200">
-                    <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center">
-                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                      Your Version
-                    </h4>
-                    <div className="text-sm leading-relaxed">
-                      {renderComparisonText(userInput, selectedVerse.text, 'user')}
+              {/* Interactive Verse Comparison */}
+              {comparisonResult && (
+                <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center justify-between">
+                      <span className="flex items-center">
+                        <span className="mr-2">📝</span>
+                        Interactive Verse Comparison
+                      </span>
+                      <span className="text-sm font-normal text-gray-600">
+                        {getVersionById(userStats.preferredVersion)?.name || 'KJV'}
+                      </span>
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                    {/* User's Version */}
+                    <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-200">
+                      <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center">
+                        <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                        Your Version ({comparisonResult.correctWords}/{comparisonResult.totalWords} correct)
+                      </h4>
+                      <div className="text-sm leading-relaxed">
+                        {renderInteractiveComparison(comparisonResult.userComparison, 'user')}
+                      </div>
+                    </div>
+                    
+                    {/* Original Version */}
+                    <div className="p-6">
+                      <h4 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
+                        <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                        Original Verse
+                      </h4>
+                      <div className="text-sm leading-relaxed">
+                        {renderInteractiveComparison(comparisonResult.originalComparison, 'original')}
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Original Version */}
-                  <div className="p-6">
-                    <h4 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
-                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                      Original Verse
-                    </h4>
-                    <div className="text-sm leading-relaxed">
-                      {renderComparisonText(userInput, selectedVerse.text, 'original')}
+                  {/* Statistics */}
+                  <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div>
+                        <div className="text-lg font-bold text-green-600">{comparisonResult.correctWords}</div>
+                        <div className="text-xs text-gray-600">Correct</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-red-600">{comparisonResult.incorrectWords}</div>
+                        <div className="text-xs text-gray-600">Incorrect</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-red-600">{comparisonResult.missingWords}</div>
+                        <div className="text-xs text-gray-600">Missing</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-yellow-600">{comparisonResult.extraWords}</div>
+                        <div className="text-xs text-gray-600">Extra</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                    <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+                      <div className="flex items-center space-x-1">
+                        <span className="w-3 h-3 bg-green-200 rounded"></span>
+                        <span>Correct</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="w-3 h-3 bg-red-200 rounded"></span>
+                        <span>Incorrect/Missing</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="w-3 h-3 bg-yellow-200 rounded"></span>
+                        <span>Extra Words</span>
+                      </div>
+                      <div className="text-purple-600 font-medium">
+                        💡 Click any word for details
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Legend */}
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                  <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
-                    <div className="flex items-center space-x-1">
-                      <span className="w-3 h-3 bg-green-200 rounded"></span>
-                      <span>Correct</span>
+              )}
+
+              {/* Word Detail Modal */}
+              {selectedWord && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                    <div className="text-center mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Word Analysis</h3>
+                      <div className="text-2xl font-bold text-purple-600 bg-purple-100 rounded-lg py-2 px-4 inline-block">
+                        "{selectedWord.word}"
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="w-3 h-3 bg-red-200 rounded"></span>
-                      <span>Incorrect/Missing</span>
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                      <p className="text-gray-700">{selectedWord.suggestion}</p>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="w-3 h-3 bg-yellow-200 rounded"></span>
-                      <span>Extra Words</span>
-                    </div>
+                    <button
+                      onClick={() => setSelectedWord(null)}
+                      className="w-full button-primary"
+                    >
+                      Got it!
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Detailed Feedback from API */}
+              {comparisonResult && (
+                <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <span className="mr-2">📝</span>
+                    Detailed Analysis
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <pre className="whitespace-pre-wrap text-gray-700 text-sm">
+                    {comparisonResult.detailedFeedback}
+                  </pre>
+                </div>
+              )}
 
               {/* Analysis */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">

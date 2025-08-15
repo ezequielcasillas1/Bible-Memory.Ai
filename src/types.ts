@@ -54,3 +54,23 @@ export interface AppSettings {
   preferredVersion: string;
   useAI: boolean;
 }
+
+export interface WordComparison {
+  userWord: string;
+  originalWord: string;
+  status: 'correct' | 'incorrect' | 'missing' | 'extra';
+  position: number;
+  suggestion?: string;
+}
+
+export interface ComparisonResult {
+  accuracy: number;
+  totalWords: number;
+  correctWords: number;
+  incorrectWords: number;
+  missingWords: number;
+  extraWords: number;
+  userComparison: WordComparison[];
+  originalComparison: WordComparison[];
+  detailedFeedback: string;
+}
