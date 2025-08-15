@@ -330,33 +330,34 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                 <p className="text-gray-700">{result.nextSteps}</p>
               </div>
 
-            {/* Original Verse */}
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Original Verse</h3>
-              <p className="text-lg leading-relaxed text-gray-700 italic">
-                "{selectedVerse.text}"
-              </p>
-              <p className="text-purple-600 font-medium mt-2">
-                {selectedVerse.reference}
-              </p>
-            </div>
+              {/* Original Verse */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Original Verse</h3>
+                <p className="text-lg leading-relaxed text-gray-700 italic">
+                  "{selectedVerse.text}"
+                </p>
+                <p className="text-purple-600 font-medium mt-2">
+                  {selectedVerse.reference}
+                </p>
+              </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-center space-x-4">
-              <button
-                onClick={retry}
-                className="button-secondary flex items-center space-x-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Try Again</span>
-              </button>
-              
-              <button
-                onClick={onBackToGenerator}
-                className="button-primary"
-              >
-                New Verse
-              </button>
+              {/* Action Buttons */}
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={retry}
+                  className="button-secondary flex items-center space-x-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Try Again</span>
+                </button>
+                
+                <button
+                  onClick={onBackToGenerator}
+                  className="button-primary"
+                >
+                  New Verse
+                </button>
+              </div>
             </div>
           </>
         )}
