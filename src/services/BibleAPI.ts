@@ -160,6 +160,7 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
         }
       } catch (error) {
         console.warn(`Failed to fetch reference ${query}:`, error);
+        // Continue to fallback search instead of throwing
       }
     }
     
