@@ -31,19 +31,6 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
         generateAIVerses();
       } else {
         generateBibleApiVerses();
-      } else {
-        const verses = verseType === 'commission' ? commissionVerses : helpVerses;
-        const otVerses = verses.filter(v => v.testament === 'OT');
-        const ntVerses = verses.filter(v => v.testament === 'NT');
-        
-        const randomOT = otVerses[Math.floor(Math.random() * otVerses.length)];
-        const randomNT = ntVerses[Math.floor(Math.random() * ntVerses.length)];
-        
-        setCurrentVerses({
-          oldTestament: randomOT,
-          newTestament: randomNT
-        });
-        setIsLoading(false);
       }
     }, 800);
   };
