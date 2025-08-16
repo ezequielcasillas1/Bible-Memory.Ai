@@ -56,9 +56,8 @@ const App: React.FC = () => {
         console.error('Failed to load Bible versions:', error);
         // Fallback to basic versions if API fails
         const fallbackVersions: BibleVersion[] = [
-          { id: 'de4e12af7f28f599-01', name: 'King James Version', abbreviation: 'KJV', available: true },
-          { id: '06125adad2d5898a-01', name: 'American Standard Version', abbreviation: 'ASV', available: true },
-          { id: '9879dbb7cfe39e4d-01', name: 'World English Bible', abbreviation: 'WEB', available: true },
+          { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
+          { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true },
           { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false },
           { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false },
           { id: 'esv', name: 'English Standard Version', abbreviation: 'ESV', available: false }
