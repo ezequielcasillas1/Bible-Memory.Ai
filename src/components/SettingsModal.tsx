@@ -84,8 +84,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 {availableBibleVersions.map((version) => (
-                  <option key={version.id} value={version.id}>
+                  <option key={version.id} value={version.id} disabled={!version.available}>
                     {version.abbreviation} – {version.name}
+                    {!version.available ? ' (Coming Soon)' : ''}
                   </option>
                 ))}
               </select>
