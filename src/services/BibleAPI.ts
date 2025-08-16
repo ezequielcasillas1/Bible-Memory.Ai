@@ -31,31 +31,31 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         available: true
       },
       { 
-        id: 'webus', 
+        id: 'en-webus', 
         abbreviation: 'WEB', 
         name: 'World English Bible (U.S. edition)', 
         description: 'Modern English translation in the public domain',
         available: true
       },
       { 
-        id: 'ylt', 
+        id: 'en-ylt', 
         abbreviation: 'YLT', 
         name: "Young's Literal Translation", 
-        description: 'Literal translation from 1898',
+        description: "Young's Literal Translation (1898)",
         available: true
       },
       { 
-        id: 'darby', 
+        id: 'en-darby', 
         abbreviation: 'DARBY', 
         name: 'Darby Bible', 
-        description: 'John Nelson Darby translation from 1890',
+        description: 'Darby Bible (1890)',
         available: true
       },
       { 
-        id: 'drb', 
+        id: 'en-drb', 
         abbreviation: 'DRB', 
         name: 'Douay-Rheims Bible', 
-        description: 'Catholic translation based on the Latin Vulgate',
+        description: 'Douay-Rheims Bible',
         available: true
       },
       // Coming soon versions
@@ -96,7 +96,7 @@ export async function getPassageByReference(versionId: string, reference: string
     console.log(`Fetching passage: ${reference} in ${versionId}`);
     
     // Check if version is available
-    const availableVersions = ['kjv', 'asv', 'webus', 'ylt', 'darby', 'drb'];
+    const availableVersions = ['kjv', 'asv', 'en-webus', 'en-ylt', 'en-darby', 'en-drb'];
     if (!availableVersions.includes(versionId)) {
       throw new Error(`Version ${versionId} is not yet available.`);
     }
@@ -105,10 +105,10 @@ export async function getPassageByReference(versionId: string, reference: string
     const versionMap: { [key: string]: string } = {
       'kjv': 'kjv',
       'asv': 'asv', 
-      'webus': 'webus',
-      'ylt': 'ylt',
-      'darby': 'darby',
-      'drb': 'drb'
+      'en-webus': 'webus',
+      'en-ylt': 'ylt',
+      'en-darby': 'darby',
+      'en-drb': 'drb'
     };
     
     const apiVersion = versionMap[versionId] || versionId;
@@ -140,7 +140,7 @@ export async function getPassageByReference(versionId: string, reference: string
 export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
   try {
     // Check if version is available
-    const availableVersions = ['kjv', 'asv', 'webus', 'ylt', 'darby', 'drb'];
+    const availableVersions = ['kjv', 'asv', 'en-webus', 'en-ylt', 'en-darby', 'en-drb'];
     if (!availableVersions.includes(versionId)) {
       throw new Error(`Version ${versionId} is not yet available.`);
     }
