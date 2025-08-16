@@ -12,9 +12,9 @@ const BIBLE_API_BASE = "https://bible-api.com";
 /** Fetch the 2 available Bible versions (KJV and ASV) */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    console.log('Loading Bible versions from bible-api.com');
+    console.log('Loading Bible versions from bible-api.com and other sources');
     
-    // Return the two supported versions
+    // Return all supported free versions
     const versions: BibleVersion[] = [
       { 
         id: 'kjv', 
@@ -28,6 +28,34 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         abbreviation: 'ASV', 
         name: 'American Standard Version', 
         description: 'The 1901 American Standard Version',
+        available: true
+      },
+      { 
+        id: 'web', 
+        abbreviation: 'WEB', 
+        name: 'World English Bible', 
+        description: 'Modern English public domain translation',
+        available: true
+      },
+      { 
+        id: 'ylt', 
+        abbreviation: 'YLT', 
+        name: "Young's Literal Translation", 
+        description: '1898 literal translation by Robert Young',
+        available: true
+      },
+      { 
+        id: 'darby', 
+        abbreviation: 'DARBY', 
+        name: 'Darby Bible', 
+        description: '1890 translation by John Nelson Darby',
+        available: true
+      },
+      { 
+        id: 'drb', 
+        abbreviation: 'DRB', 
+        name: 'Douay-Rheims Bible', 
+        description: 'Catholic translation (public domain)',
         available: true
       },
       // Coming soon versions
@@ -67,14 +95,37 @@ export async function getPassageByReference(versionId: string, reference: string
   try {
     console.log(`Fetching passage: ${reference} in ${versionId}`);
     
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is supported
+    const supportedVersions = ['kjv', 'asv', 'web', 'ylt', 'darby', 'drb'];
+    if (!supportedVersions.includes(versionId)) {
+      throw new Error(`Version ${versionId} is not yet available. Supported versions: ${supportedVersions.join(', ')}.`);
     }
     
-    // Format the URL - bible-api.com uses format like: /john+3:16?translation=kjv
+    // Format the URL based on the API source
     const formattedReference = reference.toLowerCase().replace(/\s+/g, '+');
-    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
+    
+    let url: string;
+    if (versionId === 'kjv' || versionId === 'asv') {
+      // Use bible-api.com for KJV and ASV
+      url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
+    } else {
+      // Use getbible.net API for other versions
+      const apiVersionMap: { [key: string]: string } = {
+        'web': 'web',
+        'ylt': 'ylt',
+        'darby': 'darby',
+        'drb': 'douayrheims'
+      };
+      const apiVersion = apiVersionMap[versionId] || versionId;
+      
+      // Parse reference for getbible.net format (book/chapter/verse)
+      const parsedRef = parseReference(reference);
+      if (parsedRef) {
+        url = `https://getbible.net/json?passage=${parsedRef.book}+${parsedRef.chapter}:${parsedRef.verse}&version=${apiVersion}`;
+      } else {
+        throw new Error(`Could not parse reference: ${reference}`);
+      }
+    }
     
     console.log('API URL:', url);
     
@@ -88,6 +139,27 @@ export async function getPassageByReference(versionId: string, reference: string
     const data = await response.json();
     console.log('API response:', data);
     
+    // Normalize response format
+    if (versionId === 'kjv' || versionId === 'asv') {
+      return data;
+    } else {
+      // Convert getbible.net response to our format
+      if (data && data.book && data.book.length > 0) {
+        const book = data.book[0];
+        const chapter = book.chapter;
+        const verses = Object.values(chapter).join(' ');
+        
+        return {
+          reference: reference,
+          text: verses,
+          translation_id: versionId,
+          translation_name: getBibleVersions().then(versions => 
+            versions.find(v => v.id === versionId)?.name || versionId.toUpperCase()
+          )
+        };
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error("Failed to fetch passage:", error);
@@ -98,9 +170,10 @@ export async function getPassageByReference(versionId: string, reference: string
 /** Search for verses containing specific text or by reference */
 export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
   try {
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is supported
+    const supportedVersions = ['kjv', 'asv', 'web', 'ylt', 'darby', 'drb'];
+    if (!supportedVersions.includes(versionId)) {
+      throw new Error(`Version ${versionId} is not yet available. Supported versions: ${supportedVersions.join(', ')}.`);
     }
     
     console.log(`Searching for: "${query}" in ${versionId}`);
@@ -174,5 +247,61 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
   } catch (error) {
     console.error("Search failed:", error);
     return [];
+  }
+}
+
+// Helper function to parse Bible references
+function parseReference(reference: string): { book: string; chapter: number; verse: number } | null {
+  try {
+    // Handle various reference formats
+    const patterns = [
+      /^(\d?\s*\w+(?:\s+\w+)*)\s+(\d+):(\d+)(?:-\d+)?$/i, // "John 3:16" or "1 John 3:16"
+      /^(\d?\s*\w+(?:\s+\w+)*)\s+(\d+)$/i, // "Psalm 23"
+    ];
+    
+    for (const pattern of patterns) {
+      const match = reference.match(pattern);
+      if (match) {
+        const book = match[1].trim();
+        const chapter = parseInt(match[2]);
+        const verse = match[3] ? parseInt(match[3]) : 1;
+        
+        // Convert book names to getbible.net format
+        const bookMap: { [key: string]: string } = {
+          'psalm': 'psalms',
+          'psalms': 'psalms',
+          '1 john': '1john',
+          '2 john': '2john',
+          '3 john': '3john',
+          '1 peter': '1peter',
+          '2 peter': '2peter',
+          '1 samuel': '1samuel',
+          '2 samuel': '2samuel',
+          '1 kings': '1kings',
+          '2 kings': '2kings',
+          '1 chronicles': '1chronicles',
+          '2 chronicles': '2chronicles',
+          '1 corinthians': '1corinthians',
+          '2 corinthians': '2corinthians',
+          '1 thessalonians': '1thessalonians',
+          '2 thessalonians': '2thessalonians',
+          '1 timothy': '1timothy',
+          '2 timothy': '2timothy'
+        };
+        
+        const normalizedBook = bookMap[book.toLowerCase()] || book.toLowerCase().replace(/\s+/g, '');
+        
+        return {
+          book: normalizedBook,
+          chapter,
+          verse
+        };
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error parsing reference:', error);
+    return null;
   }
 }
