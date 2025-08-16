@@ -8,49 +8,26 @@ const API_KEY = '6d078a413735440025d1f98883a8d372';
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], limit: number = 20): Promise<SearchResult[]> {
     try {
-      // Check if we have a valid API key
-      if (!API_KEY) {
-        console.warn('No Scripture API key available, using fallback search');
+      // Check if the version is available
+      const version = availableVersions.find(v => v.id === versionId);
+      if (!version || !version.available) {
+        console.warn(`Version ${versionId} is not available, using fallback search`);
         return this.fallbackSearch(query, versionId, availableVersions);
       }
 
-      const response = await fetch(
-        `${SCRIPTURE_API_BASE}/bibles/${versionId}/search?query=${encodeURIComponent(query)}&limit=${limit}`,
-        {
-          headers: {
-            'api-key': API_KEY,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.warn('API key unauthorized, using fallback search');
-        } else if (response.status === 404) {
-          console.warn(`Bible version ${versionId} not found, using fallback search`);
-        } else {
-          console.warn(`API request failed with status ${response.status}, using fallback search`);
-        }
-        
-        return this.fallbackSearch(query, versionId, availableVersions);
-      }
-
-      const data = await response.json();
-      const version = getVersionById(versionId, availableVersions);
+      // Use the new Bible API search functionality
+      const { searchVerses } = await import('./BibleAPI');
+      const results = await searchVerses(query, versionId);
       
-      if (!data.data || !data.data.passages) {
-        return this.fallbackSearch(query, versionId, availableVersions);
-      }
-      
-      return data.data.passages.map((passage: any) => ({
-        id: `search-${passage.id}`,
-        text: this.cleanVerseText(passage.content),
-        reference: passage.reference,
-        testament: this.determineTestament(passage.reference),
-        book: this.extractBook(passage.reference),
-        chapter: this.extractChapter(passage.reference),
-        verse: this.extractVerse(passage.reference),
-        version: version?.abbreviation || 'KJV'
+      return results.map((passage: any) => ({
+        id: `search-${Date.now()}-${Math.random()}`,
+        text: passage.text || '',
+        reference: passage.reference || '',
+        testament: this.determineTestament(passage.reference || ''),
+        book: this.extractBook(passage.reference || ''),
+        chapter: this.extractChapter(passage.reference || ''),
+        verse: this.extractVerse(passage.reference || ''),
+        version: version.abbreviation
       }));
     } catch (error) {
       console.error('Bible search failed:', error);
@@ -60,8 +37,29 @@ export class BibleSearchService {
 
   static async getVerseByReference(reference: string, versionId: string, availableVersions: BibleVersion[]): Promise<SearchResult | null> {
     try {
-      const searchResults = await this.searchVerses(reference, versionId, availableVersions, 1);
-      return searchResults[0] || null;
+      // Check if the version is available
+      const version = availableVersions.find(v => v.id === versionId);
+      if (!version || !version.available) {
+        console.warn(`Version ${versionId} is not available`);
+        return null;
+      }
+
+      // Use the new Bible API
+      const { getPassageByReference } = await import('./BibleAPI');
+      const passage = await getPassageByReference(versionId, reference);
+      
+      if (!passage) return null;
+      
+      return {
+        id: `verse-${Date.now()}`,
+        text: passage.text || '',
+        reference: passage.reference || reference,
+        testament: this.determineTestament(reference),
+        book: this.extractBook(reference),
+        chapter: this.extractChapter(reference),
+        verse: this.extractVerse(reference),
+        version: version.abbreviation
+      };
     } catch (error) {
       console.error('Failed to get verse by reference:', error);
       return null;
@@ -107,7 +105,8 @@ export class BibleSearchService {
 
   private static fallbackSearch(query: string, versionId?: string, availableVersions?: BibleVersion[]): SearchResult[] {
     // Expanded fallback with popular verses that might match the query
-    const version = versionId && availableVersions ? getVersionById(versionId, availableVersions)?.abbreviation || 'KJV' : 'KJV';
+    const version = versionId && availableVersions ? 
+      availableVersions.find(v => v.id === versionId)?.abbreviation || 'KJV' : 'KJV';
     const fallbackVerses = [
       {
         id: 'fallback-1',

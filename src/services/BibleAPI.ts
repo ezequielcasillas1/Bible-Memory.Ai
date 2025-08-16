@@ -1,87 +1,142 @@
-// BibleAPI.ts
+// New Bible API implementation using https://github.com/wldeh/bible-api
 export interface BibleVersion {
   id: string;
   abbreviation: string;
   name: string;
   description?: string;
+  available: boolean;
+  available: boolean;
 }
 
-const API_BASE = "https://api.scripture.api.bible/v1";
+const BIBLE_API_BASE = "https://bible-api.com";
 
-function requiredEnv(name: string): string {
-  const v = import.meta.env.VITE_BIBLE_API_KEY;
-  if (!v) throw new Error(`Missing env var: ${name}`);
-  return v;
-}
-
-/** Fetch the 5 requested English Bible versions (KJV, NKJV, NLT, ESV, ASV). */
+/** Fetch the 2 available Bible versions (KJV and ASV) */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    const apiKey = import.meta.env.VITE_BIBLE_API_KEY;
+    console.log('Loading Bible versions from bible-api.com');
     
-    if (!apiKey) {
-      console.error('VITE_BIBLE_API_KEY not found in environment variables');
-      throw new Error('Missing env var: VITE_BIBLE_API_KEY');
-    }
-    
-    const url = `${API_BASE}/bibles?abbreviation=KJV,NKJV,NLT,ESV,ASV&include-full-details=true`;
-
-    console.log('Fetching Bible versions from:', url); // Debug log
-    console.log('Using API key:', apiKey ? 'Present' : 'Missing'); // Debug log
-    
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "accept": "application/json",
-        "api-key": apiKey,
+    // Return the two supported versions
+    const versions: BibleVersion[] = [
+      { 
+        id: 'kjv', 
+        abbreviation: 'KJV', 
+        name: 'King James Version', 
+        description: 'The classic 1769 King James Version',
+        available: true
       },
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("Scripture API /bibles error:", res.status, text);
-      throw new Error(`API request failed with status ${res.status}: ${text}`);
-    }
-
-    const json = await res.json();
-    console.log('API response:', json); // Debug log
-    const data = Array.isArray(json?.data) ? json.data : [];
-
-    // Map to the strict shape
-    const versions = data.map((b: any) => ({
-      id: String(b.id),
-      abbreviation: String(b.abbreviation),
-      name: String(b.name),
-      description: b.description ? String(b.description) : undefined,
-    })) as BibleVersion[];
+      { 
+        id: 'asv', 
+        abbreviation: 'ASV', 
+        name: 'American Standard Version', 
+        description: 'The 1901 American Standard Version',
+        available: true
+      },
+      // Coming soon versions
+      { 
+        id: 'nkjv', 
+        abbreviation: 'NKJV', 
+        name: 'New King James Version', 
+        description: 'Coming Soon',
+        available: false
+      },
+      { 
+        id: 'nlt', 
+        abbreviation: 'NLT', 
+        name: 'New Living Translation', 
+        description: 'Coming Soon',
+        available: false
+      },
+      { 
+        id: 'esv', 
+        abbreviation: 'ESV', 
+        name: 'English Standard Version', 
+        description: 'Coming Soon',
+        available: false
+      }
+    ];
     
-    console.log('Mapped versions:', versions); // Debug log
+    console.log('Loaded Bible versions:', versions);
     return versions;
   } catch (error) {
-    console.error("Failed to fetch Bible versions:", error);
+    console.error("Failed to load Bible versions:", error);
     throw error;
   }
 }
 
-/** Helper: fetch a passage by Bible ID and reference, e.g. "John 3:16". */
-export async function getPassageByReference(bibleId: string, reference: string): Promise<any> {
+/** Helper: fetch a passage by Bible version and reference, e.g. "John 3:16" */
+export async function getPassageByReference(versionId: string, reference: string): Promise<any> {
   try {
-    const apiKey = import.meta.env.VITE_BIBLE_API_KEY;
-    if (!apiKey) throw new Error('Missing env var: VITE_BIBLE_API_KEY');
+    console.log(`Fetching passage: ${reference} in ${versionId}`);
     
-    // Encoded reference for safety
-    const url = `${API_BASE}/bibles/${encodeURIComponent(bibleId)}/passages?search=${encodeURIComponent(reference)}&content-type=text&include-notes=false`;
-    const res = await fetch(url, {
-      headers: { "accept": "application/json", "api-key": apiKey },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("Scripture API passage error:", res.status, text);
-      return null;
+    // Only allow KJV and ASV
+    if (versionId !== 'kjv' && versionId !== 'asv') {
+      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
     }
-    return res.json();
+    
+    // Format the URL - bible-api.com uses format like: /john+3:16?translation=kjv
+    const formattedReference = reference.toLowerCase().replace(/\s+/g, '+');
+    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
+    
+    console.log('API URL:', url);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error("Bible API error:", response.status, response.statusText);
+      throw new Error(`Failed to fetch passage: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('API response:', data);
+    
+    return data;
   } catch (error) {
     console.error("Failed to fetch passage:", error);
-    return null;
+    throw error;
+  }
+}
+
+/** Search for verses containing specific text */
+export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
+  try {
+    // Only allow KJV and ASV
+    if (versionId !== 'kjv' && versionId !== 'asv') {
+      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    }
+    
+    // bible-api.com doesn't have a direct search endpoint, so we'll return popular verses
+    // that might match the query as a fallback
+    console.log(`Searching for: "${query}" in ${versionId}`);
+    
+    const popularVerses = [
+      'John 3:16',
+      'Romans 8:28', 
+      'Philippians 4:13',
+      'Jeremiah 29:11',
+      'Psalm 23:1',
+      'Proverbs 3:5-6',
+      'Matthew 11:28',
+      'Isaiah 40:31',
+      '1 Corinthians 13:4-7',
+      'Joshua 1:9'
+    ];
+    
+    // Try to fetch a few popular verses that might match the query
+    const results = [];
+    for (const verse of popularVerses.slice(0, 5)) {
+      try {
+        const passage = await getPassageByReference(versionId, verse);
+        if (passage && passage.text && passage.text.toLowerCase().includes(query.toLowerCase())) {
+          results.push(passage);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch ${verse}:`, error);
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error("Search failed:", error);
+    return [];
   }
 }

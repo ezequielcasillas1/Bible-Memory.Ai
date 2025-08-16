@@ -45,27 +45,29 @@ const App: React.FC = () => {
         console.log('Loaded Bible versions:', versions); // Debug log
         setAvailableBibleVersions(versions);
         
-        // Set default version to first available version (should be KJV)
-        if (versions.length > 0 && !settings.preferredVersion) {
-          const defaultVersion = versions[0].id;
+        // Set default version to first available version (KJV)
+        const availableVersions = versions.filter(v => v.available);
+        if (availableVersions.length > 0 && !settings.preferredVersion) {
+          const defaultVersion = availableVersions[0].id;
           setSettings(prev => ({ ...prev, preferredVersion: defaultVersion }));
           setUserStats(prev => ({ ...prev, preferredVersion: defaultVersion }));
         }
       } catch (error) {
         console.error('Failed to load Bible versions:', error);
-        // Fallback to hardcoded versions if API fails
+        // Fallback to basic versions if API fails
         const fallbackVersions: BibleVersion[] = [
-          { id: 'de4e12af7f28f599-01', name: 'King James Version', abbreviation: 'KJV' },
-          { id: '114c1c4e4b214513-01', name: 'New King James Version', abbreviation: 'NKJV' },
-          { id: '7142879509583d59-01', name: 'New Living Translation', abbreviation: 'NLT' },
-          { id: '90c8a4bdc6b54c6b-01', name: 'English Standard Version', abbreviation: 'ESV' },
-          { id: '685d1470fe4d5361-01', name: 'American Standard Version', abbreviation: 'ASV' }
+          { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
+          { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true },
+          { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false },
+          { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false },
+          { id: 'esv', name: 'English Standard Version', abbreviation: 'ESV', available: false }
         ];
         console.log('Using fallback versions:', fallbackVersions); // Debug log
         setAvailableBibleVersions(fallbackVersions);
-        if (!settings.preferredVersion) {
-          setSettings(prev => ({ ...prev, preferredVersion: fallbackVersions[0].id }));
-          setUserStats(prev => ({ ...prev, preferredVersion: fallbackVersions[0].id }));
+        const availableFallback = fallbackVersions.filter(v => v.available);
+        if (!settings.preferredVersion && availableFallback.length > 0) {
+          setSettings(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
+          setUserStats(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
         }
       } finally {
         setIsLoadingVersions(false);
@@ -87,11 +89,12 @@ const App: React.FC = () => {
       const parsedSettings = JSON.parse(savedSettings);
       setSettings(parsedSettings);
       // Ensure the saved preferred version is valid
-      if (parsedSettings.preferredVersion && availableBibleVersions.length > 0) {
-        const isValidVersion = availableBibleVersions.some(v => v.id === parsedSettings.preferredVersion);
+      const availableVersions = availableBibleVersions.filter(v => v.available);
+      if (parsedSettings.preferredVersion && availableVersions.length > 0) {
+        const isValidVersion = availableVersions.some(v => v.id === parsedSettings.preferredVersion);
         if (!isValidVersion) {
-          // Reset to first available version if saved version is invalid
-          setSettings(prev => ({ ...prev, preferredVersion: availableBibleVersions[0].id }));
+          // Reset to first available version if saved version is invalid or unavailable
+          setSettings(prev => ({ ...prev, preferredVersion: availableVersions[0].id }));
         }
       }
     }

@@ -40,14 +40,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
-          </div>
+                <option 
+                  key={version.id} 
+                  value={version.id}
+                  disabled={!version.available}
+                >
+                  {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''}
         </div>
         
         <div className="p-6 space-y-6">
           {/* Study Time Setting */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="w-full p-3 border border-gray-300 rounded-lg bg-red-50 text-red-700">
+              Failed to load Bible versions. Please refresh the page.
               Study Time (seconds)
             </label>
             <div className="space-y-3">
