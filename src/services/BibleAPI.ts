@@ -8,6 +8,36 @@ export interface BibleVersion {
 }
 
 const BIBLE_API_BASE = "https://bible-api.com";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Helper function to make proxied API calls
+async function proxyFetch(url: string): Promise<any> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // Fallback to direct fetch if Supabase not configured
+    console.warn('Supabase not configured, attempting direct API call');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-proxy`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Proxy error: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
 
 /** Fetch the 2 available Bible versions (KJV and ASV) */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
@@ -129,14 +159,7 @@ export async function getPassageByReference(versionId: string, reference: string
     
     console.log('API URL:', url);
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error("Bible API error:", response.status, response.statusText);
-      throw new Error(`Failed to fetch passage: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
+    const data = await proxyFetch(url);
     console.log('API response:', data);
     
     // Normalize response format
