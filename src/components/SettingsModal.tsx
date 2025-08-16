@@ -91,7 +91,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </select>
             ) : (
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 text-yellow-700">
-                  </option>
                 No Bible versions available. Please check your internet connection.
               </div>
             )}
