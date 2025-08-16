@@ -12,9 +12,9 @@ const BIBLE_API_BASE = "https://bible-api.com";
 /** Fetch the 2 available Bible versions (KJV and ASV) */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    console.log('Loading Bible versions from bible-api.com');
+    console.log('Loading Bible versions from wldeh/bible-api');
     
-    // Return the two supported versions
+    // Return all supported versions from wldeh/bible-api
     const versions: BibleVersion[] = [
       { 
         id: 'kjv', 
@@ -28,6 +28,34 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         abbreviation: 'ASV', 
         name: 'American Standard Version', 
         description: 'The 1901 American Standard Version',
+        available: true
+      },
+      { 
+        id: 'webus', 
+        abbreviation: 'WEB', 
+        name: 'World English Bible (U.S. edition)', 
+        description: 'Modern English translation in the public domain',
+        available: true
+      },
+      { 
+        id: 'ylt', 
+        abbreviation: 'YLT', 
+        name: "Young's Literal Translation", 
+        description: 'Literal translation from 1898',
+        available: true
+      },
+      { 
+        id: 'darby', 
+        abbreviation: 'DARBY', 
+        name: 'Darby Bible', 
+        description: 'John Nelson Darby translation from 1890',
+        available: true
+      },
+      { 
+        id: 'drb', 
+        abbreviation: 'DRB', 
+        name: 'Douay-Rheims Bible', 
+        description: 'Catholic translation based on the Latin Vulgate',
         available: true
       },
       // Coming soon versions
@@ -67,14 +95,27 @@ export async function getPassageByReference(versionId: string, reference: string
   try {
     console.log(`Fetching passage: ${reference} in ${versionId}`);
     
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is available
+    const availableVersions = ['kjv', 'asv', 'webus', 'ylt', 'darby', 'drb'];
+    if (!availableVersions.includes(versionId)) {
+      throw new Error(`Version ${versionId} is not yet available.`);
     }
+    
+    // Map version IDs to API format
+    const versionMap: { [key: string]: string } = {
+      'kjv': 'kjv',
+      'asv': 'asv', 
+      'webus': 'webus',
+      'ylt': 'ylt',
+      'darby': 'darby',
+      'drb': 'drb'
+    };
+    
+    const apiVersion = versionMap[versionId] || versionId;
     
     // Format the URL - bible-api.com uses format like: /john+3:16?translation=kjv
     const formattedReference = reference.toLowerCase().replace(/\s+/g, '+');
-    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
+    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${apiVersion}`;
     
     console.log('API URL:', url);
     
@@ -98,9 +139,10 @@ export async function getPassageByReference(versionId: string, reference: string
 /** Search for verses containing specific text or by reference */
 export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
   try {
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is available
+    const availableVersions = ['kjv', 'asv', 'webus', 'ylt', 'darby', 'drb'];
+    if (!availableVersions.includes(versionId)) {
+      throw new Error(`Version ${versionId} is not yet available.`);
     }
     
     console.log(`Searching for: "${query}" in ${versionId}`);
