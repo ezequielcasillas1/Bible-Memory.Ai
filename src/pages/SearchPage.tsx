@@ -173,9 +173,14 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                         <span className="text-purple-600 font-medium">{verse.reference}</span>
                         <span className="text-xs text-gray-500">({verse.version})</span>
                       </div>
-                      <p className="text-gray-700 leading-relaxed italic mb-3">
-                        "{verse.text}"
-                      </p>
+                      {verse.html ? (
+                        <div className="text-gray-700 leading-relaxed italic mb-3 prose max-w-none" 
+                             dangerouslySetInnerHTML={{ __html: `"${verse.html}"` }} />
+                      ) : (
+                        <p className="text-gray-700 leading-relaxed italic mb-3">
+                          "{typeof verse.text === 'string' ? verse.text : ''}"
+                        </p>
+                      )}
                       
                       {note && (
                         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">

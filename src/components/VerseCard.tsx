@@ -23,9 +23,14 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize }) => {
       </div>
       
       <div className="mb-6">
-        <div className="text-lg leading-relaxed text-gray-700 mb-4 italic">
-          "{typeof verse.text === 'string' ? verse.text : ''}"
-        </div>
+        {verse.html ? (
+          <div className="text-lg leading-relaxed text-gray-700 mb-4 italic prose max-w-none" 
+               dangerouslySetInnerHTML={{ __html: `"${verse.html}"` }} />
+        ) : (
+          <div className="text-lg leading-relaxed text-gray-700 mb-4 italic">
+            "{typeof verse.text === 'string' ? verse.text : ''}"
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <p className="text-purple-600 font-medium">
             {verse.reference}
