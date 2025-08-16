@@ -3,7 +3,7 @@ import { RefreshCw, Heart, Sparkles } from 'lucide-react';
 import { VerseType, Verse, AppSettings } from '../types';
 import { commissionVerses, helpVerses, connections } from '../data/verses';
 import { AIService } from '../services/aiService';
-import { ScriptureApiService } from '../services/scriptureApiService';
+import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
 import VerseCard from '../components/VerseCard';
@@ -29,8 +29,8 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     setTimeout(() => {
       if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
         generateAIVerses();
-      } else if (import.meta.env.VITE_SCRIPTURE_API_KEY) {
-        generateScriptureApiVerses();
+      } else {
+        generateBibleApiVerses();
       } else {
         const verses = verseType === 'commission' ? commissionVerses : helpVerses;
         const otVerses = verses.filter(v => v.testament === 'OT');
@@ -48,11 +48,11 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     }, 800);
   };
 
-  const generateScriptureApiVerses = async () => {
+  const generateBibleApiVerses = async () => {
     try {
       const [otVerse, ntVerse] = await Promise.all([
-        ScriptureApiService.getRandomVerse(settings.preferredVersion, 'OT'),
-        ScriptureApiService.getRandomVerse(settings.preferredVersion, 'NT')
+        BibleSearchService.getRandomVerse(settings.preferredVersion, 'OT'),
+        BibleSearchService.getRandomVerse(settings.preferredVersion, 'NT')
       ]);
       
       if (otVerse && ntVerse) {
@@ -66,7 +66,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
         fallbackToStaticVerses();
       }
     } catch (error) {
-      console.error('Scripture API failed:', error);
+      console.error('Bible API failed:', error);
       fallbackToStaticVerses();
     } finally {
       setIsLoading(false);
