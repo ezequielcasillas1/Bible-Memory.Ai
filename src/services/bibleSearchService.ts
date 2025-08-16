@@ -15,18 +15,18 @@ export class BibleSearchService {
         return this.fallbackSearch(query, versionId, availableVersions);
       }
 
-      // Use the new Bible API search functionality
+      // Use the Bible API search functionality
       const { searchVerses } = await import('./BibleAPI');
-      const results = await searchVerses(query, versionId);
+      const apiResults = await searchVerses(query, versionId);
       
-      return results.map((passage: any) => ({
+      return apiResults.map((passage: any) => ({
         id: `search-${Date.now()}-${Math.random()}`,
-        text: passage.text || '',
-        reference: passage.reference || '',
-        testament: this.determineTestament(passage.reference || ''),
-        book: this.extractBook(passage.reference || ''),
-        chapter: this.extractChapter(passage.reference || ''),
-        verse: this.extractVerse(passage.reference || ''),
+        text: this.cleanVerseText(passage.text || ''),
+        reference: passage.reference || query,
+        testament: this.determineTestament(passage.reference || query),
+        book: this.extractBook(passage.reference || query),
+        chapter: this.extractChapter(passage.reference || query),
+        verse: this.extractVerse(passage.reference || query),
         version: version.abbreviation
       }));
     } catch (error) {
@@ -52,7 +52,7 @@ export class BibleSearchService {
       
       return {
         id: `verse-${Date.now()}`,
-        text: passage.text || '',
+        text: this.cleanVerseText(passage.text || ''),
         reference: passage.reference || reference,
         testament: this.determineTestament(reference),
         book: this.extractBook(reference),
@@ -82,25 +82,35 @@ export class BibleSearchService {
       'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah', 'Haggai', 'Zechariah', 'Malachi'
     ];
 
-    const bookName = reference.split(' ')[0];
-    return otBooks.includes(bookName) ? 'OT' : 'NT';
+    const referenceLower = reference.toLowerCase();
+    const isOT = otBooks.some(book => referenceLower.includes(book.toLowerCase()));
+    return isOT ? 'OT' : 'NT';
   }
 
   private static extractBook(reference: string): string {
-    return reference.split(' ').slice(0, -1).join(' ');
+    const parts = reference.split(' ');
+    if (parts.length === 1) return reference;
+    
+    // Handle cases like "1 Samuel 1:1" or "Psalm 23:1"
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.includes(':') || /^\d+$/.test(lastPart)) {
+      return parts.slice(0, -1).join(' ');
+    }
+    return reference;
   }
 
   private static extractChapter(reference: string): number {
     const parts = reference.split(' ');
     const chapterVerse = parts[parts.length - 1];
-    return parseInt(chapterVerse.split(':')[0]);
+    const chapterNum = chapterVerse.split(':')[0];
+    return parseInt(chapterNum) || 1;
   }
 
   private static extractVerse(reference: string): number {
     const parts = reference.split(' ');
     const chapterVerse = parts[parts.length - 1];
     const versePart = chapterVerse.split(':')[1];
-    return parseInt(versePart?.split('-')[0] || '1');
+    return parseInt(versePart?.split('-')[0] || '1') || 1;
   }
 
   private static fallbackSearch(query: string, versionId?: string, availableVersions?: BibleVersion[]): SearchResult[] {

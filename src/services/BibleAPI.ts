@@ -5,7 +5,6 @@ export interface BibleVersion {
   name: string;
   description?: string;
   available: boolean;
-  available: boolean;
 }
 
 const BIBLE_API_BASE = "https://bible-api.com";
@@ -96,7 +95,7 @@ export async function getPassageByReference(versionId: string, reference: string
   }
 }
 
-/** Search for verses containing specific text */
+/** Search for verses containing specific text or by reference */
 export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
   try {
     // Only allow KJV and ASV
@@ -104,34 +103,71 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
       throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
     }
     
-    // bible-api.com doesn't have a direct search endpoint, so we'll return popular verses
-    // that might match the query as a fallback
     console.log(`Searching for: "${query}" in ${versionId}`);
     
+    // Check if query looks like a Bible reference (e.g., "psalms 23", "john 3:16", "romans 8")
+    const referencePattern = /^(\d?\s*\w+)\s*(\d+)?(:(\d+))?(-(\d+))?$/i;
+    const match = query.match(referencePattern);
+    
+    if (match) {
+      // It's a reference search - try to fetch the specific passage
+      try {
+        const passage = await getPassageByReference(versionId, query);
+        if (passage && passage.text) {
+          return [passage];
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch reference ${query}:`, error);
+      }
+    }
+    
+    // For text searches or failed reference searches, try popular verses that might match
     const popularVerses = [
       'John 3:16',
       'Romans 8:28', 
       'Philippians 4:13',
       'Jeremiah 29:11',
-      'Psalm 23:1',
+      'Psalm 23:1-6',
       'Proverbs 3:5-6',
       'Matthew 11:28',
       'Isaiah 40:31',
       '1 Corinthians 13:4-7',
-      'Joshua 1:9'
+      'Joshua 1:9',
+      'Psalm 1:1-3',
+      'Psalm 91:1-2',
+      'Matthew 6:26',
+      'Romans 12:2',
+      'Ephesians 2:8-9'
     ];
     
-    // Try to fetch a few popular verses that might match the query
     const results = [];
-    for (const verse of popularVerses.slice(0, 5)) {
+    const searchTerms = query.toLowerCase().split(' ');
+    
+    // Try to fetch verses that might match the search
+    for (const verse of popularVerses) {
       try {
         const passage = await getPassageByReference(versionId, verse);
-        if (passage && passage.text && passage.text.toLowerCase().includes(query.toLowerCase())) {
-          results.push(passage);
+        if (passage && passage.text) {
+          // Check if the passage matches the search terms
+          const passageText = passage.text.toLowerCase();
+          const referenceText = passage.reference.toLowerCase();
+          
+          const matches = searchTerms.some(term => 
+            passageText.includes(term) || 
+            referenceText.includes(term) ||
+            verse.toLowerCase().includes(term)
+          );
+          
+          if (matches) {
+            results.push(passage);
+          }
         }
       } catch (error) {
         console.warn(`Failed to fetch ${verse}:`, error);
       }
+      
+      // Limit results to avoid too many API calls
+      if (results.length >= 10) break;
     }
     
     return results;
