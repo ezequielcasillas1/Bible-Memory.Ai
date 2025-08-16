@@ -48,7 +48,7 @@ const App: React.FC = () => {
         // Set default version to first available version (KJV)
         const availableVersions = versions.filter(v => v.available);
         if (availableVersions.length > 0 && !settings.preferredVersion) {
-          const defaultVersion = availableVersions[0].id;
+          const defaultVersion = availableVersions[0].id; // en-kjv
           setSettings(prev => ({ ...prev, preferredVersion: defaultVersion }));
           setUserStats(prev => ({ ...prev, preferredVersion: defaultVersion }));
         }
@@ -56,8 +56,8 @@ const App: React.FC = () => {
         console.error('Failed to load Bible versions:', error);
         // Fallback to basic versions if API fails
         const fallbackVersions: BibleVersion[] = [
-          { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
-          { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true },
+          { id: 'en-kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
+          { id: 'en-asv', name: 'American Standard Version', abbreviation: 'ASV', available: true },
           { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false },
           { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false },
           { id: 'esv', name: 'English Standard Version', abbreviation: 'ESV', available: false }

@@ -1,4 +1,4 @@
-// New Bible API implementation using https://github.com/wldeh/bible-api
+// New Bible API implementation using wldeh/bible-api CDN
 export interface BibleVersion {
   id: string;
   abbreviation: string;
@@ -7,30 +7,199 @@ export interface BibleVersion {
   available: boolean;
 }
 
-const BIBLE_API_BASE = "https://bible-api.com";
+// Versions that are present in wldeh (commercial-safe, PD)
+export const SUPPORTED_VERSIONS = [
+  'en-kjv',   // King James Version
+  'en-asv',   // American Standard Version (1901)
+  'en-webus', // World English Bible (US)
+  'en-ylt',   // Young's Literal Translation
+  'en-darby', // Darby Bible
+  'en-drb',   // Douay-Rheims
+] as const;
 
-/** Fetch the 2 available Bible versions (KJV and ASV) */
+// Book slug map (folder names in wldeh)
+const BOOK_SLUG: Record<string, string> = {
+  'genesis': 'genesis', 'exodus': 'exodus', 'leviticus': 'leviticus',
+  'numbers': 'numbers', 'deuteronomy': 'deuteronomy',
+  'joshua': 'joshua', 'judges': 'judges', 'ruth': 'ruth',
+  '1 samuel': '1-samuel', '2 samuel': '2-samuel',
+  '1 kings': '1-kings', '2 kings': '2-kings',
+  '1 chronicles': '1-chronicles', '2 chronicles': '2-chronicles',
+  'ezra': 'ezra', 'nehemiah': 'nehemiah', 'esther': 'esther',
+  'job': 'job', 'psalm': 'psalms', 'psalms': 'psalms', 'proverbs': 'proverbs',
+  'ecclesiastes': 'ecclesiastes', 'song of solomon': 'song-of-solomon',
+  'isaiah': 'isaiah', 'jeremiah': 'jeremiah', 'lamentations': 'lamentations',
+  'ezekiel': 'ezekiel', 'daniel': 'daniel',
+  'hosea': 'hosea', 'joel': 'joel', 'amos': 'amos', 'obadiah': 'obadiah',
+  'jonah': 'jonah', 'micah': 'micah', 'nahum': 'nahum', 'habakkuk': 'habakkuk',
+  'zephaniah': 'zephaniah', 'haggai': 'haggai', 'zechariah': 'zechariah', 'malachi': 'malachi',
+  'matthew': 'matthew', 'mark': 'mark', 'luke': 'luke', 'john': 'john',
+  'acts': 'acts', 'romans': 'romans',
+  '1 corinthians': '1-corinthians', '2 corinthians': '2-corinthians',
+  'galatians': 'galatians', 'ephesians': 'ephesians', 'philippians': 'philippians',
+  'colossians': 'colossians',
+  '1 thessalonians': '1-thessalonians', '2 thessalonians': '2-thessalonians',
+  '1 timothy': '1-timothy', '2 timothy': '2-timothy',
+  'titus': 'titus', 'philemon': 'philemon', 'hebrews': 'hebrews',
+  'james': 'james', '1 peter': '1-peter', '2 peter': '2-peter',
+  '1 john': '1-john', '2 john': '2-john', '3 john': '3-john',
+  'jude': 'jude', 'revelation': 'revelation',
+};
+
+const CDN = 'https://cdn.jsdelivr.net/gh/wldeh/bible-api/bibles';
+
+function norm(s: string) { 
+  return s.trim().toLowerCase().replace(/\s+/g, ' '); 
+}
+
+function parseReference(input: string) {
+  // Examples we handle: "John 3:16", "John 3:16-18", "John 3", "Psalm 23"
+  const s = norm(input);
+  // split book from rest by first digit
+  const m = s.match(/^(.+?)\s+(\d.*)$/);
+  if (!m) {
+    // Whole-book? We'll treat as chapter 1 (common UX)
+    const book = BOOK_SLUG[norm(s)];
+    if (!book) throw new Error(`Unknown book in reference: "${input}"`);
+    return { book, chapter: 1, verseStart: null as number|null, verseEnd: null as number|null };
+  }
+  const bookName = norm(m[1]);
+  const rest = m[2];
+
+  const book = BOOK_SLUG[bookName];
+  if (!book) throw new Error(`Unknown book in reference: "${input}"`);
+
+  // rest could be "3", "3:16", "3:16-18"
+  const colon = rest.indexOf(':');
+  if (colon === -1) {
+    const chapter = Number(rest);
+    if (!Number.isFinite(chapter)) throw new Error(`Invalid chapter in "${input}"`);
+    return { book, chapter, verseStart: null as number|null, verseEnd: null as number|null };
+  } else {
+    const chapter = Number(rest.slice(0, colon));
+    const versePart = rest.slice(colon + 1);
+    const dash = versePart.indexOf('-');
+    if (dash === -1) {
+      const verse = Number(versePart);
+      return { book, chapter, verseStart: verse, verseEnd: verse };
+    } else {
+      const v1 = Number(versePart.slice(0, dash));
+      const v2 = Number(versePart.slice(dash + 1));
+      return { book, chapter, verseStart: v1, verseEnd: v2 };
+    }
+  }
+}
+
+async function fetchJSON(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    // Bubble up the exact URL + status to help you debug
+    throw new Error(`HTTP ${res.status} at ${url}`);
+  }
+  return res.json();
+}
+
+// Returns { reference: string, html: string, text: string }
+export async function getPassageFromWldeh(version: string, humanRef: string) {
+  if (!SUPPORTED_VERSIONS.includes(version as any)) {
+    throw new Error(`Unsupported version slug: ${version}`);
+  }
+  const { book, chapter, verseStart, verseEnd } = parseReference(humanRef);
+
+  // If no verses: return whole chapter
+  if (verseStart == null) {
+    const chap = await fetchJSON(`${CDN}/${version}/books/${book}/chapters/${chapter}.json`);
+    // chapter JSON is usually an object of { "1": "text", "2": "text", ... }
+    const verses = Object.entries(chap).map(([v, t]) => `<sup>${v}</sup> ${t}`);
+    const html = `<div class="chapter">${verses.join(' ')}</div>`;
+    const text = Object.values(chap).join(' ');
+    return {
+      reference: `${humanRef}`,
+      html,
+      text
+    };
+  }
+
+  // If single verse
+  if (verseStart === verseEnd) {
+    const v = await fetchJSON(`${CDN}/${version}/books/${book}/chapters/${chapter}/verses/${verseStart}.json`);
+    // often { verse: "16", text: "..." }
+    const text = v.text ?? v[verseStart] ?? JSON.stringify(v);
+    const html = `<span class="verse"><sup>${verseStart}</sup> ${text}</span>`;
+    return {
+      reference: `${humanRef}`,
+      html,
+      text
+    };
+  }
+
+  // Range of verses in same chapter
+  const chap = await fetchJSON(`${CDN}/${version}/books/${book}/chapters/${chapter}.json`);
+  const out: string[] = [];
+  const textParts: string[] = [];
+  for (let v = verseStart; v <= (verseEnd ?? verseStart); v++) {
+    const t = chap[String(v)];
+    if (!t) break; // stop if range exceeds chapter
+    out.push(`<span class="verse"><sup>${v}</sup> ${t}</span>`);
+    textParts.push(t);
+  }
+  return {
+    reference: `${humanRef}`,
+    html: out.join(' '),
+    text: textParts.join(' ')
+  };
+}
+
+/** Fetch the available Bible versions */
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    console.log('Loading Bible versions from bible-api.com');
+    console.log('Loading Bible versions from wldeh/bible-api');
     
-    // Return the two supported versions
+    // Return the supported versions from wldeh
     const versions: BibleVersion[] = [
       { 
-        id: 'kjv', 
+        id: 'en-kjv', 
         abbreviation: 'KJV', 
         name: 'King James Version', 
         description: 'The classic 1769 King James Version',
         available: true
       },
       { 
-        id: 'asv', 
+        id: 'en-asv', 
         abbreviation: 'ASV', 
         name: 'American Standard Version', 
         description: 'The 1901 American Standard Version',
         available: true
       },
-      // Coming soon versions
+      { 
+        id: 'en-webus', 
+        abbreviation: 'WEB', 
+        name: 'World English Bible', 
+        description: 'Modern English translation',
+        available: true
+      },
+      { 
+        id: 'en-ylt', 
+        abbreviation: 'YLT', 
+        name: "Young's Literal Translation", 
+        description: 'Literal translation by Robert Young',
+        available: true
+      },
+      { 
+        id: 'en-darby', 
+        abbreviation: 'DARBY', 
+        name: 'Darby Bible', 
+        description: 'Translation by John Nelson Darby',
+        available: true
+      },
+      { 
+        id: 'en-drb', 
+        abbreviation: 'DRB', 
+        name: 'Douay-Rheims Bible', 
+        description: 'Catholic translation',
+        available: true
+      },
+      // Coming soon versions (not in wldeh)
       { 
         id: 'nkjv', 
         abbreviation: 'NKJV', 
@@ -67,28 +236,21 @@ export async function getPassageByReference(versionId: string, reference: string
   try {
     console.log(`Fetching passage: ${reference} in ${versionId}`);
     
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is supported
+    if (!SUPPORTED_VERSIONS.includes(versionId as any)) {
+      throw new Error(`Version ${versionId} is not yet available. Only KJV, ASV, WEB, YLT, DARBY, and DRB are currently supported.`);
     }
     
-    // Format the URL - bible-api.com uses format like: /john+3:16?translation=kjv
-    const formattedReference = reference.toLowerCase().replace(/\s+/g, '+');
-    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
+    const result = await getPassageFromWldeh(versionId, reference);
     
-    console.log('API URL:', url);
+    console.log('API response:', result);
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error("Bible API error:", response.status, response.statusText);
-      throw new Error(`Failed to fetch passage: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log('API response:', data);
-    
-    return data;
+    // Convert to expected format
+    return {
+      reference: result.reference,
+      text: result.text,
+      html: result.html
+    };
   } catch (error) {
     console.error("Failed to fetch passage:", error);
     throw error;
@@ -96,11 +258,11 @@ export async function getPassageByReference(versionId: string, reference: string
 }
 
 /** Search for verses containing specific text or by reference */
-export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
+export async function searchVerses(query: string, versionId: string = 'en-kjv'): Promise<any[]> {
   try {
-    // Only allow KJV and ASV
-    if (versionId !== 'kjv' && versionId !== 'asv') {
-      throw new Error(`Version ${versionId} is not yet available. Only KJV and ASV are currently supported.`);
+    // Check if version is supported
+    if (!SUPPORTED_VERSIONS.includes(versionId as any)) {
+      throw new Error(`Version ${versionId} is not yet available. Only KJV, ASV, WEB, YLT, DARBY, and DRB are currently supported.`);
     }
     
     console.log(`Searching for: "${query}" in ${versionId}`);
