@@ -15,10 +15,10 @@ A modern web application for memorizing Bible verses with AI-powered assistance.
 
 **Safe to be public (already in code):**
 - Supabase URL and Anon Key (designed for frontend use)
-- Bible API key (free public API)
 
 **Never exposed (properly secured):**
 - OpenAI API key (server-side only)
+- Bible API key (server-side only)
 - Database credentials
 - Private API keys
 
@@ -45,7 +45,9 @@ A modern web application for memorizing Bible verses with AI-powered assistance.
 2. Install dependencies: `npm install`
 3. Copy `.env.example` to `.env.local`
 4. Set up Supabase project and add environment variables
-5. **Important**: Add OpenAI API key to Supabase Edge Functions environment variables (NOT in .env files)
+5. **Important**: Add these API keys to Supabase Edge Functions environment variables (NOT in .env files):
+   - `OPENAI_API_KEY=your_openai_key`
+   - `BIBLE_API_KEY=your_bible_api_key`
 6. Run development server: `npm run dev`
 
 ## 📚 Bible Versions Supported

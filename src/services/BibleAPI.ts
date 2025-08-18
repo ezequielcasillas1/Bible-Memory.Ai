@@ -10,7 +10,7 @@ export interface BibleVersion {
   licenseUrl?: string;
 }
 
-const BIBLE_API_BASE = "https://bible-api.com";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const WLDEH_API_BASE = "https://cdn.jsdelivr.net/gh/wldeh/bible-api";
 
 /** Fetch all available Bible versions from multiple sources */
@@ -126,18 +126,24 @@ export async function getPassageByReference(versionId: string, reference: string
       return await getWldehPassage(actualVersionId, reference);
     }
     
-    // Handle original bible-api.com versions (KJV, ASV)
+    // Handle original bible-api.com versions (KJV, ASV) - now secured through our API
     if (versionId !== 'kjv' && versionId !== 'asv') {
       throw new Error(`Version ${versionId} is not yet available. Please select an available version.`);
     }
     
-    // Format the URL for bible-api.com
-    const formattedReference = reference.toLowerCase().replace(/\s+/g, '+');
-    const url = `${BIBLE_API_BASE}/${formattedReference}?translation=${versionId}`;
-    
-    console.log('API URL:', url);
-    
-    const response = await fetch(url);
+    // Use our secured Bible API endpoint
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-api`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        reference,
+        version: versionId,
+        action: 'getPassage'
+      }),
+    });
     
     if (!response.ok) {
       console.error("Bible API error:", response.status, response.statusText);
@@ -244,11 +250,29 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
       }
     }
     
-    // Fallback to popular verses search
-    return await searchPopularVerses(query, versionId);
+    // Use our secured search endpoint
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-api`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        reference: query,
+        version: versionId,
+        action: 'search'
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.results || [];
   } catch (error) {
     console.error("Search failed:", error);
-    return [];
+    return await searchPopularVerses(query, versionId);
   }
 }
 

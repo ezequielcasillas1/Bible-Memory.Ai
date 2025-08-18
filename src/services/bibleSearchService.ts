@@ -2,8 +2,7 @@ import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion, getPassageByReference, searchVerses } from './BibleAPI';
 
-const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
-const API_KEY = '6d078a413735440025d1f98883a8d372';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], limit: number = 20): Promise<SearchResult[]> {
@@ -78,7 +77,25 @@ export class BibleSearchService {
       const verses = testament === 'OT' ? otVerses : ntVerses;
       const randomVerse = verses[Math.floor(Math.random() * verses.length)];
       
-      const passage = await getPassageByReference(versionId, randomVerse);
+      // Use our secured Bible API endpoint
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-api`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          reference: randomVerse,
+          version: versionId,
+          action: 'getPassage'
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch random verse: ${response.status}`);
+      }
+      
+      const passage = await response.json();
       
       if (passage) {
         return {

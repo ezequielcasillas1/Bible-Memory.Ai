@@ -7,6 +7,7 @@
 The following keys are properly secured and never exposed to the client:
 
 - **OpenAI API Key**: Stored only in Supabase Edge Functions environment variables
+- **Bible API Key**: Now stored only in Supabase Edge Functions environment variables
 - **Supabase Service Role Key**: Never used in frontend code
 
 ### 🔓 Public Keys (Safe to Expose)
@@ -15,7 +16,6 @@ The following keys are designed to be public and safe to include in frontend cod
 
 - **Supabase URL** (`VITE_SUPABASE_URL`): Public endpoint for your Supabase project
 - **Supabase Anon Key** (`VITE_SUPABASE_ANON_KEY`): Anonymous key with Row Level Security
-- **Bible API Key** (`BIBLE_API_KEY`): Free public API key for bible-api.com
 
 ### 🔒 Security Measures Implemented
 
@@ -28,6 +28,7 @@ The following keys are designed to be public and safe to include in frontend cod
 ### 🚨 What to Never Expose
 
 - OpenAI API keys
+- Bible API keys
 - Database passwords
 - Private API keys
 - Supabase service role keys
@@ -36,6 +37,7 @@ The following keys are designed to be public and safe to include in frontend cod
 ### 📋 Security Checklist
 
 - [x] OpenAI API key stored in Supabase Edge Functions only
+- [x] Bible API key stored in Supabase Edge Functions only
 - [x] No sensitive keys in frontend code
 - [x] Rate limiting implemented
 - [x] Input validation and sanitization
@@ -44,7 +46,7 @@ The following keys are designed to be public and safe to include in frontend cod
 
 ### 🔍 How to Verify Security
 
-1. **Check Network Tab**: OpenAI API key should never appear in browser network requests
+1. **Check Network Tab**: No API keys should appear in browser network requests to external services
 2. **View Source**: No sensitive keys should be visible in HTML source
 3. **Bundle Analysis**: No sensitive keys in JavaScript bundles
 4. **Environment Variables**: Only public keys should have `VITE_` prefix
