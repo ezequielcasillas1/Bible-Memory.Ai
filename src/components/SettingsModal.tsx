@@ -85,7 +85,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 {availableBibleVersions.map((version) => (
                   <option key={version.id} value={version.id}>
-                    {version.abbreviation} – {version.name}
+                    {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''}
                   </option>
                 ))}
               </select>
