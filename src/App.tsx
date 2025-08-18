@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Tab, Verse, UserStats, AppSettings } from './types';
 import { getBibleVersions, BibleVersion } from './services/BibleAPI';
 import Header from './components/Header';
@@ -10,11 +11,15 @@ import SearchPage from './pages/SearchPage';
 import FavoritesPage from './pages/FavoritesPage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
+import AuthModal from './components/AuthModal';
+import ProtectedRoute from './components/ProtectedRoute';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('generator');
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [availableBibleVersions, setAvailableBibleVersions] = useState<BibleVersion[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(true);
   
@@ -141,70 +146,124 @@ const App: React.FC = () => {
     setActiveTab('generator');
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    setActiveTab('generator');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <Header 
         totalPoints={userStats.totalPoints} 
-        onSettingsClick={() => setShowSettings(true)} 
+        onSettingsClick={() => setShowSettings(true)}
+        user={user}
+        onAuthClick={() => setShowAuthModal(true)}
+        onSignOut={handleSignOut}
       />
       
-      <Navigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-      />
+      {user ? (
+        <>
+          <Navigation 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+          />
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {activeTab === 'generator' && (
-          <GeneratorPage 
-            onMemorizeVerse={handleMemorizeVerse} 
-            settings={settings}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-        
-        {activeTab === 'memorize' && (
-          <MemorizePage
-            selectedVerse={selectedVerse}
-            studyTime={settings.studyTime}
-            onComplete={handleMemorizationComplete}
-            onBackToGenerator={handleBackToGenerator}
-            userStats={userStats}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-        
-        {activeTab === 'search' && (
-          <SearchPage 
-            settings={settings}
-            onMemorizeVerse={handleMemorizeVerse}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-        
-        {activeTab === 'favorites' && (
-          <FavoritesPage 
-            settings={settings}
-            onMemorizeVerse={handleMemorizeVerse}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-        
-        {activeTab === 'history' && (
-          <HistoryPage 
-            settings={settings}
-            userStats={userStats}
-            onMemorizeVerse={handleMemorizeVerse}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-        
-        {activeTab === 'profile' && (
-          <ProfilePage 
-            userStats={userStats}
-            availableBibleVersions={availableBibleVersions}
-          />
-        )}
-      </main>
+          <main className="max-w-6xl mx-auto px-4 py-8">
+            {activeTab === 'generator' && (
+              <GeneratorPage 
+                onMemorizeVerse={handleMemorizeVerse} 
+                settings={settings}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+            
+            {activeTab === 'memorize' && (
+              <MemorizePage
+                selectedVerse={selectedVerse}
+                studyTime={settings.studyTime}
+                onComplete={handleMemorizationComplete}
+                onBackToGenerator={handleBackToGenerator}
+                userStats={userStats}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+            
+            {activeTab === 'search' && (
+              <SearchPage 
+                settings={settings}
+                onMemorizeVerse={handleMemorizeVerse}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+            
+            {activeTab === 'favorites' && (
+              <FavoritesPage 
+                settings={settings}
+                onMemorizeVerse={handleMemorizeVerse}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+            
+            {activeTab === 'history' && (
+              <HistoryPage 
+                settings={settings}
+                userStats={userStats}
+                onMemorizeVerse={handleMemorizeVerse}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+            
+            {activeTab === 'profile' && (
+              <ProfilePage 
+                userStats={userStats}
+                availableBibleVersions={availableBibleVersions}
+              />
+            )}
+          </main>
+        </>
+      ) : (
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="text-8xl mb-6">📖</div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-4">
+              Welcome to Bible Memory AI
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              Memorize Scripture with AI assistance. Join thousands of believers strengthening their faith through God's Word.
+            </p>
+            <div className="space-y-4">
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="button-primary text-lg px-8 py-4"
+              >
+                Get Started - It's Free!
+              </button>
+              <p className="text-sm text-gray-500">
+                Start your Bible memorization journey today
+              </p>
+            </div>
+          </div>
+          
+          {/* Features Preview */}
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6 bg-white rounded-xl shadow-lg">
+              <div className="text-4xl mb-4">🤖</div>
+              <h3 className="text-xl font-semibold mb-2">AI-Powered</h3>
+              <p className="text-gray-600">Get personalized verses and feedback powered by advanced AI</p>
+            </div>
+            <div className="text-center p-6 bg-white rounded-xl shadow-lg">
+              <div className="text-4xl mb-4">📚</div>
+              <h3 className="text-xl font-semibold mb-2">Multiple Versions</h3>
+              <p className="text-gray-600">Study from KJV, ASV, and more Bible translations</p>
+            </div>
+            <div className="text-center p-6 bg-white rounded-xl shadow-lg">
+              <div className="text-4xl mb-4">📈</div>
+              <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
+              <p className="text-gray-600">Monitor your memorization journey with detailed analytics</p>
+            </div>
+          </div>
+        </main>
+      )}
 
       <SettingsModal
         isOpen={showSettings}
@@ -214,7 +273,20 @@ const App: React.FC = () => {
         availableBibleVersions={availableBibleVersions}
         isLoadingVersions={isLoadingVersions}
       />
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

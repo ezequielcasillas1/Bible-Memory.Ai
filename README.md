@@ -24,6 +24,7 @@ A modern web application for memorizing Bible verses with AI-powered assistance.
 
 ## 🚀 Features
 
+- **Secure Authentication**: Email/password and social login (Google, Facebook, X, Instagram, Snapchat)
 - **AI-Powered Verse Generation**: Get personalized Bible verses for memorization
 - **Interactive Memorization**: Study timer and accuracy tracking
 - **Multiple Bible Versions**: Support for KJV, ASV, and more
@@ -45,10 +46,40 @@ A modern web application for memorizing Bible verses with AI-powered assistance.
 2. Install dependencies: `npm install`
 3. Copy `.env.example` to `.env.local`
 4. Set up Supabase project and add environment variables
+5. Configure authentication providers in Supabase Dashboard:
+   - Go to Authentication > Settings > Auth Providers
+   - Enable and configure: Google, Facebook, Twitter
+   - Set Site URL: `https://biblememory.ai`
+   - Set Redirect URLs: `https://biblememory.ai/auth/callback`
 5. **Important**: Add these API keys to Supabase Edge Functions environment variables (NOT in .env files):
    - `OPENAI_API_KEY=your_openai_key`
    - `BIBLE_API_KEY=your_bible_api_key`
 6. Run development server: `npm run dev`
+
+## 🔐 Authentication Setup
+
+### Social Login Configuration
+
+Configure these OAuth providers in your Supabase Dashboard:
+
+1. **Google OAuth**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create OAuth 2.0 credentials
+   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+
+2. **Facebook OAuth**:
+   - Go to [Facebook Developers](https://developers.facebook.com/)
+   - Create a Facebook App
+   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+
+3. **Twitter OAuth**:
+   - Go to [Twitter Developer Portal](https://developer.twitter.com/)
+   - Create an app and get API keys
+   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+
+### Default User Account
+
+A free user account has been configured for: `ezequielcasillas1@gmail.com`
 
 ## 📚 Bible Versions Supported
 

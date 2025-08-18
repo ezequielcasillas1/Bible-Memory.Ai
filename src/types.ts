@@ -21,6 +21,7 @@ export interface UserStats {
   weeklyGoal: number;
   dailyGoal: number;
   preferredVersion: string;
+  userId?: string;
 }
 
 export interface Achievement {
@@ -124,4 +125,14 @@ export interface ImprovementPlan {
   };
   createdAt: Date;
   status: 'active' | 'completed' | 'paused';
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  subscription_tier: 'free' | 'premium' | 'enterprise';
+  created_at: string;
+  updated_at: string;
 }
