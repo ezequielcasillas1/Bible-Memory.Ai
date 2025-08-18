@@ -9,7 +9,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
-  signInWithProvider: (provider: 'google' | 'facebook' | 'twitter') => Promise<{ error: AuthError | null }>
+  signInWithProvider: (provider: 'google' | 'facebook' | 'twitter' | 'instagram' | 'snapchat') => Promise<{ error: AuthError | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -69,8 +69,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signInWithProvider = async (provider: 'google' | 'facebook' | 'twitter') => {
+  const signInWithProvider = async (provider: 'google' | 'facebook' | 'twitter' | 'instagram' | 'snapchat') => {
+    // Note: Instagram uses Facebook OAuth, Snapchat needs custom implementation
+    let actualProvider = provider;
+    if (provider === 'instagram') {
+      actualProvider = 'facebook'; // Instagram login goes through Facebook
+    }
+    if (provider === 'snapchat') {
+      // Snapchat requires custom OAuth implementation
+      return { error: { message: 'Snapchat login coming soon!' } as AuthError };
+    }
+    
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
+      provider: actualProvider as 'google' | 'facebook' | 'twitter',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`
       }

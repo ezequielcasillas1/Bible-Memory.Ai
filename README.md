@@ -65,18 +65,29 @@ Configure these OAuth providers in your Supabase Dashboard:
 1. **Google OAuth**:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create OAuth 2.0 credentials
-   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+   - Add redirect URI: `https://your-project-ref.supabase.co/auth/v1/callback`
 
 2. **Facebook OAuth**:
    - Go to [Facebook Developers](https://developers.facebook.com/)
    - Create a Facebook App
-   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+   - Add redirect URI: `https://your-project-ref.supabase.co/auth/v1/callback`
 
 3. **Twitter OAuth**:
    - Go to [Twitter Developer Portal](https://developer.twitter.com/)
    - Create an app and get API keys
-   - Add redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+   - Add redirect URI: `https://your-project-ref.supabase.co/auth/v1/callback`
 
+4. **Instagram OAuth**:
+   - Uses Facebook OAuth (Instagram Business accounts)
+   - Configure through Facebook Developer Console
+   - Add Instagram Basic Display product to your Facebook app
+
+5. **Snapchat OAuth**:
+   - Requires custom implementation
+   - Go to [Snapchat Developer Portal](https://developers.snapchat.com/)
+   - Currently shows "coming soon" message
+
+**Important**: Replace `your-project-ref` with your actual Supabase project reference ID.
 ### Default User Account
 
 A free user account has been configured for: `ezequielcasillas1@gmail.com`
