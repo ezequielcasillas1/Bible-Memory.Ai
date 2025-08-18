@@ -5,6 +5,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Rate limiting storage
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+// Security helper functions
+const getClientIP = (req: Request): string => {
+  return req.headers.get('x-forwarded-for') || 
+         req.headers.get('x-real-ip') || 
+         'unknown'
+}
+
+const isRateLimited = (clientIP: string): boolean => {
+  const now = Date.now()
+  const limit = rateLimitMap.get(clientIP)
+  
+  if (!limit || now > limit.resetTime) {
+    // Reset or create new limit (20 requests per minute for comparison)
+    rateLimitMap.set(clientIP, { count: 1, resetTime: now + 60000 })
+    return false
+  }
+  
+  if (limit.count >= 20) {
+    return true
+  }
+  
+  limit.count++
+  return false
+}
+
+const validateRequest = (data: any): boolean => {
+  return data && 
+         typeof data.userInput === 'string' && 
+         typeof data.originalVerse === 'string' &&
+         data.userInput.length <= 2000 &&
+         data.originalVerse.length <= 2000
+}
+
 interface WordComparison {
   userWord: string;
   originalWord: string;
@@ -31,7 +67,57 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting
+    const clientIP = getClientIP(req)
+    if (isRateLimited(clientIP)) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        { 
+          status: 429,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': '60'
+          } 
+        }
+      )
+    }
+
+    // Validate request method
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ error: 'Method not allowed' }),
+        { 
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Validate authorization header
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     const { userInput, originalVerse, bibleVersion } = await req.json()
+    
+    // Validate input data
+    if (!validateRequest({ userInput, originalVerse, bibleVersion })) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
     
     // Normalize text function
     const normalizeText = (text: string): string => {
@@ -42,9 +128,14 @@ serve(async (req) => {
         .trim()
     }
 
+    // Sanitize inputs
+    const sanitizedUserInput = userInput.replace(/[<>]/g, '').trim()
+    const sanitizedOriginalVerse = originalVerse.replace(/[<>]/g, '').trim()
+    const sanitizedBibleVersion = bibleVersion ? bibleVersion.replace(/[<>]/g, '').trim() : 'Unknown Version'
+
     // Split into words
-    const userWords = normalizeText(userInput).split(' ').filter(word => word.length > 0)
-    const originalWords = normalizeText(originalVerse).split(' ').filter(word => word.length > 0)
+    const userWords = normalizeText(sanitizedUserInput).split(' ').filter(word => word.length > 0)
+    const originalWords = normalizeText(sanitizedOriginalVerse).split(' ').filter(word => word.length > 0)
 
     // Advanced word comparison using dynamic programming (Levenshtein-like approach)
     const compareWords = (user: string[], original: string[]): {
@@ -174,7 +265,7 @@ serve(async (req) => {
       const { correct, incorrect, missing, extra } = stats
       const total = correct + incorrect + missing + extra
 
-      let feedback = `Analysis for ${version || 'your chosen Bible version'}:\n\n`
+      let feedback = `Analysis for ${sanitizedBibleVersion}:\n\n`
       
       if (correct === totalWords) {
         feedback += "🎉 Perfect! You memorized the verse exactly as written."
@@ -203,7 +294,7 @@ serve(async (req) => {
       extraWords: comparison.stats.extra,
       userComparison: comparison.userComparison,
       originalComparison: comparison.originalComparison,
-      detailedFeedback: generateDetailedFeedback(comparison.stats, bibleVersion)
+      detailedFeedback: generateDetailedFeedback(comparison.stats, sanitizedBibleVersion)
     }
 
     return new Response(
@@ -217,8 +308,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Verse Comparison Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { 
         status: 500,
         headers: { 
