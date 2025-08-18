@@ -44,7 +44,7 @@ export class BibleSearchService {
         return null;
       }
 
-      // Use the appropriate Bible API based on version
+      // Use the new Bible API
       const { getPassageByReference } = await import('./BibleAPI');
       const passage = await getPassageByReference(versionId, reference);
       
@@ -64,17 +64,6 @@ export class BibleSearchService {
       console.error('Failed to get verse by reference:', error);
       return null;
     }
-  }
-
-  static async getRandomVerse(versionId: string, testament: 'OT' | 'NT'): Promise<SearchResult | null> {
-    // For now, return a popular verse from the requested testament
-    const otVerses = ['Psalm 23:1', 'Proverbs 3:5', 'Isaiah 40:31', 'Jeremiah 29:11'];
-    const ntVerses = ['John 3:16', 'Romans 8:28', 'Philippians 4:13', 'Matthew 11:28'];
-    
-    const verses = testament === 'OT' ? otVerses : ntVerses;
-    const randomVerse = verses[Math.floor(Math.random() * verses.length)];
-    
-    return this.getVerseByReference(randomVerse, versionId, await import('./BibleAPI').then(api => api.getBibleVersions()));
   }
 
   private static cleanVerseText(text: string): string {

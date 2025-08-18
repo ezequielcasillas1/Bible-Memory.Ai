@@ -37,26 +37,16 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
 
   const generateBibleApiVerses = async () => {
     try {
-      // Get random verses for the selected version
-      const otVerse = await BibleSearchService.getRandomVerse(settings.preferredVersion, 'OT');
-      const ntVerse = await BibleSearchService.getRandomVerse(settings.preferredVersion, 'NT');
+      const [otVerse, ntVerse] = await Promise.all([
+        BibleSearchService.getRandomVerse(settings.preferredVersion, 'OT'),
+        BibleSearchService.getRandomVerse(settings.preferredVersion, 'NT')
+      ]);
       
       if (otVerse && ntVerse) {
         const version = getVersionById(settings.preferredVersion, availableBibleVersions);
-        
-        // Convert SearchResult to Verse format
-        const convertToVerse = (searchResult: any) => ({
-          id: searchResult.id,
-          text: searchResult.text,
-          reference: searchResult.reference,
-          testament: searchResult.testament,
-          version: version?.abbreviation,
-          reason: `A meaningful ${searchResult.testament === 'OT' ? 'Old Testament' : 'New Testament'} verse for ${verseType === 'commission' ? 'encouragement and faith building' : 'comfort and guidance'}.`
-        });
-        
         setCurrentVerses({
-          oldTestament: convertToVerse(otVerse),
-          newTestament: convertToVerse(ntVerse)
+          oldTestament: { ...otVerse, version: version?.abbreviation },
+          newTestament: { ...ntVerse, version: version?.abbreviation }
         });
       } else {
         // Fallback to static verses
