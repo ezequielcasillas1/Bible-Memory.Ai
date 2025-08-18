@@ -133,12 +133,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse
                     )}
                   </div>
                   <p className="text-gray-700 leading-relaxed italic mb-3">
-                    {favorite.verse.html ? (
-                      <div className="prose max-w-none" 
-                           dangerouslySetInnerHTML={{ __html: `"${favorite.verse.html}"` }} />
-                    ) : (
-                      <span>"{typeof favorite.verse.text === 'string' ? favorite.verse.text : ''}"</span>
-                    )}
+                    "{favorite.verse.text}"
                   </p>
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
