@@ -85,14 +85,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 {availableBibleVersions.map((version) => (
                   <option key={version.id} value={version.id} disabled={!version.available}>
-                    {version.abbreviation} – {version.name}
-                    {!version.available ? ' (Coming Soon)' : ''}
+                    {version.abbreviation} – {version.name}{!version.available ? ' (Coming Soon)' : ''}
                   </option>
                 ))}
               </select>
             ) : (
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 text-yellow-700">
                 No Bible versions available. Please check your internet connection.
+              </div>
+            )}
+            
+            {/* Version Info */}
+            {settings.preferredVersion && availableBibleVersions.length > 0 && (
+              <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>
+                    {availableBibleVersions.find(v => v.id === settings.preferredVersion)?.name}
+                  </strong>
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  {availableBibleVersions.find(v => v.id === settings.preferredVersion)?.description}
+                </p>
               </div>
             )}
           </div>
