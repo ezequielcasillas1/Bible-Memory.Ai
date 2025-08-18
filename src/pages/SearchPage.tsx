@@ -213,9 +213,9 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       <span>{note ? 'Edit Note' : 'Add Note'}</span>
                     </button>
                     
-                          <div className="text-gray-700 leading-relaxed italic mb-3">
-                            "{typeof verse.text === 'string' ? verse.text : JSON.stringify(verse.text)}"
-                          </div>
+                    <button
+                      onClick={() => {
+                        const favorites = JSON.parse(localStorage.getItem('bibleMemoryFavorites') || '[]');
                         const isAlreadyFavorite = favorites.some((fav: any) => fav.verse.id === verse.id);
                         
                         if (!isAlreadyFavorite) {
