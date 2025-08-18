@@ -1,6 +1,7 @@
 import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from './BibleAPI';
+import { fetchPassageHTML, WldehVersion, WldehVersions } from './wldeh';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
 const API_KEY = '6d078a413735440025d1f98883a8d372';
@@ -8,27 +9,30 @@ const API_KEY = '6d078a413735440025d1f98883a8d372';
 export class BibleSearchService {
   static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], limit: number = 20): Promise<SearchResult[]> {
     try {
-      // Check if the version is available
+      // Map to wldeh version
+      const wldehVersion = (WldehVersions.includes(versionId as any) ? versionId : 'en-kjv') as WldehVersion;
       const version = availableVersions.find(v => v.id === versionId);
-      if (!version || !version.available) {
-        console.warn(`Version ${versionId} is not available, using fallback search`);
-        return this.fallbackSearch(query, versionId, availableVersions);
-      }
-
-      // Use the Bible API search functionality
-      const { searchVerses } = await import('./BibleAPI');
-      const apiResults = await searchVerses(query, versionId);
       
-      return apiResults.map((passage: any) => ({
-        id: `search-${Date.now()}-${Math.random()}`,
-        text: this.cleanVerseText(passage.text || ''),
-        reference: passage.reference || query,
-        testament: this.determineTestament(passage.reference || query),
-        book: this.extractBook(passage.reference || query),
-        chapter: this.extractChapter(passage.reference || query),
-        verse: this.extractVerse(passage.reference || query),
-        version: version.abbreviation
-      }));
+      // Try to fetch as Bible reference
+      const { html, reference, isReference } = await fetchPassageHTML(wldehVersion, query);
+      
+      if (isReference && html) {
+        const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+        return [{
+          id: `search-${Date.now()}-${Math.random()}`,
+          text,
+          html,
+          reference: reference || query,
+          testament: this.determineTestament(reference || query),
+          book: this.extractBook(reference || query),
+          chapter: this.extractChapter(reference || query),
+          verse: this.extractVerse(reference || query),
+          version: version?.abbreviation || 'KJV'
+        }];
+      }
+      
+      // If not a reference, fall back to keyword search
+      return this.fallbackSearch(query, versionId, availableVersions);
     } catch (error) {
       console.error('Bible search failed:', error);
       return this.fallbackSearch(query, versionId, availableVersions);
@@ -37,28 +41,25 @@ export class BibleSearchService {
 
   static async getVerseByReference(reference: string, versionId: string, availableVersions: BibleVersion[]): Promise<SearchResult | null> {
     try {
-      // Check if the version is available
+      // Map to wldeh version
+      const wldehVersion = (WldehVersions.includes(versionId as any) ? versionId : 'en-kjv') as WldehVersion;
       const version = availableVersions.find(v => v.id === versionId);
-      if (!version || !version.available) {
-        console.warn(`Version ${versionId} is not available`);
-        return null;
-      }
-
-      // Use the new Bible API
-      const { getPassageByReference } = await import('./BibleAPI');
-      const passage = await getPassageByReference(versionId, reference);
       
-      if (!passage) return null;
+      const { html, reference: ref, isReference } = await fetchPassageHTML(wldehVersion, reference);
       
+      if (!isReference || !html) return null;
+      
+      const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
       return {
         id: `verse-${Date.now()}`,
-        text: this.cleanVerseText(passage.text || ''),
-        reference: passage.reference || reference,
+        text,
+        html,
+        reference: ref || reference,
         testament: this.determineTestament(reference),
         book: this.extractBook(reference),
         chapter: this.extractChapter(reference),
         verse: this.extractVerse(reference),
-        version: version.abbreviation
+        version: version?.abbreviation || 'KJV'
       };
     } catch (error) {
       console.error('Failed to get verse by reference:', error);

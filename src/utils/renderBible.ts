@@ -1,4 +1,5 @@
-function escapeHtml(s: string) {
+// src/utils/renderBible.ts
+function esc(s: string) {
   return s
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -7,28 +8,35 @@ function escapeHtml(s: string) {
     .replaceAll("'", "&#039;");
 }
 
-type ChapterLike = Record<string, string> | string[];
+type ChapterMap = Record<string, string> | string[];
 
-export function renderChapterToPlain(ch: ChapterLike): string {
-  const entries = Array.isArray(ch)
-    ? ch.map((t, i) => [String(i + 1), t] as const)
+export function renderChapterToHTML(ch: ChapterMap): string {
+  const pairs: Array<[string, string]> = Array.isArray(ch)
+    ? ch.map((t, i) => [String(i + 1), t])
     : Object.entries(ch);
 
-  return entries.map(([v, t]) => `${v} ${t}`).join(" ");
-}
-
-export function renderChapterToHtml(ch: ChapterLike): string {
-  const entries = Array.isArray(ch)
-    ? ch.map((t, i) => [String(i + 1), t] as const)
-    : Object.entries(ch);
-
-  return entries
-    .map(([v, t]) => `<span class="verse"><sup>${v}</sup> ${escapeHtml(t)}</span>`)
+  return pairs
+    .map(([v, t]) => `<span class="verse"><sup>${esc(v)}</sup> ${esc(String(t))}</span>`)
     .join(" ");
 }
 
-export function renderVerseToHtml(verseObj: any): string {
-  const vnum = String(verseObj?.verse ?? verseObj?.v ?? "");
-  const text = String(verseObj?.text ?? verseObj?.t ?? "");
-  return `<span class="verse"><sup>${vnum}</sup> ${escapeHtml(text)}</span>`;
+export function renderVerseToHTML(obj: any): string {
+  const v = String(obj?.verse ?? obj?.v ?? "");
+  const t = String(obj?.text ?? obj?.t ?? "");
+  return `<span class="verse"><sup>${esc(v)}</sup> ${esc(t)}</span>`;
 }
+
+// Legacy functions for backward compatibility
+export function renderChapterToPlain(ch: ChapterMap): string {
+  const pairs: Array<[string, string]> = Array.isArray(ch)
+    ? ch.map((t, i) => [String(i + 1), t])
+    : Object.entries(ch);
+
+  return pairs.map(([v, t]) => `${v} ${t}`).join(" ");
+}
+
+function escapeHtml(s: string) {
+  return esc(s);
+}
+
+export { escapeHtml };
