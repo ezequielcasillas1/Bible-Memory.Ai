@@ -69,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signInWithProvider = async (provider: 'google' | 'facebook' | 'twitter') => {
+  }
   const signInWithProvider = async (provider: 'google' | 'facebook' | 'twitter' | 'instagram' | 'snapchat') => {
     // Note: Instagram uses Facebook OAuth, Snapchat needs custom implementation
     let actualProvider = provider;
