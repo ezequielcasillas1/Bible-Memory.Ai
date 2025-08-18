@@ -150,17 +150,35 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         return AIService.getPersonalizedFeedback(userInput, session.verse.text, comparison.accuracy, userStats);
       })
       .then((aiResponse) => {
-        setResult({ 
-          accuracy: comparisonResult?.accuracy || 0, 
-          feedback: aiResponse.feedback,
-          analysis: aiResponse.analysis,
-          strategies: aiResponse.strategies,
-          spiritualInsight: aiResponse.spiritualInsight,
-          nextSteps: aiResponse.nextSteps,
-          encouragement: aiResponse.encouragement
-        });
-        setIsLoadingFeedback(false);
-        setPhase('feedback');
+        // Use the comparison data from the resolved promise
+        VerseComparisonService.compareVerses(userInput, session.verse.text, versionName)
+          .then((comparison) => {
+            setResult({ 
+              accuracy: comparison.accuracy, 
+              feedback: aiResponse.feedback,
+              analysis: aiResponse.analysis,
+              strategies: aiResponse.strategies,
+              spiritualInsight: aiResponse.spiritualInsight,
+              nextSteps: aiResponse.nextSteps,
+              encouragement: aiResponse.encouragement
+            });
+            
+            const updatedSession = {
+              ...session,
+              attempts: session.attempts + 1,
+              accuracy: comparison.accuracy,
+              completed: comparison.accuracy >= 70
+            };
+            
+            setSession(updatedSession);
+            
+            // Award points based on accuracy
+            const points = Math.round(comparison.accuracy * 1.5);
+            onComplete(points);
+            
+            setIsLoadingFeedback(false);
+            setPhase('feedback');
+          });
       })
       .catch(() => {
         // Fallback if everything fails
@@ -168,29 +186,30 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
         setResult({ 
           accuracy, 
-          feedback, 
+          feedback: aiResponse.feedback,
           analysis: "Keep practicing to improve your accuracy!",
           strategies: suggestions,
           spiritualInsight: "Focus on understanding the verse's meaning.",
           nextSteps: "Try practicing again tomorrow.",
           encouragement: "You're making progress!"
         });
+        
+        const updatedSession = {
+          ...session,
+          attempts: session.attempts + 1,
+          accuracy: accuracy,
+          completed: accuracy >= 70
+        };
+        
+        setSession(updatedSession);
+        
+        // Award points based on accuracy
+        const points = Math.round(accuracy * 1.5);
+        onComplete(points);
+        
         setIsLoadingFeedback(false);
         setPhase('feedback');
       });
-    
-    const updatedSession = {
-      ...session,
-      attempts: session.attempts + 1,
-      accuracy: comparisonResult?.accuracy || 0,
-      completed: (comparisonResult?.accuracy || 0) >= 70
-    };
-    
-    setSession(updatedSession);
-    
-    // Award points based on accuracy
-    const points = Math.round((comparisonResult?.accuracy || 0) * 1.5);
-    onComplete(points);
   };
 
   const retry = () => {
