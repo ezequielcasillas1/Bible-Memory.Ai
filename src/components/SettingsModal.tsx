@@ -78,17 +78,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 Loading Bible versions...
               </div>
             ) : availableBibleVersions.length > 0 ? (
-              <select
-                value={settings.preferredVersion}
-                onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                {availableBibleVersions.map((version) => (
-                  <option key={version.id} value={version.id}>
-                    {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-4">
+                <select
+                  value={settings.preferredVersion}
+                  onChange={(e) => handleSettingChange('preferredVersion', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  {availableBibleVersions.map((version) => (
+                    <option key={version.id} value={version.id} disabled={!version.available}>
+                      {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Version Info */}
+                {(() => {
+                  const selectedVersion = availableBibleVersions.find(v => v.id === settings.preferredVersion);
+                  if (selectedVersion && selectedVersion.available) {
+                    return (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-800 mb-1">
+                            {selectedVersion.name} ({selectedVersion.abbreviation})
+                          </p>
+                          {selectedVersion.description && (
+                            <p className="text-blue-700 mb-2">{selectedVersion.description}</p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-blue-600">
+                              Source: {selectedVersion.source === 'bible-api' ? 'Bible API' : 'Wldeh API'}
+                            </span>
+                            {selectedVersion.license && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                {selectedVersion.license}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
             ) : (
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-yellow-50 text-yellow-700">
                 No Bible versions available. Please check your internet connection.
@@ -103,6 +135,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               Coming Soon - Customization options for your memorization journey will be added here
             </p>
           </div>
+          
+          {/* Version Statistics */}
+          {availableBibleVersions.length > 0 && (
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+              <h3 className="font-medium text-gray-800 mb-2">📊 Available Versions</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-green-600">
+                    {availableBibleVersions.filter(v => v.available).length}
+                  </span>
+                  <span className="text-gray-600 ml-1">Available Now</span>
+                </div>
+                <div>
+                  <span className="font-medium text-yellow-600">
+                    {availableBibleVersions.filter(v => !v.available).length}
+                  </span>
+                  <span className="text-gray-600 ml-1">Coming Soon</span>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-600">
+                    {availableBibleVersions.filter(v => v.license === 'Public Domain').length}
+                  </span>
+                  <span className="text-gray-600 ml-1">Public Domain</span>
+                </div>
+                <div>
+                  <span className="font-medium text-purple-600">
+                    {availableBibleVersions.filter(v => v.source === 'wldeh-api').length}
+                  </span>
+                  <span className="text-gray-600 ml-1">Enhanced API</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

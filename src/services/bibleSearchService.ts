@@ -1,6 +1,6 @@
 import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
-import { BibleVersion } from './BibleAPI';
+import { BibleVersion, getPassageByReference, searchVerses } from './BibleAPI';
 
 const SCRIPTURE_API_BASE = 'https://api.scripture.api.bible/v1';
 const API_KEY = '6d078a413735440025d1f98883a8d372';
@@ -15,8 +15,6 @@ export class BibleSearchService {
         return this.fallbackSearch(query, versionId, availableVersions);
       }
 
-      // Use the Bible API search functionality
-      const { searchVerses } = await import('./BibleAPI');
       const apiResults = await searchVerses(query, versionId);
       
       return apiResults.map((passage: any) => ({
@@ -44,8 +42,6 @@ export class BibleSearchService {
         return null;
       }
 
-      // Use the new Bible API
-      const { getPassageByReference } = await import('./BibleAPI');
       const passage = await getPassageByReference(versionId, reference);
       
       if (!passage) return null;
@@ -66,6 +62,42 @@ export class BibleSearchService {
     }
   }
 
+  static async getRandomVerse(versionId: string, testament: 'OT' | 'NT'): Promise<any> {
+    try {
+      // Popular verses for random selection
+      const otVerses = [
+        'Jeremiah 29:11', 'Proverbs 3:5-6', 'Psalm 23:1', 'Isaiah 40:31',
+        'Joshua 1:9', 'Psalm 46:1', 'Proverbs 16:3', 'Isaiah 41:10'
+      ];
+      
+      const ntVerses = [
+        'John 3:16', 'Romans 8:28', 'Philippians 4:13', 'Matthew 11:28',
+        '1 Corinthians 13:4', 'Romans 12:2', 'Ephesians 2:8-9', '2 Timothy 1:7'
+      ];
+      
+      const verses = testament === 'OT' ? otVerses : ntVerses;
+      const randomVerse = verses[Math.floor(Math.random() * verses.length)];
+      
+      const passage = await getPassageByReference(versionId, randomVerse);
+      
+      if (passage) {
+        return {
+          id: `random-${Date.now()}`,
+          text: passage.text,
+          reference: passage.reference,
+          testament,
+          reason: testament === 'OT' 
+            ? "A foundational verse from the Old Testament that provides wisdom and encouragement."
+            : "A powerful verse from the New Testament that reveals God's love and grace."
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to get random verse:', error);
+      return null;
+    }
+  }
   private static cleanVerseText(text: string): string {
     return text
       .replace(/<[^>]*>/g, '') // Remove HTML tags
@@ -117,7 +149,8 @@ export class BibleSearchService {
     // Expanded fallback with popular verses that might match the query
     const version = versionId && availableVersions ? 
       availableVersions.find(v => v.id === versionId)?.abbreviation || 'KJV' : 'KJV';
-    const fallbackVerses = [
+    
+    const fallbackVerses: SearchResult[] = [
       {
         id: 'fallback-1',
         text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.',

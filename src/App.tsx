@@ -57,10 +57,10 @@ const App: React.FC = () => {
         // Fallback to basic versions if API fails
         const fallbackVersions: BibleVersion[] = [
           { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
-          { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true },
-          { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false },
-          { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false },
-          { id: 'esv', name: 'English Standard Version', abbreviation: 'ESV', available: false }
+          { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true, source: 'bible-api' },
+          { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false, source: 'bible-api' },
+          { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false, source: 'bible-api' },
+          { id: 'esv', name: 'English Standard Version', abbreviation: 'ESV', available: false, source: 'bible-api' }
         ];
         console.log('Using fallback versions:', fallbackVersions); // Debug log
         setAvailableBibleVersions(fallbackVersions);
