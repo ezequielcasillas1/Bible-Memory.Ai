@@ -56,7 +56,7 @@ const App: React.FC = () => {
         console.error('Failed to load Bible versions:', error);
         // Fallback to basic versions if API fails
         const fallbackVersions: BibleVersion[] = [
-          { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true },
+          { id: 'kjv', name: 'King James Version', abbreviation: 'KJV', available: true, source: 'bible-api' },
           { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV', available: true, source: 'bible-api' },
           { id: 'nkjv', name: 'New King James Version', abbreviation: 'NKJV', available: false, source: 'bible-api' },
           { id: 'nlt', name: 'New Living Translation', abbreviation: 'NLT', available: false, source: 'bible-api' },
@@ -65,7 +65,7 @@ const App: React.FC = () => {
         console.log('Using fallback versions:', fallbackVersions); // Debug log
         setAvailableBibleVersions(fallbackVersions);
         const availableFallback = fallbackVersions.filter(v => v.available);
-        if (!settings.preferredVersion && availableFallback.length > 0) {
+        if (availableFallback.length > 0 && !settings.preferredVersion) {
           setSettings(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
           setUserStats(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
         }
@@ -88,17 +88,20 @@ const App: React.FC = () => {
     if (savedSettings) {
       const parsedSettings = JSON.parse(savedSettings);
       setSettings(parsedSettings);
-      // Ensure the saved preferred version is valid
+    }
+  }, []);
+
+  // Validate saved preferred version when Bible versions are loaded
+  useEffect(() => {
+    if (availableBibleVersions.length > 0 && settings.preferredVersion) {
       const availableVersions = availableBibleVersions.filter(v => v.available);
-      if (parsedSettings.preferredVersion && availableVersions.length > 0) {
-        const isValidVersion = availableVersions.some(v => v.id === parsedSettings.preferredVersion);
-        if (!isValidVersion) {
-          // Reset to first available version if saved version is invalid or unavailable
-          setSettings(prev => ({ ...prev, preferredVersion: availableVersions[0].id }));
-        }
+      const isValidVersion = availableVersions.some(v => v.id === settings.preferredVersion);
+      if (!isValidVersion && availableVersions.length > 0) {
+        // Reset to first available version if saved version is invalid or unavailable
+        setSettings(prev => ({ ...prev, preferredVersion: availableVersions[0].id }));
       }
     }
-  }, [availableBibleVersions]);
+  }, [availableBibleVersions, settings.preferredVersion]);
 
   // Save user data to localStorage when it changes
   useEffect(() => {
