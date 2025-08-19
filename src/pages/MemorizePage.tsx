@@ -146,12 +146,26 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
       .then((comparison) => {
         setComparisonResult(comparison);
         
+        // Update session with actual accuracy and award points
+        const updatedSessionWithAccuracy = {
+          ...session,
+          attempts: session.attempts + 1,
+          accuracy: comparison.accuracy,
+          completed: comparison.accuracy >= 70
+        };
+        setSession(updatedSessionWithAccuracy);
+        
+        // Award points based on actual accuracy
+        const points = Math.round(comparison.accuracy * 1.5);
+        onComplete(points);
+        
         // Then get AI feedback with the accurate comparison data
-        return AIService.getPersonalizedFeedback(userInput, session.verse.text, comparison.accuracy, userStats);
+        return AIService.getPersonalizedFeedback(userInput, session.verse.text, comparison.accuracy, userStats)
+          .then((aiResponse) => ({ aiResponse, accuracy: comparison.accuracy }));
       })
-      .then((aiResponse) => {
+      .then(({ aiResponse, accuracy }) => {
         setResult({ 
-          accuracy: comparisonResult?.accuracy || 0, 
+          accuracy: accuracy, 
           feedback: aiResponse.feedback,
           analysis: aiResponse.analysis,
           strategies: aiResponse.strategies,
@@ -182,15 +196,13 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     const updatedSession = {
       ...session,
       attempts: session.attempts + 1,
-      accuracy: comparisonResult?.accuracy || 0,
-      completed: (comparisonResult?.accuracy || 0) >= 70
+      accuracy: 0, // Will be updated when comparison completes
+      completed: false // Will be updated when comparison completes
     };
     
     setSession(updatedSession);
     
-    // Award points based on accuracy
-    const points = Math.round((comparisonResult?.accuracy || 0) * 1.5);
-    onComplete(points);
+    // Points will be awarded when we get the actual accuracy
   };
 
   const retry = () => {
