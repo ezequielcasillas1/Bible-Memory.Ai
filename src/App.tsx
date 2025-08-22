@@ -15,6 +15,7 @@ import ProfilePage from './pages/ProfilePage';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
+import SyntaxLabPage from './pages/SyntaxLabPage';
 
 const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -25,6 +26,7 @@ const AppContent: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [availableBibleVersions, setAvailableBibleVersions] = useState<BibleVersion[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(true);
+  const [syntaxLabComparisonResult, setSyntaxLabComparisonResult] = useState<any>(null);
   
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
@@ -225,6 +227,8 @@ const AppContent: React.FC = () => {
                 onBackToGenerator={handleBackToGenerator}
                 userStats={userStats}
                 availableBibleVersions={availableBibleVersions}
+                onComparisonComplete={setSyntaxLabComparisonResult}
+                setActiveTab={setActiveTab}
               />
             )}
             
