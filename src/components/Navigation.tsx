@@ -14,6 +14,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'generator' as Tab, label: t('nav.generator'), icon: Home },
     { id: 'memorize' as Tab, label: t('nav.memorize'), icon: Brain },
+    { id: 'syntax-lab' as Tab, label: 'Syntax Lab', icon: Target },
     { id: 'search' as Tab, label: t('nav.search'), icon: Search },
     { id: 'favorites' as Tab, label: t('nav.favorites'), icon: Heart },
     { id: 'history' as Tab, label: t('nav.history'), icon: History },

@@ -25,7 +25,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   onComplete, 
   onBackToGenerator,
   userStats,
-  availableBibleVersions
+  availableBibleVersions,
+  setActiveTab
 }) => {
   const [phase, setPhase] = useState<MemorizationPhase>('study');
   const [timeLeft, setTimeLeft] = useState(studyTime);

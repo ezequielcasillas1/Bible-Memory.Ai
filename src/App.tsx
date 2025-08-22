@@ -260,6 +260,22 @@ const AppContent: React.FC = () => {
                 availableBibleVersions={availableBibleVersions}
               />
             )}
+            
+            {activeTab === 'syntax-lab' && (
+              <SyntaxLabPage
+                comparisonResult={syntaxLabComparisonResult}
+                onBack={() => {
+                  setActiveTab('memorize');
+                  setSyntaxLabComparisonResult(null);
+                  localStorage.removeItem('syntaxLabComparisonResult');
+                }}
+                onStartNewSession={() => {
+                  setActiveTab('generator');
+                  setSyntaxLabComparisonResult(null);
+                  localStorage.removeItem('syntaxLabComparisonResult');
+                }}
+              />
+            )}
           </main>
         </>
       ) : (
