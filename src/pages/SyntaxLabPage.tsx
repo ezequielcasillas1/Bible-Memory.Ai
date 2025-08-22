@@ -287,22 +287,24 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
               </div>
             </div>
 
-            <div className="text-center space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">Choose Practice Mode:</h3>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="text-center space-y-6">
+              <h3 className="text-xl font-bold text-gray-800">Choose Your Practice Mode:</h3>
+              <div className="flex flex-col sm:flex-row gap-6 justify-center">
                 <button
                   onClick={() => startPractice('blank')}
-                  className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
+                  className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white px-8 py-4 rounded-2xl hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm"
                 >
-                  <Target className="w-4 h-4" />
-                  <span>Blank Mode</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                  <Target className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🎯 Fill in the Blank Mode</span>
                 </button>
                 <button
                   onClick={() => startPractice('type-along')}
-                  className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors"
+                  className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white px-8 py-4 rounded-2xl hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm"
                 >
-                  <Brain className="w-4 h-4" />
-                  <span>Type-Along Mode</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                  <Brain className="w-6 h-6 relative z-10 group-hover:pulse transition-transform duration-300" />
+                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🧠 Type-Along Mode</span>
                 </button>
               </div>
             </div>
@@ -314,7 +316,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                {practiceMode === 'blank' ? 'Fill in the Blanks' : 'Type Along'}
+                {practiceMode === 'blank' ? 'Fill in the Blank Mode' : 'Type-Along Mode'}
               </h2>
               <div className="text-sm text-gray-600">
                 Round {currentRound}/{currentSession.maxRounds} • Word {currentWordIndex + 1}/{currentSession.wrongWords.length}
