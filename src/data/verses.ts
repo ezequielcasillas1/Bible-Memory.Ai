@@ -51,20 +51,6 @@ export const commissionVerses: Verse[] = [
     reason: "Reminds us of our calling to encourage and strengthen fellow believers in their faith journey."
   },
   {
-    id: 'nt-10',
-    text: "And God is able to bless you abundantly, so that in all things at all times, having all that you need, you will abound in every good work.",
-    reference: "2 Corinthians 9:8",
-    testament: 'NT',
-    reason: "Assures believers of God's abundant provision for good works and ministry."
-  },
-  {
-    id: 'nt-11',
-    text: "But seek first his kingdom and his righteousness, and all these things will be given to you as well.",
-    reference: "Matthew 6:33",
-    testament: 'NT',
-    reason: "Teaches the priority of seeking God's kingdom above all earthly concerns."
-  },
-  {
     id: 'ot-8',
     text: "He has shown you, O man, what is good. What does the Lord require of you, but to act justly, love mercy, and walk humbly with your God?",
     reference: "Micah 6:8",
