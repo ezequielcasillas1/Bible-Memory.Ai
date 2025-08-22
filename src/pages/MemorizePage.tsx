@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain, Target } from 'lucide-react';
-import { Verse, MemorizationSession } from '../types';
+import { Verse, MemorizationSession, Tab } from '../types';
 import { calculateAccuracy, generateFeedback } from '../utils/scoring';
 import { AIService } from '../services/aiService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
-import { Tab } from '../types';
 import CountdownTimer from '../components/CountdownTimer';
 
 interface MemorizePageProps {
@@ -97,6 +96,45 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     return () => clearInterval(interval);
   }, [phase]);
 
+  const saveToHistory = (completedSession: MemorizationSession, finalAccuracy: number) => {
+    // Load existing history
+    const existingHistory = JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]');
+    
+    // Check if this verse already exists in history
+    const existingIndex = existingHistory.findIndex((item: any) => 
+      item.verse.reference === completedSession.verse.reference
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing entry
+      const existing = existingHistory[existingIndex];
+      existingHistory[existingIndex] = {
+        ...existing,
+        attempts: existing.attempts + 1,
+        bestAccuracy: Math.max(existing.bestAccuracy, finalAccuracy),
+        averageAccuracy: ((existing.averageAccuracy * (existing.attempts - 1)) + finalAccuracy) / existing.attempts,
+        lastPracticed: new Date(),
+        status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
+      };
+    } else {
+      // Create new history entry
+      const newHistoryItem = {
+        id: `history-${Date.now()}`,
+        verse: completedSession.verse,
+        attempts: 1,
+        bestAccuracy: finalAccuracy,
+        averageAccuracy: finalAccuracy,
+        totalTime: practiceTime,
+        lastPracticed: new Date(),
+        status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
+      };
+      existingHistory.unshift(newHistoryItem);
+    }
+    
+    // Save updated history
+    localStorage.setItem('bibleMemoryHistory', JSON.stringify(existingHistory));
+  };
+
   // Loading messages for AI feedback
   const encouragingMessages = [
     "🙏 The Lord is analyzing your heart's work...",
@@ -160,6 +198,9 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         };
         setSession(updatedSessionWithAccuracy);
         
+        // Save to history
+        saveToHistory(updatedSessionWithAccuracy, comparison.accuracy);
+        
         // Award points based on actual accuracy
         const points = Math.round(comparison.accuracy * 1.5);
         onComplete(points);
@@ -185,6 +226,16 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         // Fallback if everything fails
         const accuracy = calculateAccuracy(userInput, session.verse.text);
         const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
+        
+        // Save to history even with fallback
+        const fallbackSession = {
+          ...session,
+          attempts: session.attempts + 1,
+          accuracy,
+          completed: accuracy >= 70
+        };
+        saveToHistory(fallbackSession, accuracy);
+        
         setResult({ 
           accuracy, 
           feedback, 
