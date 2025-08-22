@@ -120,7 +120,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
     })
 
     if (!response.ok) {
-      throw new Error(`Translation API error: ${response.status}`)
+      return `[Translation Unavailable: API Error ${response.status}]`
     }
 
     const data = await response.json()
@@ -128,11 +128,11 @@ async function translateText(text: string, targetLang: string): Promise<string> 
     if (data.destination_text) {
       return data.destination_text
     } else {
-      throw new Error('Invalid translation response')
+      return '[Translation Unavailable: Invalid Response]'
     }
   } catch (error) {
     console.error('Translation error:', error)
-    throw new Error('Translation service temporarily unavailable')
+    return '[Translation Unavailable: Service Unreachable]'
   }
 }
 
