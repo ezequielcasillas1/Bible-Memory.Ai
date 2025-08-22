@@ -14,6 +14,8 @@ import ProfilePage from './pages/ProfilePage';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
 
 const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -239,6 +241,10 @@ const AppContent: React.FC = () => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
+
+      {/* PWA Components */}
+      <PWAInstallPrompt />
+      <OfflineIndicator />
     </div>
   );
 };
