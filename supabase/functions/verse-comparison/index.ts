@@ -3,29 +3,79 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-// Rate limiting storage
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+// Enhanced security constants
+const MAX_REQUEST_SIZE = 8000 // bytes
+const MAX_TEXT_LENGTH = 2000
+
+// Rate limiting with IP tracking and progressive penalties
+const rateLimitMap = new Map<string, { 
+  count: number; 
+  resetTime: number; 
+  violations: number;
+  blockedUntil?: number;
+}>()
+
+// Suspicious activity tracking
+const suspiciousActivityMap = new Map<string, {
+  sqlInjectionAttempts: number;
+  xssAttempts: number;
+  oversizedRequests: number;
+  invalidTokens: number;
+  lastActivity: number;
+}>()
 
 // Security helper functions
 const getClientIP = (req: Request): string => {
-  return req.headers.get('x-forwarded-for') || 
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
          req.headers.get('x-real-ip') || 
+         req.headers.get('cf-connecting-ip') ||
          'unknown'
+}
+
+const isBlocked = (clientIP: string): boolean => {
+  const activity = suspiciousActivityMap.get(clientIP)
+  if (!activity) return false
+  
+  // Block if too many violations
+  const totalViolations = activity.sqlInjectionAttempts + activity.xssAttempts + 
+                         activity.oversizedRequests + activity.invalidTokens
+  
+  if (totalViolations >= 10) {
+    return true // Permanent block for severe violations
+  }
+  
+  return false
 }
 
 const isRateLimited = (clientIP: string): boolean => {
   const now = Date.now()
   const limit = rateLimitMap.get(clientIP)
   
+  // Check if IP is temporarily blocked
+  if (limit?.blockedUntil && now < limit.blockedUntil) {
+    return true
+  }
+  
   if (!limit || now > limit.resetTime) {
     // Reset or create new limit (20 requests per minute for comparison)
-    rateLimitMap.set(clientIP, { count: 1, resetTime: now + 60000 })
+    rateLimitMap.set(clientIP, { 
+      count: 1, 
+      resetTime: now + 60000,
+      violations: limit?.violations || 0
+    })
     return false
   }
   
   if (limit.count >= 20) {
+    // Progressive penalties for rate limit violations
+    limit.violations++
+    if (limit.violations >= 3) {
+      // Block for 5 minutes after 3 violations
+      limit.blockedUntil = now + 300000
+    }
     return true
   }
   
@@ -33,12 +83,107 @@ const isRateLimited = (clientIP: string): boolean => {
   return false
 }
 
-const validateRequest = (data: any): boolean => {
-  return data && 
-         typeof data.userInput === 'string' && 
-         typeof data.originalVerse === 'string' &&
-         data.userInput.length <= 2000 &&
-         data.originalVerse.length <= 2000
+const trackSuspiciousActivity = (clientIP: string, type: 'sql' | 'xss' | 'oversized' | 'token') => {
+  const activity = suspiciousActivityMap.get(clientIP) || {
+    sqlInjectionAttempts: 0,
+    xssAttempts: 0,
+    oversizedRequests: 0,
+    invalidTokens: 0,
+    lastActivity: Date.now()
+  }
+  
+  switch (type) {
+    case 'sql': activity.sqlInjectionAttempts++; break
+    case 'xss': activity.xssAttempts++; break
+    case 'oversized': activity.oversizedRequests++; break
+    case 'token': activity.invalidTokens++; break
+  }
+  
+  activity.lastActivity = Date.now()
+  suspiciousActivityMap.set(clientIP, activity)
+}
+
+const detectSQLInjection = (input: string): boolean => {
+  const sqlPatterns = [
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
+    /(--|\/\*|\*\/|;|'|"|`)/,
+    /(\bOR\b|\bAND\b).*[=<>]/i,
+    /(INFORMATION_SCHEMA|SYSOBJECTS|SYSCOLUMNS)/i,
+    /(WAITFOR|DELAY|BENCHMARK)/i
+  ]
+  
+  return sqlPatterns.some(pattern => pattern.test(input))
+}
+
+const detectXSS = (input: string): boolean => {
+  const xssPatterns = [
+    /<script[^>]*>.*?<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi,
+    /<iframe[^>]*>/gi,
+    /<object[^>]*>/gi,
+    /<embed[^>]*>/gi,
+    /data:text\/html/gi,
+    /vbscript:/gi
+  ]
+  
+  return xssPatterns.some(pattern => pattern.test(input))
+}
+
+const sanitizeInput = (input: string): string => {
+  if (!input || typeof input !== 'string') return ''
+  
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript protocol
+    .replace(/data:/gi, '') // Remove data protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/['"`;]/g, '') // Remove quotes and semicolons
+    .trim()
+    .substring(0, MAX_TEXT_LENGTH)
+}
+
+const validateRequest = (data: any): { valid: boolean; error?: string } => {
+  if (!data) return { valid: false, error: 'No data provided' }
+  
+  if (typeof data.userInput !== 'string' || typeof data.originalVerse !== 'string') {
+    return { valid: false, error: 'Invalid input types' }
+  }
+  
+  if (data.userInput.length > MAX_TEXT_LENGTH || data.originalVerse.length > MAX_TEXT_LENGTH) {
+    return { valid: false, error: 'Input too long' }
+  }
+  
+  // Check for malicious patterns
+  if (detectSQLInjection(data.userInput) || detectSQLInjection(data.originalVerse)) {
+    return { valid: false, error: 'Suspicious input detected' }
+  }
+  
+  if (detectXSS(data.userInput) || detectXSS(data.originalVerse)) {
+    return { valid: false, error: 'Suspicious input detected' }
+  }
+  
+  return { valid: true }
+}
+
+const validateAuthToken = (authHeader: string | null): boolean => {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+  
+  const token = authHeader.substring(7)
+  
+  // Basic token format validation
+  if (token.length < 20 || token.length > 500) {
+    return false
+  }
+  
+  // Check for suspicious token patterns
+  if (detectSQLInjection(token) || detectXSS(token)) {
+    return false
+  }
+  
+  return true
 }
 
 interface WordComparison {
@@ -62,13 +207,26 @@ interface ComparisonResult {
 }
 
 serve(async (req) => {
+  const clientIP = getClientIP(req)
+  
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Rate limiting
-    const clientIP = getClientIP(req)
+    // Check if IP is blocked for suspicious activity
+    if (isBlocked(clientIP)) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied' }),
+        { 
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Rate limiting with progressive penalties
     if (isRateLimited(clientIP)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
@@ -94,9 +252,23 @@ serve(async (req) => {
       )
     }
 
+    // Check request size before parsing
+    const contentLength = req.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE) {
+      trackSuspiciousActivity(clientIP, 'oversized')
+      return new Response(
+        JSON.stringify({ error: 'Request too large' }),
+        { 
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Validate authorization header
     const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!validateAuthToken(authHeader)) {
+      trackSuspiciousActivity(clientIP, 'token')
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { 
@@ -106,12 +278,35 @@ serve(async (req) => {
       )
     }
 
-    const { userInput, originalVerse, bibleVersion } = await req.json()
+    // Parse and validate request body
+    let requestData
+    try {
+      const body = await req.text()
+      if (body.length > MAX_REQUEST_SIZE) {
+        trackSuspiciousActivity(clientIP, 'oversized')
+        throw new Error('Request body too large')
+      }
+      requestData = JSON.parse(body)
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    const { userInput, originalVerse, bibleVersion } = requestData
     
     // Validate input data
-    if (!validateRequest({ userInput, originalVerse, bibleVersion })) {
+    const validation = validateRequest({ userInput, originalVerse, bibleVersion })
+    if (!validation.valid) {
+      if (validation.error === 'Suspicious input detected') {
+        trackSuspiciousActivity(clientIP, detectSQLInjection(userInput + originalVerse) ? 'sql' : 'xss')
+      }
       return new Response(
-        JSON.stringify({ error: 'Invalid request data' }),
+        JSON.stringify({ error: validation.error }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -129,9 +324,20 @@ serve(async (req) => {
     }
 
     // Sanitize inputs
-    const sanitizedUserInput = userInput.replace(/[<>]/g, '').trim()
-    const sanitizedOriginalVerse = originalVerse.replace(/[<>]/g, '').trim()
-    const sanitizedBibleVersion = bibleVersion ? bibleVersion.replace(/[<>]/g, '').trim() : 'Unknown Version'
+    const sanitizedUserInput = sanitizeInput(userInput)
+    const sanitizedOriginalVerse = sanitizeInput(originalVerse)
+    const sanitizedBibleVersion = bibleVersion ? sanitizeInput(bibleVersion) : 'Unknown Version'
+
+    // Additional validation after sanitization
+    if (!sanitizedUserInput || !sanitizedOriginalVerse) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input after sanitization' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
 
     // Split into words
     const userWords = normalizeText(sanitizedUserInput).split(' ').filter(word => word.length > 0)
@@ -263,7 +469,6 @@ serve(async (req) => {
     // Generate detailed feedback
     const generateDetailedFeedback = (stats: typeof comparison.stats, version: string): string => {
       const { correct, incorrect, missing, extra } = stats
-      const total = correct + incorrect + missing + extra
 
       let feedback = `Analysis for ${sanitizedBibleVersion}:\n\n`
       
@@ -302,20 +507,26 @@ serve(async (req) => {
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'X-XSS-Protection': '1; mode=block'
         } 
       }
     )
 
   } catch (error) {
-    console.error('Verse Comparison Error:', error)
+    console.error('Verse Comparison Error:', error.message)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Service temporarily unavailable' }),
       { 
         status: 500,
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'X-XSS-Protection': '1; mode=block'
         } 
       }
     )

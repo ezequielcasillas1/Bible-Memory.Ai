@@ -3,10 +3,30 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-// Rate limiting storage
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+// Enhanced security constants
+const MAX_REQUEST_SIZE = 15000 // bytes
+const MAX_TEXT_LENGTH = 2000
+const ALLOWED_VERSIONS = ['kjv', 'asv', 'darby', 'bbe', 'oeb-us', 'webbe']
+
+// Rate limiting with IP tracking and progressive penalties
+const rateLimitMap = new Map<string, { 
+  count: number; 
+  resetTime: number; 
+  violations: number;
+  blockedUntil?: number;
+}>()
+
+// Suspicious activity tracking
+const suspiciousActivityMap = new Map<string, {
+  sqlInjectionAttempts: number;
+  xssAttempts: number;
+  oversizedRequests: number;
+  invalidTokens: number;
+  lastActivity: number;
+}>()
 
 // Strategic language pairings based on translation accuracy and clarity
 const LANGUAGE_STRATEGIES = {
@@ -62,22 +82,53 @@ const SUPPORTED_LANGUAGES: Record<string, any> = {
 
 // Security helper functions
 const getClientIP = (req: Request): string => {
-  return req.headers.get('x-forwarded-for') || 
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
          req.headers.get('x-real-ip') || 
+         req.headers.get('cf-connecting-ip') ||
          'unknown'
+}
+
+const isBlocked = (clientIP: string): boolean => {
+  const activity = suspiciousActivityMap.get(clientIP)
+  if (!activity) return false
+  
+  // Block if too many violations
+  const totalViolations = activity.sqlInjectionAttempts + activity.xssAttempts + 
+                         activity.oversizedRequests + activity.invalidTokens
+  
+  if (totalViolations >= 12) {
+    return true // Permanent block for severe violations
+  }
+  
+  return false
 }
 
 const isRateLimited = (clientIP: string): boolean => {
   const now = Date.now()
   const limit = rateLimitMap.get(clientIP)
   
+  // Check if IP is temporarily blocked
+  if (limit?.blockedUntil && now < limit.blockedUntil) {
+    return true
+  }
+  
   if (!limit || now > limit.resetTime) {
     // 10 translations per minute (translation is resource intensive)
-    rateLimitMap.set(clientIP, { count: 1, resetTime: now + 60000 })
+    rateLimitMap.set(clientIP, { 
+      count: 1, 
+      resetTime: now + 60000,
+      violations: limit?.violations || 0
+    })
     return false
   }
   
   if (limit.count >= 10) {
+    // Progressive penalties for rate limit violations
+    limit.violations++
+    if (limit.violations >= 3) {
+      // Block for 10 minutes after 3 violations
+      limit.blockedUntil = now + 600000
+    }
     return true
   }
   
@@ -85,35 +136,124 @@ const isRateLimited = (clientIP: string): boolean => {
   return false
 }
 
-const validateRequest = (data: any): boolean => {
-  return data && 
-         typeof data.text === 'string' && 
-         typeof data.targetLanguage === 'string' &&
-         typeof data.sourceVersion === 'string' &&
-         data.text.length <= 2000 &&
-         data.text.length > 0 &&
-         SUPPORTED_LANGUAGES[data.targetLanguage] &&
-         ['kjv', 'asv', 'darby', 'bbe', 'oeb-us', 'webbe'].includes(data.sourceVersion)
+const trackSuspiciousActivity = (clientIP: string, type: 'sql' | 'xss' | 'oversized' | 'token') => {
+  const activity = suspiciousActivityMap.get(clientIP) || {
+    sqlInjectionAttempts: 0,
+    xssAttempts: 0,
+    oversizedRequests: 0,
+    invalidTokens: 0,
+    lastActivity: Date.now()
+  }
+  
+  switch (type) {
+    case 'sql': activity.sqlInjectionAttempts++; break
+    case 'xss': activity.xssAttempts++; break
+    case 'oversized': activity.oversizedRequests++; break
+    case 'token': activity.invalidTokens++; break
+  }
+  
+  activity.lastActivity = Date.now()
+  suspiciousActivityMap.set(clientIP, activity)
+}
+
+const detectSQLInjection = (input: string): boolean => {
+  const sqlPatterns = [
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
+    /(--|\/\*|\*\/|;|'|"|`)/,
+    /(\bOR\b|\bAND\b).*[=<>]/i,
+    /(INFORMATION_SCHEMA|SYSOBJECTS|SYSCOLUMNS)/i,
+    /(WAITFOR|DELAY|BENCHMARK)/i
+  ]
+  
+  return sqlPatterns.some(pattern => pattern.test(input))
+}
+
+const detectXSS = (input: string): boolean => {
+  const xssPatterns = [
+    /<script[^>]*>.*?<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi,
+    /<iframe[^>]*>/gi,
+    /<object[^>]*>/gi,
+    /<embed[^>]*>/gi,
+    /data:text\/html/gi,
+    /vbscript:/gi
+  ]
+  
+  return xssPatterns.some(pattern => pattern.test(input))
 }
 
 const sanitizeInput = (input: string): string => {
+  if (!input || typeof input !== 'string') return ''
+  
   return input
-    .replace(/[<>]/g, '')
-    .replace(/javascript:/gi, '')
-    .replace(/data:/gi, '')
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript protocol
+    .replace(/data:/gi, '') // Remove data protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/['"`;]/g, '') // Remove quotes and semicolons
     .trim()
-    .substring(0, 2000)
+    .substring(0, MAX_TEXT_LENGTH)
+}
+
+const validateRequest = (data: any): { valid: boolean; error?: string } => {
+  if (!data) return { valid: false, error: 'No data provided' }
+  
+  if (typeof data.text !== 'string' || data.text.length === 0) {
+    return { valid: false, error: 'Invalid text' }
+  }
+  
+  if (data.text.length > MAX_TEXT_LENGTH) {
+    return { valid: false, error: 'Text too long' }
+  }
+  
+  if (typeof data.targetLanguage !== 'string' || !SUPPORTED_LANGUAGES[data.targetLanguage]) {
+    return { valid: false, error: 'Invalid target language' }
+  }
+  
+  if (typeof data.sourceVersion !== 'string' || !ALLOWED_VERSIONS.includes(data.sourceVersion)) {
+    return { valid: false, error: 'Invalid source version' }
+  }
+  
+  // Check for malicious patterns
+  if (detectSQLInjection(data.text) || detectXSS(data.text)) {
+    return { valid: false, error: 'Suspicious input detected' }
+  }
+  
+  return { valid: true }
+}
+
+const validateAuthToken = (authHeader: string | null): boolean => {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+  
+  const token = authHeader.substring(7)
+  
+  // Basic token format validation
+  if (token.length < 20 || token.length > 500) {
+    return false
+  }
+  
+  // Check for suspicious token patterns
+  if (detectSQLInjection(token) || detectXSS(token)) {
+    return false
+  }
+  
+  return true
 }
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   try {
     // Use Google Translate free API with proper full text handling
-    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}&ie=UTF-8&oe=UTF-8&format=text`, {
+    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}&ie=UTF-8&oe=UTF-8&format=text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'Mozilla/5.0 (compatible; Bible-Memory-AI/1.0)',
+        'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(10000) // 10 second timeout
     })
 
     if (googleResponse.ok) {
@@ -129,7 +269,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
         }
         // Return the complete translation without trimming to preserve formatting
         if (fullTranslation) {
-          return fullTranslation
+          return sanitizeInput(fullTranslation)
         }
       }
     }
@@ -139,6 +279,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
         q: text,
@@ -146,41 +287,57 @@ async function translateText(text: string, targetLang: string): Promise<string> 
         target: targetLang,
         format: 'text',
         api_key: null // Use free tier
-      })
+      }),
+      signal: AbortSignal.timeout(8000) // 8 second timeout
     })
 
     if (libreResponse.ok) {
       const libreData = await libreResponse.json()
       if (libreData.translatedText) {
-        return libreData.translatedText
+        return sanitizeInput(libreData.translatedText)
       }
     }
 
     // Fallback 2: MyMemory API (limit to 500 chars due to their restrictions)
-    const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 500))}&langpair=en|${targetLang}`)
+    const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 500))}&langpair=en|${encodeURIComponent(targetLang)}`, {
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    })
     
     if (myMemoryResponse.ok) {
       const myMemoryData = await myMemoryResponse.json()
       if (myMemoryData.responseData && myMemoryData.responseData.translatedText) {
-        return myMemoryData.responseData.translatedText
+        return sanitizeInput(myMemoryData.responseData.translatedText)
       }
     }
 
     return `[Translation Unavailable: All translation services failed for this ${text.length > 500 ? 'long' : 'short'} text]`
   } catch (error) {
-    console.error('Translation error:', error)
+    console.error('Translation error:', error.message)
     return '[Translation Unavailable: Network Error]'
   }
 }
 
 serve(async (req) => {
+  const clientIP = getClientIP(req)
+  
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Rate limiting
-    const clientIP = getClientIP(req)
+    // Check if IP is blocked for suspicious activity
+    if (isBlocked(clientIP)) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied' }),
+        { 
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Rate limiting with progressive penalties
     if (isRateLimited(clientIP)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
@@ -206,9 +363,23 @@ serve(async (req) => {
       )
     }
 
+    // Check request size before parsing
+    const contentLength = req.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE) {
+      trackSuspiciousActivity(clientIP, 'oversized')
+      return new Response(
+        JSON.stringify({ error: 'Request too large' }),
+        { 
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Validate authorization header
     const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!validateAuthToken(authHeader)) {
+      trackSuspiciousActivity(clientIP, 'token')
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { 
@@ -218,25 +389,35 @@ serve(async (req) => {
       )
     }
 
-    const requestData = await req.json()
-    const { text, targetLanguage, sourceVersion, reference } = requestData
-    
-    // Additional security checks
-    const totalPayloadSize = JSON.stringify({ text, targetLanguage, sourceVersion, reference }).length
-    if (totalPayloadSize > 10000) {
+    // Parse and validate request body
+    let requestData
+    try {
+      const body = await req.text()
+      if (body.length > MAX_REQUEST_SIZE) {
+        trackSuspiciousActivity(clientIP, 'oversized')
+        throw new Error('Request body too large')
+      }
+      requestData = JSON.parse(body)
+    } catch (error) {
       return new Response(
-        JSON.stringify({ error: 'Request payload too large' }),
+        JSON.stringify({ error: 'Invalid JSON' }),
         { 
-          status: 413,
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
     }
+
+    const { text, targetLanguage, sourceVersion, reference } = requestData
     
     // Validate input data
-    if (!validateRequest({ text, targetLanguage, sourceVersion })) {
+    const validation = validateRequest({ text, targetLanguage, sourceVersion, reference })
+    if (!validation.valid) {
+      if (validation.error === 'Suspicious input detected') {
+        trackSuspiciousActivity(clientIP, detectSQLInjection(text) ? 'sql' : 'xss')
+      }
       return new Response(
-        JSON.stringify({ error: 'Invalid request data' }),
+        JSON.stringify({ error: validation.error }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -247,6 +428,17 @@ serve(async (req) => {
     // Sanitize inputs
     const sanitizedText = sanitizeInput(text)
     const sanitizedReference = reference ? sanitizeInput(reference) : ''
+
+    // Additional validation after sanitization
+    if (!sanitizedText) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input after sanitization' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
 
     // Get language info
     const languageInfo = SUPPORTED_LANGUAGES[targetLanguage]
@@ -283,23 +475,29 @@ serve(async (req) => {
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'X-XSS-Protection': '1; mode=block'
         } 
       }
     )
 
   } catch (error) {
-    console.error('Bible Translation Error:', error)
+    console.error('Bible Translation Error:', error.message)
     return new Response(
       JSON.stringify({ 
-        error: 'Translation service temporarily unavailable',
-        details: error.message 
+        error: 'Service temporarily unavailable',
+        details: 'Translation service is currently unavailable'
       }),
       { 
         status: 500,
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'X-XSS-Protection': '1; mode=block'
         } 
       }
     )
