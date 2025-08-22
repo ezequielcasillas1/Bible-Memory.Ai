@@ -251,6 +251,20 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
               <p className="text-gray-600">Track your progress and plan your memorization journey</p>
             </div>
           </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleManualRefresh}
+              className="text-sm text-purple-600 hover:text-purple-800 px-3 py-1 border border-purple-200 rounded-lg"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={checkLocalStorage}
+              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+            >
+              Debug
+            </button>
+          </div>
         </div>
       </div>
 
