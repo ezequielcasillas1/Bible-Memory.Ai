@@ -292,3 +292,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 })()
               )}
             </div>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            {t('settings.cancel')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsModal;
