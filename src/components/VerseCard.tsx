@@ -1,12 +1,14 @@
 import React from 'react';
+import { Globe } from 'lucide-react';
 import { Verse } from '../types';
 
 interface VerseCardProps {
   verse: Verse;
   onMemorize: (verse: Verse) => void;
+  onTranslate?: (verse: Verse) => void;
 }
 
-const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize }) => {
+const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize, onTranslate }) => {
   return (
     <div className="verse-card bg-white rounded-2xl p-4 sm:p-6 shadow-xl border border-purple-200">
       <div className="flex items-center justify-between mb-4">
@@ -58,12 +60,25 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize }) => {
         )}
       </div>
       
-      <button
-        onClick={() => onMemorize(verse)}
-        className="button-primary w-full"
-      >
-        Transfer to Memorize
-      </button>
+      <div className="flex space-x-3">
+        <button
+          onClick={() => onMemorize(verse)}
+          className="button-primary flex-1"
+        >
+          Transfer to Memorize
+        </button>
+        
+        {onTranslate && (
+          <button
+            onClick={() => onTranslate(verse)}
+            className="flex items-center justify-center space-x-2 px-4 py-2 border-2 border-blue-500 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors"
+            title="Translate to other languages"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">Translate</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };
