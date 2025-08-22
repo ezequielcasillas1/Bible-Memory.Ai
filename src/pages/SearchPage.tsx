@@ -392,6 +392,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       {translation.reference && (
                         <p className="text-purple-600 font-medium text-sm">{translation.reference}</p>
                       )}
+                    </div>
                   )}
                   
                   <div className="flex items-center space-x-3">
