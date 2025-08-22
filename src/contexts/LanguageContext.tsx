@@ -388,7 +388,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentLanguage]);
 
   const setLanguage = (languageCode: string) => {
-    if (translations[languageCode] || SUPPORTED_LANGUAGES.find(lang => lang.code === languageCode)) {
+    if (translations[languageCode] || UI_LANGUAGES.find(lang => lang.code === languageCode)) {
       setCurrentLanguage(languageCode);
       localStorage.setItem('uiLanguage', languageCode);
       
