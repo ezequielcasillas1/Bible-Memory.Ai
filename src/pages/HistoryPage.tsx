@@ -251,20 +251,6 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
               <p className="text-gray-600">Track your progress and plan your memorization journey</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleManualRefresh}
-              className="text-sm text-purple-600 hover:text-purple-800 px-3 py-1 border border-purple-200 rounded-lg"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={checkLocalStorage}
-              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
-            >
-              Debug
-            </button>
-          </div>
         </div>
       </div>
 
@@ -427,12 +413,6 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                   >
                     Practice Again
                   </button>
-                  <button
-                    onClick={() => deleteHistoryEntry(item.id)}
-                    className="text-xs text-red-500 hover:text-red-700 mt-1 block"
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
             ))}
@@ -443,14 +423,9 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
             <p className="text-gray-500 mb-2">
               {isLoading ? 'Loading your history...' : 'No memorization history yet. Start practicing to see your progress!'}
             </p>
-            {!isLoading && (
-              <button
-                onClick={handleManualRefresh}
-                className="text-sm text-purple-600 hover:text-purple-800 mt-2"
-              >
-                Refresh History
-              </button>
-            )}
+            <p className="text-xs text-gray-400">
+              Debug: History items in localStorage: {localStorage.getItem('bibleMemoryHistory') ? JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]').length : 0}
+            </p>
           </div>
         )}
       </div>
