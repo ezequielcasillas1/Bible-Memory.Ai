@@ -7,6 +7,7 @@ import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
 import VerseCard from '../components/VerseCard';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface GeneratorPageProps {
   onMemorizeVerse: (verse: Verse) => void;
@@ -15,6 +16,7 @@ interface GeneratorPageProps {
 }
 
 const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings, availableBibleVersions }) => {
+  const { t } = useTranslation();
   const [verseType, setVerseType] = useState<VerseType>('commission');
   const [currentVerses, setCurrentVerses] = useState({
     oldTestament: commissionVerses.find(v => v.testament === 'OT'),
