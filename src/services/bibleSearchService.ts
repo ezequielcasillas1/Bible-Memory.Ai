@@ -257,6 +257,26 @@ export class BibleSearchService {
         chapter: 43,
         verse: 2,
         version
+      },
+      {
+        id: 'fallback-10',
+        text: 'But seek first God\'s Kingdom, and his righteousness; and all these things will be given to you as well.',
+        reference: 'Matthew 6:33',
+        testament: 'NT' as const,
+        book: 'Matthew',
+        chapter: 6,
+        verse: 33,
+        version
+      },
+      {
+        id: 'fallback-11',
+        text: 'The Lord is good, a stronghold in the day of trouble; and he knows those who trust in him.',
+        reference: 'Nahum 1:7',
+        testament: 'OT' as const,
+        book: 'Nahum',
+        chapter: 1,
+        verse: 7,
+        version
       }
     ];
 

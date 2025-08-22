@@ -36,7 +36,7 @@ const isRateLimited = (clientIP: string): boolean => {
 const validateRequest = (data: any): boolean => {
   return data && 
          typeof data.reference === 'string' &&
-         ['kjv', 'asv', 'darby', 'bbe'].includes(data.version) &&
+         ['kjv', 'asv', 'darby', 'bbe', 'oeb-us', 'webbe'].includes(data.version) &&
          data.reference.length <= 100
 }
 

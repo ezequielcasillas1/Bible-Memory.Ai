@@ -42,6 +42,27 @@ export const commissionVerses: Verse[] = [
     reference: "John 16:33",
     testament: 'NT',
     reason: "Jesus promises peace and victory over worldly troubles through faith in Him."
+  },
+  {
+    id: 'nt-8',
+    text: "Therefore encourage one another and build each other up, just as in fact you are doing.",
+    reference: "1 Thessalonians 5:11",
+    testament: 'NT',
+    reason: "Reminds us of our calling to encourage and strengthen fellow believers in their faith journey."
+  },
+  {
+    id: 'ot-8',
+    text: "He has shown you, O man, what is good. What does the Lord require of you, but to act justly, love mercy, and walk humbly with your God?",
+    reference: "Micah 6:8",
+    testament: 'OT',
+    reason: "Summarizes God's requirements for righteous living in three simple but profound principles."
+  },
+  {
+    id: 'nt-9',
+    text: "Let us hold fast the confession of our hope without wavering, for he who promised is faithful.",
+    reference: "Hebrews 10:23",
+    testament: 'NT',
+    reason: "Encourages steadfast faith based on God's faithfulness to His promises."
   }
 ];
 
