@@ -84,46 +84,6 @@ export class BibleSearchService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        {
-          id: 'fallback-12',
-          text: 'The Lord is my light and my salvation—whom shall I fear? The Lord is the stronghold of my life—of whom shall I be afraid?',
-          reference: 'Psalm 27:1',
-          testament: 'OT' as const,
-          book: 'Psalm',
-          chapter: 27,
-          verse: 1,
-          version
-        },
-        {
-          id: 'fallback-13',
-          text: 'Therefore, if anyone is in Christ, the new creation has come: The old has gone, the new is here!',
-          reference: '2 Corinthians 5:17',
-          testament: 'NT' as const,
-          book: '2 Corinthians',
-          chapter: 5,
-          verse: 17,
-          version
-        },
-        {
-          id: 'fallback-14',
-          text: 'Delight yourself in the Lord, and he will give you the desires of your heart.',
-          reference: 'Psalm 37:4',
-          testament: 'OT' as const,
-          book: 'Psalm',
-          chapter: 37,
-          verse: 4,
-          version
-        },
-        {
-          id: 'fallback-15',
-          text: 'For we are God\'s handiwork, created in Christ Jesus to do good works, which God prepared in advance for us to do.',
-          reference: 'Ephesians 2:10',
-          testament: 'NT' as const,
-          book: 'Ephesians',
-          chapter: 2,
-          verse: 10,
-          version
-        }
         body: JSON.stringify({
           reference: randomVerse,
           version: versionId,

@@ -63,7 +63,7 @@ export const commissionVerses: Verse[] = [
     reference: "Matthew 6:33",
     testament: 'NT',
     reason: "Teaches the priority of seeking God's kingdom above all earthly concerns."
-  }
+  },
   {
     id: 'ot-8',
     text: "He has shown you, O man, what is good. What does the Lord require of you, but to act justly, love mercy, and walk humbly with your God?",
