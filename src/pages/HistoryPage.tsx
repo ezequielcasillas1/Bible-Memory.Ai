@@ -16,7 +16,6 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
   const [improvementPlans, setImprovementPlans] = useState<ImprovementPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
-  const [showMockData, setShowMockData] = useState(false);
   const [newPlan, setNewPlan] = useState({
     title: '',
     description: '',
@@ -26,32 +25,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     dailyPractice: 15
   });
 
-  // Add mock data for testing
-  const addMockHistoryEntry = () => {
-    const mockEntry: MemorizationHistory = {
-      id: `mock-${Date.now()}`,
-      verse: {
-        id: 'mock-verse-1',
-        text: "And the Lord said unto Moses, 'Behold, I have given thee wisdom to lead my people through the wilderness of code, that they might find rest in the promised land of working applications.'",
-        reference: "Debuggicus 3:16",
-        testament: 'OT'
-      },
-      attempts: 3,
-      bestAccuracy: 87,
-      averageAccuracy: 82,
-      totalTime: 145,
-      lastPracticed: new Date(),
-      status: 'reviewing'
-    };
-    
-    setHistory(prev => [mockEntry, ...prev]);
-    console.log('Added mock history entry:', mockEntry);
-  };
-
-  const clearMockData = () => {
-    setHistory(prev => prev.filter(item => !item.id.startsWith('mock-')));
-    console.log('Cleared mock history entries');
-  };
+  
 
   // Load data from Supabase
   useEffect(() => {
@@ -88,11 +62,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     const refreshHistory = async () => {
       try {
         const historyData = await HistoryService.getMemorizationHistory();
-        // Preserve mock entries when refreshing
-        setHistory(prev => {
-          const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
-          return [...mockEntries, ...historyData];
-        });
+        setHistory(historyData);
       } catch (error) {
         console.error('Failed to refresh history:', error);
       }
@@ -109,11 +79,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     const handleFocus = async () => {
       try {
         const historyData = await HistoryService.getMemorizationHistory();
-        // Preserve mock entries when refreshing on focus
-        setHistory(prev => {
-          const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
-          return [...mockEntries, ...historyData];
-        });
+        setHistory(historyData);
       } catch (error) {
         console.error('Failed to refresh history on focus:', error);
       }
@@ -131,11 +97,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     setIsLoading(true);
     try {
       const historyData = await HistoryService.getMemorizationHistory();
-      // Preserve mock entries during manual refresh
-      setHistory(prev => {
-        const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
-        return [...mockEntries, ...historyData];
-      });
+      setHistory(historyData);
     } catch (error) {
       console.error('Failed to refresh history:', error);
     } finally {
@@ -293,46 +255,12 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={addMockHistoryEntry}
-              className="text-sm bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg"
-            >
-              Add Mock Entry
-            </button>
-            <button
-              onClick={clearMockData}
-              className="text-sm bg-red-600 text-white hover:bg-red-700 px-3 py-2 rounded-lg"
-            >
-              Clear Mock
-            </button>
-            <button
               onClick={handleManualRefresh}
               className="text-sm text-purple-600 hover:text-purple-800 px-3 py-1 border border-purple-200 rounded-lg"
             >
               Refresh
             </button>
           </div>
-        </div>
-        
-        {/* Debug Controls */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={addMockHistoryEntry}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Add Mock Entry
-          </button>
-          <button
-            onClick={clearMockData}
-            className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            Clear Mock
-          </button>
-          <button
-            onClick={handleManualRefresh}
-            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-          >
-            Refresh
-          </button>
         </div>
       </div>
 
