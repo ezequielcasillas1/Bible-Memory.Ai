@@ -107,15 +107,16 @@ const sanitizeInput = (input: string): string => {
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   try {
-    const response = await fetch('https://ftapi.pythonanywhere.com/translate', {
+    const response = await fetch('https://libretranslate.de/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sl: 'en',
-        dl: targetLang,
-        text: text
+        q: text,
+        source: 'en',
+        target: targetLang,
+        format: 'text'
       })
     })
 
@@ -125,8 +126,8 @@ async function translateText(text: string, targetLang: string): Promise<string> 
 
     const data = await response.json()
     
-    if (data.destination_text) {
-      return data.destination_text
+    if (data.translatedText) {
+      return data.translatedText
     } else {
       return '[Translation Unavailable: Invalid Response]'
     }
