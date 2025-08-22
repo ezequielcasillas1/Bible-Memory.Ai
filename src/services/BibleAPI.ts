@@ -73,7 +73,7 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         available: true,
         source: 'bible-api',
         license: 'Public Domain'
-      }
+      },
       { 
         id: 'rccv', 
         abbreviation: 'RCCV', 
