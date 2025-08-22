@@ -41,7 +41,7 @@ export interface MemorizationSession {
   accuracy: number;
 }
 
-export type Tab = 'generator' | 'memorize' | 'profile';
+export type Tab = 'generator' | 'memorize' | 'search' | 'favorites' | 'history' | 'profile' | 'syntax-lab';
 export type VerseType = 'commission' | 'help';
 
 export interface AppSettings {
@@ -127,6 +127,44 @@ export interface ImprovementPlan {
   };
   createdAt: Date;
   status: 'active' | 'completed' | 'paused';
+}
+
+export interface SyntaxLabSession {
+  id: string;
+  verseId: string;
+  verse: Verse;
+  originalComparison: ComparisonResult;
+  wrongWords: WordComparison[];
+  practiceMode: 'blank' | 'type-along';
+  currentRound: number;
+  maxRounds: number;
+  wordsFixed: string[];
+  startTime: Date;
+  endTime?: Date;
+  finalAccuracy: number;
+  improvementScore: number;
+}
+
+export interface WeakWord {
+  id: string;
+  word: string;
+  originalWord: string;
+  verse: string;
+  reference: string;
+  timesWrong: number;
+  lastMissed: Date;
+  definition?: string;
+  mastered: boolean;
+}
+
+export interface SyntaxLabStats {
+  totalSessions: number;
+  wordsFixed: number;
+  averageImprovement: number;
+  weakWords: WeakWord[];
+  accuracyTrend: number[];
+  mostMissedTypes: string[];
+  streakDays: number;
 }
 
 export interface UserProfile {
