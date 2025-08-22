@@ -1,6 +1,0 @@
-[33m544159b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: checkout: moving from 2a659bdac4c03babacf83cd2f9b9dedc650bb0e5 to main
-[33m2a659bd[m HEAD@{1}: commit: BM1.5
-[33m5bb1a74[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: commit: BM1.1
-[33m3d6b82c[m HEAD@{3}: rebase (start): checkout origin/main
-[33m544159b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{4}: Branch: renamed refs/heads/master to refs/heads/main
-[33m544159b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{6}: commit (initial): BM1.1
