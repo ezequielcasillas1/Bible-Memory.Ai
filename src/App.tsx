@@ -233,6 +233,7 @@ const AppContent: React.FC = () => {
                 settings={settings}
                 onMemorizeVerse={handleMemorizeVerse}
                 availableBibleVersions={availableBibleVersions}
+               onSettingsChange={setSettings}
               />
             )}
             

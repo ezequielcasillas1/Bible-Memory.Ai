@@ -10,9 +10,10 @@ interface SearchPageProps {
   settings: AppSettings;
   onMemorizeVerse: (verse: any) => void;
   availableBibleVersions: BibleVersion[];
+  onSettingsChange: (settings: AppSettings) => void;
 }
 
-const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions }) => {
+const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions, onSettingsChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -279,7 +280,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
           <div className="grid gap-4">
             {searchResults.map((verse) => {
               const note = getVerseNote(verse.id);
-              const translationKey = `${verse.id}-${selectedLanguage}`;
+             const translationKey = `${verse.id}-${settings.preferredTranslationLanguage}`;
               const translation = translations[translationKey];
               const isTranslating = translatingVerses.has(verse.id);
               
