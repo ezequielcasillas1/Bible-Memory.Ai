@@ -131,10 +131,14 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
     setTranslatingVerses(prev => new Set(prev).add(verse.id));
 
     try {
+      // Get the current Bible version being used
+      const currentVersion = getVersionById(settings.preferredVersion, availableBibleVersions);
+      const versionId = currentVersion?.id || 'kjv';
+      
       const result = await TranslationService.translateVerse(
         verse.text,
         selectedTranslationLanguage,
-        verse.version.toLowerCase(),
+        versionId,
         verse.reference
       );
 
@@ -148,6 +152,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
       }));
     } catch (error) {
       console.error('Translation failed:', error);
+      // Show error to user
+      alert('Translation failed. Please try again.');
     } finally {
       setTranslatingVerses(prev => {
         const newSet = new Set(prev);
@@ -344,7 +350,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                     <button
                       onClick={() => handleTranslateVerse(verse)}
                       disabled={isTranslating || (!selectedTranslationLanguage && !showLanguageSelector)}
-                      className="flex items-center space-x-2 px-4 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isTranslating ? (
                         <>
@@ -354,7 +360,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       ) : (
                         <>
                           <Globe className="w-4 h-4" />
-                          <span>{translation ? 'Retranslate' : 'Translate'}</span>
+                          <span>
+                            {translation ? 'Retranslate' : 
+                             selectedTranslationLanguage ? 'Translate' : 'Select Language'}
+                          </span>
                         </>
                       )}
                     </button>
@@ -379,6 +388,9 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                             addedAt: new Date()
                           };
                           localStorage.setItem('bibleMemoryFavorites', JSON.stringify([...favorites, newFavorite]));
+                          alert('Added to favorites!');
+                        } else {
+                          alert('Already in favorites!');
                         }
                       }}
                       className="flex items-center space-x-2 px-4 py-2 text-sm border border-pink-200 text-pink-600 rounded-lg hover:bg-pink-50 transition-colors"
