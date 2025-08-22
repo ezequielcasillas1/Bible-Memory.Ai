@@ -324,6 +324,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const savedLanguage = localStorage.getItem('uiLanguage');
     if (savedLanguage && translations[savedLanguage]) {
       setCurrentLanguage(savedLanguage);
+    } else {
+      // Also check settings localStorage for backward compatibility
+      const savedSettings = localStorage.getItem('bibleMemorySettings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        if (parsedSettings.uiLanguage && translations[parsedSettings.uiLanguage]) {
+          setCurrentLanguage(parsedSettings.uiLanguage);
+        }
+      }
     }
   }, []);
 
@@ -331,6 +340,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (translations[languageCode]) {
       setCurrentLanguage(languageCode);
       localStorage.setItem('uiLanguage', languageCode);
+      
+      // Also update the settings localStorage for consistency
+      const savedSettings = localStorage.getItem('bibleMemorySettings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        parsedSettings.uiLanguage = languageCode;
+        localStorage.setItem('bibleMemorySettings', JSON.stringify(parsedSettings));
+      }
     }
   };
 

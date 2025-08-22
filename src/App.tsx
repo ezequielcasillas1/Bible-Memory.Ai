@@ -18,6 +18,7 @@ import LandingPage from './components/LandingPage';
 
 const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { currentLanguage, setLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>('generator');
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -28,7 +29,7 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: '', // Will be set once versions are loaded
-    uiLanguage: 'en',
+    uiLanguage: 'en', // This will be synced with LanguageContext
     preferredTranslationLanguage: '', // Will be set to default language
   });
   
@@ -117,8 +118,22 @@ const AppContent: React.FC = () => {
     if (savedSettings) {
       const parsedSettings = JSON.parse(savedSettings);
       setSettings(parsedSettings);
+      // Sync UI language with LanguageContext
+      if (parsedSettings.uiLanguage && parsedSettings.uiLanguage !== currentLanguage) {
+        setLanguage(parsedSettings.uiLanguage);
+      }
     }
-  }, []);
+  }, [currentLanguage, setLanguage]);
+
+  // Sync LanguageContext changes back to settings
+  useEffect(() => {
+    if (currentLanguage !== settings.uiLanguage) {
+      setSettings(prev => ({
+        ...prev,
+        uiLanguage: currentLanguage
+      }));
+    }
+  }, [currentLanguage, settings.uiLanguage]);
 
   // Validate saved preferred version when Bible versions are loaded
   useEffect(() => {
