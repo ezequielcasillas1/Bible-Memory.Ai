@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { UITranslationService } from '../services/uiTranslationService';
 
 // UI Language definitions
 export interface UILanguage {
@@ -304,6 +305,7 @@ interface LanguageContextType {
   setLanguage: (languageCode: string) => void;
   t: (key: keyof Translations) => string;
   availableLanguages: UILanguage[];
+  isTranslating: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -318,6 +320,8 @@ export const useLanguage = () => {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState('en');
+  const [dynamicTranslations, setDynamicTranslations] = useState<Record<string, Translations>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
     // Load saved language from localStorage
@@ -336,8 +340,46 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
+  // Load dynamic translations when language changes
+  useEffect(() => {
+    const loadDynamicTranslations = async () => {
+      if (currentLanguage === 'en' || translations[currentLanguage]) {
+        return; // Use static translations for English or already available languages
+      }
+
+      setIsTranslating(true);
+      try {
+        // Get all English translation keys and values
+        const englishTranslations = translations['en'];
+        const keys = Object.keys(englishTranslations) as (keyof Translations)[];
+        const texts = keys.map(key => englishTranslations[key]);
+
+        const result = await UITranslationService.translateUITexts(texts, currentLanguage);
+        
+        if (result.translations && !result.fallback) {
+          // Create dynamic translation object
+          const dynamicTranslation: Translations = {} as Translations;
+          keys.forEach((key, index) => {
+            (dynamicTranslation as any)[key] = result.translations[index] || englishTranslations[key];
+          });
+
+          setDynamicTranslations(prev => ({
+            ...prev,
+            [currentLanguage]: dynamicTranslation
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load dynamic translations:', error);
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    loadDynamicTranslations();
+  }, [currentLanguage]);
+
   const setLanguage = (languageCode: string) => {
-    if (translations[languageCode]) {
+    if (translations[languageCode] || SUPPORTED_LANGUAGES.find(lang => lang.code === languageCode)) {
       setCurrentLanguage(languageCode);
       localStorage.setItem('uiLanguage', languageCode);
       
@@ -352,14 +394,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: keyof Translations): string => {
-    return translations[currentLanguage]?.[key] || translations['en'][key] || key;
+    // Try dynamic translations first, then static translations, then fallback to English
+    return dynamicTranslations[currentLanguage]?.[key] || 
+           translations[currentLanguage]?.[key] || 
+           translations['en'][key] || 
+           key;
   };
 
   const value = {
     currentLanguage,
     setLanguage,
     t,
-    availableLanguages: UI_LANGUAGES
+    availableLanguages: UI_LANGUAGES,
+    isTranslating
   };
 
   return (
