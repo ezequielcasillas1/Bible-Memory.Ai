@@ -187,17 +187,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Bible API Error:', error)
-    
-    // Return fallback response instead of 500 error
     return new Response(
-      JSON.stringify({ 
-        fallback: true, 
-        error: 'Primary Bible API unavailable',
-        reference: sanitizedReference,
-        version: sanitizedVersion
-      }),
+      JSON.stringify({ error: 'Failed to fetch Bible data' }),
       { 
-        status: 200,
+        status: 500,
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 

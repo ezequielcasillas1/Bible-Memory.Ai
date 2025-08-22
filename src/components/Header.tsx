@@ -1,7 +1,6 @@
 import React from 'react';
 import { BookOpen, Settings, Trophy, LogIn, LogOut, User } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { useTranslation } from '../hooks/useTranslation';
 
 interface HeaderProps {
   totalPoints: number;
@@ -12,8 +11,6 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onAuthClick, onSignOut }) => {
-  const { t } = useTranslation();
-
   return (
     <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200 sticky top-0 z-50 safe-area-top">
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
@@ -24,9 +21,9 @@ const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onA
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate">
-                {t('app.title', 'Bible Memory AI')}
+                Bible Memory AI
               </h1>
-              <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">{t('app.subtitle', 'Memorize Scripture with AI assistance')}</p>
+              <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Memorize Scripture with AI assistance</p>
             </div>
           </div>
           
@@ -48,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onA
                 <button
                   onClick={onSettingsClick}
                   className="p-1.5 sm:p-2 hover:bg-white/60 rounded-full transition-colors"
-                  title={t('header.settings', 'Settings')}
+                  title="Settings"
                 >
                   <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                 </button>
@@ -56,7 +53,7 @@ const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onA
                 <button
                   onClick={onSignOut}
                   className="p-1.5 sm:p-2 hover:bg-white/60 rounded-full transition-colors"
-                  title={t('header.signOut', 'Sign Out')}
+                  title="Sign Out"
                 >
                   <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                 </button>
@@ -67,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onA
                 className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 sm:px-4 py-2 rounded-full hover:scale-105 transition-transform"
               >
                 <LogIn className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="font-medium text-sm sm:text-base">{t('header.signIn', 'Sign In')}</span>
+                <span className="font-medium text-sm sm:text-base">Sign In</span>
               </button>
             )}
           </div>

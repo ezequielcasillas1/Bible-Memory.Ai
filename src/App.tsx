@@ -14,7 +14,6 @@ import ProfilePage from './pages/ProfilePage';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
-import { TranslationService } from './services/translationService';
 
 const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -28,8 +27,6 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: '', // Will be set once versions are loaded
-    uiLanguage: 'en',
-    bibleLanguage: 'en',
   });
   
   const [userStats, setUserStats] = useState<UserStats>({
@@ -124,33 +121,13 @@ const AppContent: React.FC = () => {
 
   // Sync preferred version between settings and user stats
   useEffect(() => {
-    // Update preferred version based on Bible language selection
-    const bibleTranslations = TranslationService.getBibleTranslationsForLanguage(settings.bibleLanguage);
-    
-    let newPreferredVersion = settings.preferredVersion;
-    
-    // If Bible language changed, update to appropriate version
-    if (settings.bibleLanguage !== 'en' && bibleTranslations.length > 0) {
-      newPreferredVersion = `${settings.bibleLanguage}_${bibleTranslations[0].version}`;
-    } else if (settings.bibleLanguage === 'en' && settings.preferredVersion.includes('_')) {
-      // Switch back to English version if language changed to English
-      newPreferredVersion = 'kjv';
-    }
-    
-    if (newPreferredVersion !== userStats.preferredVersion) {
+    if (settings.preferredVersion !== userStats.preferredVersion) {
       setUserStats(prev => ({
         ...prev,
-        preferredVersion: newPreferredVersion
+        preferredVersion: settings.preferredVersion
       }));
-      
-      if (newPreferredVersion !== settings.preferredVersion) {
-        setSettings(prev => ({
-          ...prev,
-          preferredVersion: newPreferredVersion
-        }));
-      }
     }
-  }, [settings.bibleLanguage, settings.preferredVersion, userStats.preferredVersion]);
+  }, [settings.preferredVersion, userStats.preferredVersion]);
 
   const handleMemorizeVerse = (verse: Verse) => {
     setSelectedVerse(verse);
