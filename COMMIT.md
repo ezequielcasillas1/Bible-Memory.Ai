@@ -1,51 +1,58 @@
-# 🚀 Cursor Agent Commit & Push Guide
+🚀 Cursor Agent Commit & Push Guide (UI Branch)
 
-This document defines **best practices** for Cursor (or any AI agent) when working in this repo.  
-The goal is to ensure **every code change is properly staged, committed, and pushed**.
+This repo uses a dedicated branch for UI work:
+👉 bm/ui-improvement
 
----
-
-## 🔹 Golden Rules
-
-1. **Never delete sensitive files**:
-   - `.env`, API keys, secrets, database files, or configs.
-   - If changes are needed, comment them or mock them instead.
-
-2. **Always stage only intentional changes**:
-   - Use `git add .` to include all modifications **only after validating they belong to the feature**.
-   - Never commit system files like `.DS_Store`, `Thumbs.db`, or local logs.
-
-3. **Always commit after a change is made**:
-   - Each commit should have a **clear message**.
-   - Format:
-     ```
-     [Tag] Short Description
-     ```
-     Example:
-     ```
-     BM1.6 IMPROVED SYNTAX LAB PART 1
-     chore: remove accidental embedded repo path
-     fix: corrected verse translation bug
-     ```
-
-4. **Push to remote every time**:
-   - After committing, **always push to `main`** (or the active branch).
+Cursor AI must always commit and push changes to this branch, never directly to main.
 
 ---
 
-## 🔹 Standard Commit Flow
+🔹 Workflow Rules
 
-Every time a feature or file is added/updated:
+1. Always work in bm/ui-improvement branch:
+   git checkout bm/ui-improvement || git checkout -b bm/ui-improvement
 
-```bash
-# 1. Sync with remote first
-git pull origin main --allow-unrelated-histories
+2. Stage all changes after modifications:
+   git add -A
 
-# 2. Stage changes
-git add .
+3. Commit with a clear message:
+   Format: BMx.x <Description>
+   Example: BM1.7 IMPROVED UI
+   git commit -m "BM1.7 IMPROVED UI"
 
-# 3. Commit with descriptive message
-git commit -m "BMx.x <FEATURE SUMMARY>"
+4. Push to GitHub:
+   git push origin bm/ui-improvement
 
-# 4. Push to remote
-git push origin main
+5. Never push directly to main:
+   - main stays clean.
+   - All work goes into bm/ui-improvement.
+   - When ready, open a Pull Request into main.
+
+---
+
+🔹 Commit Etiquette
+
+- UI Updates: BM1.7 IMPROVED UI
+- Bug Fixes: fix: corrected button alignment
+- Chores/Cleanup: chore: removed unused imports
+- Docs: docs: updated cursor-agent-commit-guide.md
+
+---
+
+🔹 Example Full Flow (for Cursor)
+
+git checkout bm/ui-improvement || git checkout -b bm/ui-improvement
+git add -A
+git commit -m "BM1.7 IMPROVED UI"
+git push origin bm/ui-improvement
+
+---
+
+🔹 Notes for Cursor
+
+- Always create a commit after changes.
+- Always push to bm/ui-improvement.
+- Never touch main directly.
+- If git push fails, run:
+  git pull origin bm/ui-improvement
+  git push origin bm/ui-improvement
