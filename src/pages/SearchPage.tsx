@@ -40,7 +40,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
 
   // Load translation language preference
   useEffect(() => {
-
+  }, []);
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     
