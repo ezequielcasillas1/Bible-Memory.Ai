@@ -97,8 +97,11 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   }, [phase]);
 
   const saveToHistory = (completedSession: MemorizationSession, finalAccuracy: number) => {
+    console.log('Saving to history:', { completedSession, finalAccuracy }); // Debug log
+    
     // Load existing history
     const existingHistory = JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]');
+    console.log('Existing history:', existingHistory); // Debug log
     
     // Check if this verse already exists in history
     const existingIndex = existingHistory.findIndex((item: any) => 
@@ -113,9 +116,11 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         attempts: existing.attempts + 1,
         bestAccuracy: Math.max(existing.bestAccuracy, finalAccuracy),
         averageAccuracy: ((existing.averageAccuracy * (existing.attempts - 1)) + finalAccuracy) / existing.attempts,
+        totalTime: (existing.totalTime || 0) + practiceTime,
         lastPracticed: new Date(),
         status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
       };
+      console.log('Updated existing history item:', existingHistory[existingIndex]); // Debug log
     } else {
       // Create new history entry
       const newHistoryItem = {
@@ -129,10 +134,12 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
       };
       existingHistory.unshift(newHistoryItem);
+      console.log('Created new history item:', newHistoryItem); // Debug log
     }
     
     // Save updated history
     localStorage.setItem('bibleMemoryHistory', JSON.stringify(existingHistory));
+    console.log('Saved history to localStorage:', existingHistory); // Debug log
   };
 
   // Loading messages for AI feedback

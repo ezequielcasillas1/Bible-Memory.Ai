@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { History, TrendingUp, Target, Clock, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
-import { MemorizationHistory, ImprovementPlan, AppSettings } from '../types';
+import { MemorizationHistory, ImprovementPlan, AppSettings, UserStats } from '../types';
 import { BibleVersion } from '../services/BibleAPI';
 
 interface HistoryPageProps {
   settings: AppSettings;
-  userStats: any;
+  userStats: UserStats;
   onMemorizeVerse: (verse: any) => void;
   availableBibleVersions: BibleVersion[];
 }
@@ -28,11 +28,26 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     const savedHistory = localStorage.getItem('bibleMemoryHistory');
     const savedPlans = localStorage.getItem('bibleMemoryPlans');
     
+    console.log('Loading history from localStorage:', savedHistory); // Debug log
+    
     if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
+      try {
+        const parsedHistory = JSON.parse(savedHistory);
+        console.log('Parsed history:', parsedHistory); // Debug log
+        setHistory(parsedHistory);
+      } catch (error) {
+        console.error('Failed to parse history:', error);
+        setHistory([]);
+      }
     }
+    
     if (savedPlans) {
-      setImprovementPlans(JSON.parse(savedPlans));
+      try {
+        setImprovementPlans(JSON.parse(savedPlans));
+      } catch (error) {
+        console.error('Failed to parse plans:', error);
+        setImprovementPlans([]);
+      }
     }
   }, []);
 
@@ -252,7 +267,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         {history.length > 0 ? (
           <div className="space-y-3">
             {history.slice(0, 10).map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center space-x-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
                     {item.status}
@@ -260,7 +275,10 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                   <div>
                     <p className="font-medium text-gray-800">{item.verse.reference}</p>
                     <p className="text-sm text-gray-600">
-                      {item.attempts} attempts • Best: {item.bestAccuracy}% • Avg: {Math.round(item.averageAccuracy)}%
+                      {item.attempts} attempt{item.attempts !== 1 ? 's' : ''} • Best: {item.bestAccuracy}% • Avg: {Math.round(item.averageAccuracy)}%
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Practice time: {Math.floor(item.totalTime / 60)}m {item.totalTime % 60}s
                     </p>
                   </div>
                 </div>
@@ -270,7 +288,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                   </p>
                   <button
                     onClick={() => onMemorizeVerse(item.verse)}
-                    className="text-xs text-purple-600 hover:text-purple-800"
+                    className="text-xs text-purple-600 hover:text-purple-800 mt-1 block"
                   >
                     Practice Again
                   </button>
@@ -281,7 +299,10 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         ) : (
           <div className="text-center py-8">
             <History className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">No memorization history yet. Start practicing to see your progress!</p>
+            <p className="text-gray-500 mb-2">No memorization history yet. Start practicing to see your progress!</p>
+            <p className="text-xs text-gray-400">
+              Debug: Check browser console for localStorage data
+            </p>
           </div>
         )}
       </div>
