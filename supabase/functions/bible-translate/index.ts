@@ -107,32 +107,34 @@ const sanitizeInput = (input: string): string => {
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   try {
-    // Try Google Translate free API first
-    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}&ie=UTF-8&oe=UTF-8`, {
+    // Use Google Translate free API with proper full text handling
+    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}&ie=UTF-8&oe=UTF-8&format=text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (compatible; Bible-Memory-AI/1.0)',
       },
     })
 
     if (googleResponse.ok) {
       const data = await googleResponse.json()
       if (data && data[0] && Array.isArray(data[0])) {
-        // Google Translate returns an array of translation segments
-        // We need to concatenate all segments to get the full translation
+        // Google Translate returns nested arrays of translation segments
+        // Concatenate ALL segments to preserve the complete verse
         let fullTranslation = ''
         for (const segment of data[0]) {
-          if (segment && segment[0]) {
+          if (segment && segment[0] && typeof segment[0] === 'string') {
             fullTranslation += segment[0]
           }
         }
-        if (fullTranslation.trim()) {
-          return fullTranslation.trim()
+        // Return the complete translation without trimming to preserve formatting
+        if (fullTranslation) {
+          return fullTranslation
         }
       }
     }
 
-    // Fallback to LibreTranslate if Google fails
+    // Fallback 1: LibreTranslate with full text support
     const libreResponse = await fetch('https://libretranslate.de/translate', {
       method: 'POST',
       headers: {
@@ -142,7 +144,8 @@ async function translateText(text: string, targetLang: string): Promise<string> 
         q: text,
         source: 'en',
         target: targetLang,
-        format: 'text'
+        format: 'text',
+        api_key: null // Use free tier
       })
     })
 
@@ -153,7 +156,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
       }
     }
 
-    // Final fallback to MyMemory API
+    // Fallback 2: MyMemory API (limit to 500 chars due to their restrictions)
     const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 500))}&langpair=en|${targetLang}`)
     
     if (myMemoryResponse.ok) {
@@ -163,7 +166,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
       }
     }
 
-    return '[Translation Unavailable: All Services Failed]'
+    return `[Translation Unavailable: All translation services failed for this ${text.length > 500 ? 'long' : 'short'} text]`
   } catch (error) {
     console.error('Translation error:', error)
     return '[Translation Unavailable: Network Error]'

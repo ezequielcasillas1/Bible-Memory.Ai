@@ -164,6 +164,13 @@ export class TranslationService {
     reference?: string
   ): Promise<TranslationResult> {
     try {
+      // Ensure we're sending the complete verse text without any truncation
+      const fullText = text.trim()
+      
+      if (!fullText) {
+        throw new Error('No text provided for translation')
+      }
+      
       const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-translate`, {
         method: 'POST',
         headers: {
@@ -171,7 +178,7 @@ export class TranslationService {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          text,
+          text: fullText, // Send complete verse text
           targetLanguage,
           sourceVersion,
           reference
@@ -179,13 +186,14 @@ export class TranslationService {
       });
 
       if (!response.ok) {
-        throw new Error(`Translation failed: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`Translation failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
       }
 
       return await response.json();
     } catch (error) {
       console.error('Translation service error:', error);
-      throw new Error('Translation service temporarily unavailable');
+      throw new Error(`Translation service error: ${error.message || 'Service temporarily unavailable'}`);
     }
   }
 
