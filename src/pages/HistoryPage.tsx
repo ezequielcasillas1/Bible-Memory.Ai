@@ -281,13 +281,13 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={addMockEntry}
+              onClick={addMockHistoryEntry}
               className="text-sm bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg"
             >
               Add Mock Entry
             </button>
             <button
-              onClick={clearMockEntries}
+              onClick={clearMockData}
               className="text-sm bg-red-600 text-white hover:bg-red-700 px-3 py-2 rounded-lg"
             >
               Clear Mock
