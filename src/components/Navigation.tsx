@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Brain, Search, Heart, History, User } from 'lucide-react';
+import { Home, Brain, Search, Heart, History, User, Target } from 'lucide-react';
 import { Tab } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
