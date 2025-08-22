@@ -47,6 +47,7 @@ export type VerseType = 'commission' | 'help';
 export interface AppSettings {
   studyTime: number;
   preferredVersion: string;
+  preferredTranslationLanguage: string;
 }
 
 export interface WordComparison {

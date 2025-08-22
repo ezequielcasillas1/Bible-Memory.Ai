@@ -27,6 +27,7 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: '', // Will be set once versions are loaded
+    preferredTranslationLanguage: '', // Will be set to default language
   });
   
   const [userStats, setUserStats] = useState<UserStats>({
@@ -58,6 +59,11 @@ const AppContent: React.FC = () => {
           setSettings(prev => ({ ...prev, preferredVersion: defaultVersion }));
           setUserStats(prev => ({ ...prev, preferredVersion: defaultVersion }));
         }
+        
+        // Set default translation language if not set
+        if (!settings.preferredTranslationLanguage) {
+          setSettings(prev => ({ ...prev, preferredTranslationLanguage: 'es' })); // Default to Spanish
+        }
       } catch (error) {
         console.error('Failed to load Bible versions:', error);
         // Fallback to basic versions if API fails
@@ -74,6 +80,11 @@ const AppContent: React.FC = () => {
         if (availableFallback.length > 0 && !settings.preferredVersion) {
           setSettings(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
           setUserStats(prev => ({ ...prev, preferredVersion: availableFallback[0].id }));
+        }
+        
+        // Set default translation language if not set
+        if (!settings.preferredTranslationLanguage) {
+          setSettings(prev => ({ ...prev, preferredTranslationLanguage: 'es' })); // Default to Spanish
         }
       } finally {
         setIsLoadingVersions(false);

@@ -21,7 +21,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
   const [noteText, setNoteText] = useState('');
   const [noteTags, setNoteTags] = useState('');
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [translations, setTranslations] = useState<{[key: string]: TranslationResult}>({});
   const [translatingVerses, setTranslatingVerses] = useState<Set<string>>(new Set());
@@ -41,18 +40,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
 
   // Load translation language preference
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('bibleTranslationLanguage');
-    if (savedLanguage) {
-      setSelectedLanguage(savedLanguage);
-    }
-  }, []);
-
-  // Save translation language preference
-  useEffect(() => {
-    if (selectedLanguage) {
-      localStorage.setItem('bibleTranslationLanguage', selectedLanguage);
-    }
-  }, [selectedLanguage]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -116,12 +103,12 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
   };
 
   const handleTranslate = async (verse: SearchResult) => {
-    if (!selectedLanguage) {
+    if (!settings.preferredTranslationLanguage) {
       setShowLanguageModal(true);
       return;
     }
 
-    const translationKey = `${verse.id}-${selectedLanguage}`;
+    const translationKey = `${verse.id}-${settings.preferredTranslationLanguage}`;
     if (translations[translationKey]) {
       // Clear existing translation
       const newTranslations = { ...translations };
@@ -135,7 +122,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
     try {
       const result = await TranslationService.translateVerse(
         verse.text,
-        selectedLanguage,
+        settings.preferredTranslationLanguage,
         verse.version.toLowerCase(),
         verse.reference
       );
@@ -187,9 +174,9 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
     }
   };
 
-  const selectedLangInfo = SUPPORTED_LANGUAGES.find(lang => lang.code === selectedLanguage);
+  const selectedLangInfo = SUPPORTED_LANGUAGES.find(lang => lang.code === settings.preferredTranslationLanguage);
   const isRecommended = selectedLangInfo ? 
-    TranslationService.isRecommendedPairing(settings.preferredVersion, selectedLanguage) : false;
+    TranslationService.isRecommendedPairing(settings.preferredVersion, settings.preferredTranslationLanguage) : false;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -236,34 +223,12 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
           <div className="flex items-center space-x-4">
             <Globe className="w-5 h-5 text-purple-600" />
             <span className="text-sm font-medium text-gray-700">Translation Language:</span>
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-            >
-              <option value="">Select Language</option>
-              
-              <optgroup label="🏛️ Romance & Germanic (Best with KJV, ASV, Darby)">
-                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
-                  <option key={lang.code} value={lang.code}>{lang.name}</option>
-                ))}
-              </optgroup>
-              
-              <optgroup label="🌏 Asian & African (Best with BBE, OEB-US)">
-                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
-                  <option key={lang.code} value={lang.code}>{lang.name}</option>
-                ))}
-              </optgroup>
-              
-              <optgroup label="✝️ Missionary & Global (Best with WEBBE, OEB-US)">
-                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
-                  <option key={lang.code} value={lang.code}>{lang.name}</option>
-                ))}
-              </optgroup>
-            </select>
+            <span className="text-sm text-purple-600 font-medium">
+              {selectedLangInfo ? selectedLangInfo.name : 'Not Selected'}
+            </span>
           </div>
           
-          {!selectedLanguage && (
+          {!settings.preferredTranslationLanguage && (
             <button
               onClick={() => setShowLanguageModal(true)}
               className="text-sm text-purple-600 hover:text-purple-800"

@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { BibleVersion } from '../services/BibleAPI';
 import { AppSettings } from '../types';
+import { SUPPORTED_LANGUAGES } from '../services/translationService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -130,6 +131,91 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
+          {/* Translation Language Setting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preferred Translation Language
+            </label>
+            <div className="space-y-4">
+              <select
+                value={settings.preferredTranslationLanguage}
+                onChange={(e) => handleSettingChange('preferredTranslationLanguage', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="">Select Language</option>
+                
+                <optgroup label="🏛️ Romance & Germanic (Best with KJV, ASV, Darby)">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
+                    <option key={lang.code} value={lang.code}>{lang.name}</option>
+                  ))}
+                </optgroup>
+                
+                <optgroup label="🌏 Asian & African (Best with BBE, OEB-US)">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
+                    <option key={lang.code} value={lang.code}>{lang.name}</option>
+                  ))}
+                </optgroup>
+                
+                <optgroup label="✝️ Missionary & Global (Best with WEBBE, OEB-US)">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
+                    <option key={lang.code} value={lang.code}>{lang.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+              
+              {/* Language Info */}
+              {settings.preferredTranslationLanguage && (
+                (() => {
+                  const selectedLanguage = SUPPORTED_LANGUAGES.find(lang => lang.code === settings.preferredTranslationLanguage);
+                  if (selectedLanguage) {
+                    const isRecommended = selectedLanguage.recommended.includes(settings.preferredVersion);
+                    return (
+                      <div className={`border rounded-lg p-3 ${
+                        isRecommended 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        <div className="text-sm">
+                          <p className={`font-medium mb-1 ${
+                            isRecommended ? 'text-green-800' : 'text-yellow-800'
+                          }`}>
+                            {selectedLanguage.name} ({selectedLanguage.code.toUpperCase()})
+                          </p>
+                          <p className={`mb-2 ${
+                            isRecommended ? 'text-green-700' : 'text-yellow-700'
+                          }`}>
+                            {selectedLanguage.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              selectedLanguage.strategy === 'romance_germanic' ? 'bg-blue-100 text-blue-700' :
+                              selectedLanguage.strategy === 'asian_african' ? 'bg-green-100 text-green-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {selectedLanguage.strategy === 'romance_germanic' ? '🏛️ Romance/Germanic' :
+                               selectedLanguage.strategy === 'asian_african' ? '🌏 Asian/African' :
+                               '✝️ Missionary/Global'}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              isRecommended ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {isRecommended ? '✓ Optimal Pairing' : 'Consider Alternative'}
+                            </span>
+                          </div>
+                          {!isRecommended && (
+                            <p className="text-xs text-yellow-600 mt-2">
+                              Recommended versions: {selectedLanguage.recommended.map(v => v.toUpperCase()).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+            </div>
+          </div>
           {/* Bible Memory Career Settings Placeholder */}
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="font-medium text-gray-800 mb-2">📚 Bible Memory Career Settings</h3>
