@@ -142,6 +142,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {availableBibleVersions.length > 0 && (
             <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
               <h3 className="font-medium text-gray-800 mb-2">📊 Available Versions</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                🌍 All versions support translation to 18 world languages with strategic pairing recommendations
+              </p>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-green-600">
@@ -166,6 +169,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {availableBibleVersions.filter(v => v.source === 'bible-api').length}
                   </span>
                   <span className="text-gray-600 ml-1">Bible API</span>
+                </div>
+              </div>
+              
+              {/* Translation Strategy Info */}
+              <div className="mt-4 pt-3 border-t border-purple-200">
+                <h4 className="text-sm font-medium text-gray-800 mb-2">🌍 Translation Strategies</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center space-x-2">
+                    <span>🏛️</span>
+                    <span className="text-gray-600">
+                      <strong>Romance/Germanic:</strong> KJV, ASV, Darby → Spanish, French, German, Portuguese, Italian, Dutch
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span>🌏</span>
+                    <span className="text-gray-600">
+                      <strong>Asian/African:</strong> BBE, OEB-US → Chinese, Japanese, Korean, Hindi, Swahili
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span>✝️</span>
+                    <span className="text-gray-600">
+                      <strong>Missionary/Global:</strong> WEBBE, OEB-US → Tagalog, Vietnamese, Thai, Zulu, Malay, Indonesian
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TranslationModal from '../components/TranslationModal';
 import { RefreshCw, Heart, Sparkles } from 'lucide-react';
 import { VerseType, Verse, AppSettings } from '../types';
 import { commissionVerses, helpVerses, connections } from '../data/verses';
@@ -16,6 +17,8 @@ interface GeneratorPageProps {
 
 const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings, availableBibleVersions }) => {
   const [verseType, setVerseType] = useState<VerseType>('commission');
+  const [showTranslationModal, setShowTranslationModal] = useState(false);
+  const [selectedVerseForTranslation, setSelectedVerseForTranslation] = useState<Verse | null>(null);
   const [currentVerses, setCurrentVerses] = useState({
     oldTestament: commissionVerses.find(v => v.testament === 'OT'),
     newTestament: commissionVerses.find(v => v.testament === 'NT')
@@ -102,6 +105,11 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     });
   };
 
+  const handleTranslateVerse = (verse: Verse) => {
+    setSelectedVerseForTranslation(verse);
+    setShowTranslationModal(true);
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Main Title */}
@@ -154,12 +162,14 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
             <VerseCard 
               verse={currentVerses.oldTestament} 
               onMemorize={onMemorizeVerse}
+              onTranslate={handleTranslateVerse}
             />
           )}
           {currentVerses.newTestament && (
             <VerseCard 
               verse={currentVerses.newTestament} 
               onMemorize={onMemorizeVerse}
+              onTranslate={handleTranslateVerse}
             />
           )}
         </div>
@@ -187,6 +197,22 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
           <span>Generate New Verses</span>
         </button>
       </div>
+
+      {/* Translation Modal */}
+      {selectedVerseForTranslation && (
+        <TranslationModal
+          isOpen={showTranslationModal}
+          onClose={() => {
+            setShowTranslationModal(false);
+            setSelectedVerseForTranslation(null);
+          }}
+          verse={{
+            text: selectedVerseForTranslation.text,
+            reference: selectedVerseForTranslation.reference,
+            version: selectedVerseForTranslation.version || 'KJV'
+          }}
+        />
+      )}
     </div>
   );
 };
