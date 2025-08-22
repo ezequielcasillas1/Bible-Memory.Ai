@@ -26,7 +26,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse
         .map((fav: FavoriteVerse) => fav.category)
         .filter((cat: string) => cat)
       )];
-      setCategories(uniqueCategories);
+      setCategories(uniqueCategories as string[]);
     }
   }, []);
 

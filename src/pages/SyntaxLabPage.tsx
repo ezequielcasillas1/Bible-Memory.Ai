@@ -190,7 +190,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
       if (!existingWeakWord) {
         const newWeakWord: WeakWord = {
+          id: Date.now().toString(),
           word: currentWord.originalWord,
+          originalWord: currentWord.originalWord,
+          verse: comparisonResult?.originalComparison[0]?.verse || 'Unknown',
+          reference: 'Unknown Reference',
           timesWrong: 1,
           timesCorrect: 0,
           lastMissed: new Date(),
@@ -265,10 +269,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     const newStats: SyntaxLabStats = {
       totalSessions: (stats?.totalSessions || 0) + 1,
       wordsFixed: (stats?.wordsFixed || 0) + wordsFixed.length,
+      averageImprovement: stats?.averageImprovement || 0,
       averageAccuracy: stats ? 
         ((stats.averageAccuracy * stats.totalSessions) + finalSession.finalAccuracy) / (stats.totalSessions + 1) :
         finalSession.finalAccuracy,
       totalTimeSpent: (stats?.totalTimeSpent || 0) + ((finalSession.endTime!.getTime() - finalSession.startTime.getTime()) / 1000 / 60),
+      weakWords: weakWords,
       accuracyTrend: [...(stats?.accuracyTrend || []), finalSession.improvementScore].slice(-10),
       mostMissedTypes: ['connecting words', 'theological terms'],
       streakDays: (stats?.streakDays || 0) + 1
@@ -674,12 +680,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession.wrongWords.length}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession?.wrongWords.length || 0}</div>
                 <div className="text-green-700">Mistakes Fixed</div>
               </div>
               
               <div className="bg-blue-50 rounded-xl p-6 text-center border border-blue-200">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{Math.round((wordsFixed.length / currentSession.wrongWords.length) * 100)}%</div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">{Math.round((wordsFixed.length / (currentSession?.wrongWords.length || 1)) * 100)}%</div>
                 <div className="text-blue-700">Improvement Score</div>
               </div>
             </div>
@@ -704,7 +710,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   <h4 className="font-semibold text-yellow-800 mb-2">Encouragement</h4>
                   <p className="text-yellow-700 text-sm">
                     You mastered {wordsFixed.length} challenging words today—keep it up! 
-                    {wordsFixed.length >= currentSession.wrongWords.length * 0.8 && " You're becoming a Scripture master!"}
+                    {wordsFixed.length >= (currentSession?.wrongWords.length || 1) * 0.8 && " You're becoming a Scripture master!"}
                   </p>
                 </div>
               </div>

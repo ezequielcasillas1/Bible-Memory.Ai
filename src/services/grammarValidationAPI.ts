@@ -25,7 +25,7 @@ export class GrammarValidationAPI {
       'seperate': 'separate',
       'definately': 'definitely',
       'occured': 'occurred'
-    }
+    } as Record<string, string>
   };
 
   static validateGrammar(userWord: string, originalWord: string, context: string = ''): GrammarValidation {

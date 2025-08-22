@@ -378,7 +378,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       } catch (error) {
         console.error('Failed to load dynamic translations:', error);
-        setTranslationError(`Translation failed: ${error.message}`);
+        setTranslationError(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsTranslating(false);
       }

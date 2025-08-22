@@ -1,7 +1,7 @@
-# 🚀 Cursor Agent Commit & Push Guide
+# 🚀 Cursor Agent Commit & Push Guide (Main Branch Only)
 
 This document defines **best practices** for Cursor (or any AI agent) when working in this repo.  
-The goal is to ensure **every code change is properly staged, committed, and pushed**.
+The goal is to ensure **every code change is properly staged, committed, and pushed to `main`**.
 
 ---
 
@@ -21,15 +21,16 @@ The goal is to ensure **every code change is properly staged, committed, and pus
      ```
      [Tag] Short Description
      ```
-     Example:
+   - Examples:
      ```
-     BM1.6 IMPROVED SYNTAX LAB PART 1
-     chore: remove accidental embedded repo path
+     BM1.7 IMPROVED UI
+     chore: remove unused imports
      fix: corrected verse translation bug
      ```
 
-4. **Push to remote every time**:
-   - After committing, **always push to `main`** (or the active branch).
+4. **Always push directly to `main`**:
+   - No feature branches for standard changes.
+   - After every commit, push to `main`.
 
 ---
 
@@ -39,13 +40,14 @@ Every time a feature or file is added/updated:
 
 ```bash
 # 1. Sync with remote first
-git pull origin main --allow-unrelated-histories
+git checkout main
+git pull origin main
 
-# 2. Stage changes
+# 2. Stage all changes
 git add .
 
-# 3. Commit with descriptive message
+# 3. Commit with a descriptive message
 git commit -m "BMx.x <FEATURE SUMMARY>"
 
-# 4. Push to remote
+# 4. Push to remote main
 git push origin main

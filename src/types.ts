@@ -57,6 +57,7 @@ export interface WordComparison {
   status: 'correct' | 'incorrect' | 'missing' | 'extra';
   position: number;
   suggestion?: string;
+  verse?: string;
 }
 
 export interface ComparisonResult {
@@ -152,6 +153,7 @@ export interface WeakWord {
   verse: string;
   reference: string;
   timesWrong: number;
+  timesCorrect: number;
   lastMissed: Date;
   definition?: string;
   mastered: boolean;
@@ -161,6 +163,8 @@ export interface SyntaxLabStats {
   totalSessions: number;
   wordsFixed: number;
   averageImprovement: number;
+  averageAccuracy: number;
+  totalTimeSpent: number;
   weakWords: WeakWord[];
   accuracyTrend: number[];
   mostMissedTypes: string[];
