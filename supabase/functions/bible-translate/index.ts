@@ -107,7 +107,23 @@ const sanitizeInput = (input: string): string => {
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   try {
-    const response = await fetch('https://libretranslate.de/translate', {
+    // Try Google Translate free API first
+    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
+
+    if (googleResponse.ok) {
+      const data = await googleResponse.json()
+      if (data && data[0] && data[0][0] && data[0][0][0]) {
+        return data[0][0][0]
+      }
+    }
+
+    // Fallback to LibreTranslate if Google fails
+    const libreResponse = await fetch('https://libretranslate.de/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,20 +136,27 @@ async function translateText(text: string, targetLang: string): Promise<string> 
       })
     })
 
-    if (!response.ok) {
-      return `[Translation Unavailable: API Error ${response.status}]`
+    if (libreResponse.ok) {
+      const libreData = await libreResponse.json()
+      if (libreData.translatedText) {
+        return libreData.translatedText
+      }
     }
 
-    const data = await response.json()
+    // Final fallback to MyMemory API
+    const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`)
     
-    if (data.translatedText) {
-      return data.translatedText
-    } else {
-      return '[Translation Unavailable: Invalid Response]'
+    if (myMemoryResponse.ok) {
+      const myMemoryData = await myMemoryResponse.json()
+      if (myMemoryData.responseData && myMemoryData.responseData.translatedText) {
+        return myMemoryData.responseData.translatedText
+      }
     }
+
+    return '[Translation Unavailable: All Services Failed]'
   } catch (error) {
     console.error('Translation error:', error)
-    return '[Translation Unavailable: Service Unreachable]'
+    return '[Translation Unavailable: Network Error]'
   }
 }
 
