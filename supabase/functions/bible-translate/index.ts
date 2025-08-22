@@ -33,7 +33,7 @@ const LANGUAGE_STRATEGIES = {
 }
 
 // Language metadata with full names and recommendations
-const SUPPORTED_LANGUAGES = {
+const SUPPORTED_LANGUAGES: Record<string, any> = {
   // Romance & Germanic (Formal translations recommended)
   'es': { name: 'Spanish', strategy: 'romance_germanic', recommended: ['kjv', 'asv', 'darby'] },
   'fr': { name: 'French', strategy: 'romance_germanic', recommended: ['kjv', 'asv', 'darby'] },
@@ -90,7 +90,7 @@ const validateRequest = (data: any): boolean => {
          typeof data.text === 'string' && 
          typeof data.targetLanguage === 'string' &&
          typeof data.sourceVersion === 'string' &&
-         data.text.length <= 1000 &&
+         data.text.length <= 2000 &&
          data.text.length > 0 &&
          SUPPORTED_LANGUAGES[data.targetLanguage] &&
          ['kjv', 'asv', 'darby', 'bbe', 'oeb-us', 'webbe'].includes(data.sourceVersion)
@@ -102,13 +102,13 @@ const sanitizeInput = (input: string): string => {
     .replace(/javascript:/gi, '')
     .replace(/data:/gi, '')
     .trim()
-    .substring(0, 1000)
+    .substring(0, 2000)
 }
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   try {
     // Try Google Translate free API first
-    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`, {
+    const googleResponse = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}&ie=UTF-8&oe=UTF-8`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -117,8 +117,18 @@ async function translateText(text: string, targetLang: string): Promise<string> 
 
     if (googleResponse.ok) {
       const data = await googleResponse.json()
-      if (data && data[0] && data[0][0] && data[0][0][0]) {
-        return data[0][0][0]
+      if (data && data[0] && Array.isArray(data[0])) {
+        // Google Translate returns an array of translation segments
+        // We need to concatenate all segments to get the full translation
+        let fullTranslation = ''
+        for (const segment of data[0]) {
+          if (segment && segment[0]) {
+            fullTranslation += segment[0]
+          }
+        }
+        if (fullTranslation.trim()) {
+          return fullTranslation.trim()
+        }
       }
     }
 
@@ -144,7 +154,7 @@ async function translateText(text: string, targetLang: string): Promise<string> 
     }
 
     // Final fallback to MyMemory API
-    const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`)
+    const myMemoryResponse = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 500))}&langpair=en|${targetLang}`)
     
     if (myMemoryResponse.ok) {
       const myMemoryData = await myMemoryResponse.json()
@@ -208,6 +218,18 @@ serve(async (req) => {
     const requestData = await req.json()
     const { text, targetLanguage, sourceVersion, reference } = requestData
     
+    // Additional security checks
+    const totalPayloadSize = JSON.stringify({ text, targetLanguage, sourceVersion, reference }).length
+    if (totalPayloadSize > 10000) {
+      return new Response(
+        JSON.stringify({ error: 'Request payload too large' }),
+        { 
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+    
     // Validate input data
     if (!validateRequest({ text, targetLanguage, sourceVersion })) {
       return new Response(
@@ -222,7 +244,7 @@ serve(async (req) => {
     // Sanitize inputs
     const sanitizedText = sanitizeInput(text)
     const sanitizedReference = reference ? sanitizeInput(reference) : ''
-    
+
     // Get language info
     const languageInfo = SUPPORTED_LANGUAGES[targetLanguage]
     
@@ -230,7 +252,12 @@ serve(async (req) => {
     const isRecommended = languageInfo.recommended.includes(sourceVersion)
     
     // Perform translation
-    const translatedText = await translateText(sanitizedText, targetLanguage)
+    let translatedText: string
+    try {
+      translatedText = await translateText(sanitizedText, targetLanguage)
+    } catch (error) {
+      translatedText = '[Translation service temporarily unavailable]'
+    }
     
     // Prepare response
     const response = {
