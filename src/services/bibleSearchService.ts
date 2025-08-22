@@ -247,6 +247,16 @@ export class BibleSearchService {
         chapter: 11,
         verse: 28,
         version
+      },
+      {
+        id: 'fallback-9',
+        text: 'When you go through the waters, I will be with you; when you go through the rivers, they will not go over you.',
+        reference: 'Isaiah 43:2',
+        testament: 'OT' as const,
+        book: 'Isaiah',
+        chapter: 43,
+        verse: 2,
+        version
       }
     ];
 

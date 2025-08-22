@@ -163,9 +163,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div>
                   <span className="font-medium text-purple-600">
-                    {availableBibleVersions.filter(v => v.source === 'wldeh-api').length}
+                    {availableBibleVersions.filter(v => v.source === 'bible-api').length}
                   </span>
-                  <span className="text-gray-600 ml-1">Enhanced API</span>
+                  <span className="text-gray-600 ml-1">Bible API</span>
                 </div>
               </div>
             </div>

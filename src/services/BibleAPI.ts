@@ -46,6 +46,15 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         available: true,
         source: 'bible-api',
         license: 'Public Domain'
+      },
+      { 
+        id: 'bbe', 
+        abbreviation: 'BBE', 
+        name: 'Bible in Basic English', 
+        description: 'The 1965 Bible in Basic English - simple, clear language',
+        available: true,
+        source: 'bible-api',
+        license: 'Public Domain'
       }
     ];
 
@@ -136,7 +145,7 @@ export async function getPassageByReference(versionId: string, reference: string
     }
     
     // Handle original bible-api.com versions (KJV, ASV) - now secured through our API
-    if (versionId !== 'kjv' && versionId !== 'asv' && versionId !== 'darby') {
+    if (versionId !== 'kjv' && versionId !== 'asv' && versionId !== 'darby' && versionId !== 'bbe') {
       throw new Error(`Version ${versionId} is not yet available. Please select an available version.`);
     }
     
@@ -239,7 +248,7 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
     }
     
     // Handle original API versions
-    if (versionId !== 'kjv' && versionId !== 'asv' && versionId !== 'darby') {
+    if (versionId !== 'kjv' && versionId !== 'asv' && versionId !== 'darby' && versionId !== 'bbe') {
       throw new Error(`Version ${versionId} is not yet available. Please select an available version.`);
     }
     

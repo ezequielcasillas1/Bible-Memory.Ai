@@ -104,6 +104,7 @@ const AppContent: React.FC = () => {
       const isValidVersion = availableVersions.some(v => v.id === settings.preferredVersion);
       if (!isValidVersion && availableVersions.length > 0) {
         // Reset to first available version if saved version is invalid or unavailable
+        console.log(`Resetting invalid version ${settings.preferredVersion} to ${availableVersions[0].id}`);
         setSettings(prev => ({ ...prev, preferredVersion: availableVersions[0].id }));
       }
     }

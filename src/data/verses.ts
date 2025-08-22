@@ -28,6 +28,20 @@ export const commissionVerses: Verse[] = [
     reference: "Romans 8:28",
     testament: 'NT',
     reason: "Assures believers that God orchestrates all circumstances for their ultimate good."
+  },
+  {
+    id: 'ot-3',
+    text: "Be strong and take heart, all you who hope in the Lord.",
+    reference: "Psalm 31:24",
+    testament: 'OT',
+    reason: "Encourages believers to find strength and courage through hope in the Lord."
+  },
+  {
+    id: 'nt-3',
+    text: "I have told you these things, so that in me you may have peace. In this world you will have trouble. But take heart! I have overcome the world.",
+    reference: "John 16:33",
+    testament: 'NT',
+    reason: "Jesus promises peace and victory over worldly troubles through faith in Him."
   }
 ];
 
@@ -59,6 +73,20 @@ export const helpVerses: Verse[] = [
     reference: "Philippians 4:13",
     testament: 'NT',
     reason: "Reminds believers that Christ provides the strength needed to face any challenge."
+  },
+  {
+    id: 'ot-5',
+    text: "When you pass through the waters, I will be with you; and when you pass through the rivers, they will not sweep over you.",
+    reference: "Isaiah 43:2",
+    testament: 'OT',
+    reason: "God promises His presence and protection during life's most difficult trials."
+  },
+  {
+    id: 'nt-5',
+    text: "And my God will meet all your needs according to the riches of his glory in Christ Jesus.",
+    reference: "Philippians 4:19",
+    testament: 'NT',
+    reason: "Assures believers that God will provide for all their needs through Christ's abundant resources."
   }
 ];
 
