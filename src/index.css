@@ -78,13 +78,4 @@
       @apply text-xs;
     }
   }
-  
-  /* Bible verse styling for HelloAO API HTML content */
-  .verse {
-    @apply inline;
-  }
-  
-  .verse sup {
-    @apply text-xs text-purple-600 font-medium mr-1;
-  }
 }
