@@ -3,8 +3,8 @@
 // npm install sharp
 // node generate-icons.js
 
-const sharp = require('sharp');
-const fs = require('fs');
+import sharp from 'sharp';
+import fs from 'fs';
 
 const sizes = [16, 32, 72, 96, 128, 144, 152, 192, 384, 512];
 
