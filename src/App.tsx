@@ -153,7 +153,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-bottom">
       <Header 
         totalPoints={userStats.totalPoints} 
         onSettingsClick={() => setShowSettings(true)}
@@ -169,7 +169,7 @@ const AppContent: React.FC = () => {
             onTabChange={setActiveTab} 
           />
 
-          <main className="max-w-6xl mx-auto px-4 py-8">
+          <main className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
             {activeTab === 'generator' && (
               <GeneratorPage 
                 onMemorizeVerse={handleMemorizeVerse} 

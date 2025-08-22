@@ -8,7 +8,22 @@
   }
   
   body {
-    @apply font-sans bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 text-gray-900;
+    @apply font-sans bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 text-gray-900 overflow-x-hidden;
+  }
+  
+  /* Safe area support for mobile devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
   }
 }
 
@@ -26,11 +41,11 @@
   }
   
   .button-primary {
-    @apply bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg;
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg;
   }
   
   .button-secondary {
-    @apply border-2 border-purple-600 text-purple-600 font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:bg-purple-50;
+    @apply border-2 border-purple-600 text-purple-600 font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-200 hover:bg-purple-50;
   }
   
   .countdown-timer {
@@ -51,5 +66,16 @@
   
   .settings-modal {
     @apply animate-fade-in;
+  }
+  
+  /* Mobile-specific improvements */
+  @media (max-width: 640px) {
+    .verse-card {
+      @apply mx-2;
+    }
+    
+    .nav-tab {
+      @apply text-xs;
+    }
   }
 }

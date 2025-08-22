@@ -106,23 +106,23 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
     <div className="space-y-8 animate-fade-in">
       {/* Main Title */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-4 px-4">
           Receive Today's Commission or Help People Verses
         </h1>
         
         {/* Verse Type Toggle */}
-        <div className="flex justify-center space-x-4 mb-8">
+        <div className="flex justify-center space-x-2 sm:space-x-4 mb-6 sm:mb-8 px-4">
           <div className="flex items-center space-x-2 mb-4">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">
               Version: {getVersionById(settings.preferredVersion, availableBibleVersions)?.abbreviation || 'Loading...'}
             </span>
           </div>
         </div>
         
-        <div className="flex justify-center space-x-4 mb-8">
+        <div className="flex justify-center space-x-2 sm:space-x-4 mb-6 sm:mb-8 px-4">
           <button
             onClick={() => handleVerseTypeChange('commission')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
               verseType === 'commission'
                 ? 'bg-purple-600 text-white shadow-lg'
                 : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
@@ -132,7 +132,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
           </button>
           <button
             onClick={() => handleVerseTypeChange('help')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
               verseType === 'help'
                 ? 'bg-purple-600 text-white shadow-lg'
                 : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
@@ -146,10 +146,10 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
       {/* Verses Display */}
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-purple-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-slide-up">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 animate-slide-up px-4">
           {currentVerses.oldTestament && (
             <VerseCard 
               verse={currentVerses.oldTestament} 
@@ -166,24 +166,24 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
       )}
 
       {/* Connection Insight */}
-      <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-200 animate-slide-up">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-xl border border-purple-200 animate-slide-up mx-4">
         <div className="flex items-center mb-4">
-          <Heart className="w-5 h-5 text-purple-600 mr-2" />
-          <h3 className="text-lg font-bold text-gray-800">Connection Insight</h3>
+          <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 mr-2" />
+          <h3 className="text-base sm:text-lg font-bold text-gray-800">Connection Insight</h3>
         </div>
-        <p className="text-gray-700 leading-relaxed">
+        <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
           {connections[verseType]}
         </p>
       </div>
 
       {/* Generate New Verses Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-center px-4">
         <button
           onClick={generateNewVerses}
           disabled={isLoading}
-          className="button-primary flex items-center space-x-2 disabled:opacity-50"
+          className="button-primary flex items-center space-x-2 disabled:opacity-50 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
         >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
           <span>Generate New Verses</span>
         </button>
       </div>
