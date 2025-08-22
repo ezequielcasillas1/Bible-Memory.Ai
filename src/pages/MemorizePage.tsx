@@ -140,6 +140,9 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     // Save updated history
     localStorage.setItem('bibleMemoryHistory', JSON.stringify(existingHistory));
     console.log('Saved history to localStorage:', existingHistory); // Debug log
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('bibleMemoryHistoryUpdated'));
   };
 
   // Loading messages for AI feedback

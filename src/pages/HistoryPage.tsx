@@ -13,6 +13,7 @@ interface HistoryPageProps {
 const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemorizeVerse, availableBibleVersions }) => {
   const [history, setHistory] = useState<MemorizationHistory[]>([]);
   const [improvementPlans, setImprovementPlans] = useState<ImprovementPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [newPlan, setNewPlan] = useState({
     title: '',
@@ -25,6 +26,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
 
   // Load data from localStorage
   useEffect(() => {
+    setIsLoading(true);
     const savedHistory = localStorage.getItem('bibleMemoryHistory');
     const savedPlans = localStorage.getItem('bibleMemoryPlans');
     
@@ -39,6 +41,9 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         console.error('Failed to parse history:', error);
         setHistory([]);
       }
+    } else {
+      console.log('No saved history found in localStorage');
+      setHistory([]);
     }
     
     if (savedPlans) {
@@ -49,6 +54,32 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         setImprovementPlans([]);
       }
     }
+    
+    setIsLoading(false);
+  }, []);
+
+  // Listen for localStorage changes from other components
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log('Storage change detected, reloading history...');
+      const savedHistory = localStorage.getItem('bibleMemoryHistory');
+      if (savedHistory) {
+        try {
+          const parsedHistory = JSON.parse(savedHistory);
+          console.log('Reloaded history after storage change:', parsedHistory);
+          setHistory(parsedHistory);
+        } catch (error) {
+          console.error('Failed to parse history after storage change:', error);
+        }
+      }
+    };
+
+    // Listen for custom storage events
+    window.addEventListener('bibleMemoryHistoryUpdated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('bibleMemoryHistoryUpdated', handleStorageChange);
+    };
   }, []);
 
   // Save data to localStorage
@@ -299,9 +330,11 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         ) : (
           <div className="text-center py-8">
             <History className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 mb-2">No memorization history yet. Start practicing to see your progress!</p>
+            <p className="text-gray-500 mb-2">
+              {isLoading ? 'Loading your history...' : 'No memorization history yet. Start practicing to see your progress!'}
+            </p>
             <p className="text-xs text-gray-400">
-              Debug: Check browser console for localStorage data
+              Debug: History items in localStorage: {localStorage.getItem('bibleMemoryHistory') ? JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]').length : 0}
             </p>
           </div>
         )}
