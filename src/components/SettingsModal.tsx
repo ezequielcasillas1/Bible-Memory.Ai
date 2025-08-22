@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { BibleVersion } from '../services/BibleAPI';
 import { AppSettings } from '../types';
 import { SUPPORTED_LANGUAGES } from '../services/translationService';
+import { useLanguage, UI_LANGUAGES } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -21,9 +22,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   availableBibleVersions,
   isLoadingVersions
 }) => {
+  const { t, setLanguage } = useLanguage();
+
   if (!isOpen) return null;
 
   const handleSettingChange = (key: keyof AppSettings, value: any) => {
+    // Handle UI language change
+    if (key === 'uiLanguage') {
+      setLanguage(value);
+    }
+    
     onSettingsChange({
       ...settings,
       [key]: value
@@ -35,7 +43,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="settings-modal bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">⚙️ Settings</h2>
+            <h2 className="text-xl font-bold">⚙️ {t('settings.title')}</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -49,7 +57,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Study Time Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Study Time (seconds)
+              {t('settings.studyTime')}
             </label>
             <div className="space-y-3">
               <input
@@ -72,7 +80,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Bible Version Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Preferred Bible Version
+              {t('settings.bibleVersion')}
             </label>
             {isLoadingVersions ? (
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
@@ -131,10 +139,60 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
+          {/* UI Language Setting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('settings.uiLanguage')}
+            </label>
+            <div className="space-y-4">
+              <select
+                value={settings.uiLanguage}
+                onChange={(e) => handleSettingChange('uiLanguage', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                {UI_LANGUAGES.map((language) => (
+                  <option key={language.code} value={language.code}>
+                    {language.flag} {language.name} ({language.nativeName})
+                  </option>
+                ))}
+              </select>
+              
+              {/* Language Info */}
+              {settings.uiLanguage && (
+                (() => {
+                  const selectedUILanguage = UI_LANGUAGES.find(lang => lang.code === settings.uiLanguage);
+                  if (selectedUILanguage) {
+                    return (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-800 mb-1">
+                            {selectedUILanguage.flag} {selectedUILanguage.name}
+                          </p>
+                          <p className="text-blue-700 mb-2">
+                            Interface will be displayed in {selectedUILanguage.nativeName}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-blue-600">
+                              Changes apply immediately
+                            </span>
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              UI Language
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+            </div>
+          </div>
+
           {/* Translation Language Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Preferred Translation Language
+              {t('settings.translationLanguage')}
             </label>
             <div className="space-y-4">
               <select

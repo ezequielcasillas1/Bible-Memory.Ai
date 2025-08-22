@@ -47,7 +47,8 @@ export type VerseType = 'commission' | 'help';
 export interface AppSettings {
   studyTime: number;
   preferredVersion: string;
-  preferredTranslationLanguage: string;
+  uiLanguage: string;
+  preferredTranslationLanguage: string; // Keep this for Bible verse translation
 }
 
 export interface WordComparison {

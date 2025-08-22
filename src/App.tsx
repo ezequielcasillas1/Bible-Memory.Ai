@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { Tab, Verse, UserStats, AppSettings } from './types';
 import { getBibleVersions, BibleVersion } from './services/BibleAPI';
 import Header from './components/Header';
@@ -27,6 +28,7 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: '', // Will be set once versions are loaded
+    uiLanguage: 'en',
     preferredTranslationLanguage: '', // Will be set to default language
   });
   
@@ -64,6 +66,11 @@ const AppContent: React.FC = () => {
         if (!settings.preferredTranslationLanguage) {
           setSettings(prev => ({ ...prev, preferredTranslationLanguage: 'es' })); // Default to Spanish
         }
+        
+        // Set default UI language if not set
+        if (!settings.uiLanguage) {
+          setSettings(prev => ({ ...prev, uiLanguage: 'en' })); // Default to English
+        }
       } catch (error) {
         console.error('Failed to load Bible versions:', error);
         // Fallback to basic versions if API fails
@@ -85,6 +92,11 @@ const AppContent: React.FC = () => {
         // Set default translation language if not set
         if (!settings.preferredTranslationLanguage) {
           setSettings(prev => ({ ...prev, preferredTranslationLanguage: 'es' })); // Default to Spanish
+        }
+        
+        // Set default UI language if not set
+        if (!settings.uiLanguage) {
+          setSettings(prev => ({ ...prev, uiLanguage: 'en' })); // Default to English
         }
       } finally {
         setIsLoadingVersions(false);
@@ -258,7 +270,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </AuthProvider>
   );
 };
