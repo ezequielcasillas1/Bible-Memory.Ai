@@ -1,6 +1,7 @@
 import { SearchResult } from '../types';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion, getPassageByReference, searchVerses } from './BibleAPI';
+import { getPassageHTML, generateRandomByTopic } from './BibleHelloAo';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -73,6 +74,32 @@ export class BibleSearchService {
         'John 3:16', 'Romans 8:28', 'Philippians 4:13', 'Matthew 11:28',
         '1 Corinthians 13:4', 'Romans 12:2', 'Ephesians 2:8-9', '2 Timothy 1:7'
       ];
+      
+      // Handle HelloAO API versions with topic-based generation
+      if (versionId.startsWith('helloao_')) {
+        const actualVersionId = versionId.replace('helloao_', '');
+        const topicKey = testament === 'OT' ? 'help-people' : 'commission';
+        
+        try {
+          const result = await generateRandomByTopic(actualVersionId, topicKey);
+          if (result.ok) {
+            // Extract plain text from HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = result.html;
+            const plainText = tempDiv.textContent || tempDiv.innerText || '';
+            
+            return {
+              id: `helloao-random-${Date.now()}`,
+              text: plainText.trim(),
+              reference: result.reference,
+              testament,
+              reason: `A meaningful ${testament === 'OT' ? 'Old Testament' : 'New Testament'} verse selected for ${topicKey === 'commission' ? 'encouragement and faith building' : 'comfort and guidance'}.`
+            };
+          }
+        } catch (error) {
+          console.warn('HelloAO random verse generation failed, falling back to popular verses:', error);
+        }
+      }
       
       const verses = testament === 'OT' ? otVerses : ntVerses;
       const randomVerse = verses[Math.floor(Math.random() * verses.length)];

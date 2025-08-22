@@ -87,7 +87,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {availableBibleVersions.length > 0 ? (
                     availableBibleVersions.map((version) => (
                       <option key={version.id} value={version.id} disabled={!version.available}>
-                        {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''}
+                        {version.abbreviation} – {version.name} {!version.available ? '(Coming Soon)' : ''} {version.source === 'helloao-api' ? '(HelloAO)' : ''}
                       </option>
                     ))
                   ) : (
@@ -111,7 +111,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             )}
                             <div className="flex items-center justify-between">
                               <span className="text-blue-600">
-                                Source: {selectedVersion.source === 'bible-api' ? 'Bible API' : 'Wldeh API'}
+                                Source: {selectedVersion.source === 'bible-api' ? 'Bible API' : selectedVersion.source === 'helloao-api' ? 'HelloAO API' : 'Wldeh API'}
                               </span>
                               {selectedVersion.license && (
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
@@ -157,15 +157,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div>
                   <span className="font-medium text-blue-600">
-                    {availableBibleVersions.filter(v => v.license === 'Public Domain').length}
+                    {availableBibleVersions.filter(v => v.license === 'Public Domain' || v.source === 'helloao-api').length}
                   </span>
                   <span className="text-gray-600 ml-1">Public Domain</span>
                 </div>
                 <div>
                   <span className="font-medium text-purple-600">
-                    {availableBibleVersions.filter(v => v.source === 'wldeh-api').length}
+                    {availableBibleVersions.filter(v => v.source === 'helloao-api').length}
                   </span>
-                  <span className="text-gray-600 ml-1">Enhanced API</span>
+                  <span className="text-gray-600 ml-1">HelloAO API</span>
                 </div>
               </div>
             </div>

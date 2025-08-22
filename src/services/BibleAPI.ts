@@ -1,11 +1,14 @@
 // Enhanced Bible API implementation supporting multiple sources
+import { listTranslations as getHelloAoTranslations, Translation as HelloAoTranslation } from './helloAo';
+import { getPassageHTML, generateRandomByTopic } from './BibleHelloAo';
+
 export interface BibleVersion {
   id: string;
   abbreviation: string;
   name: string;
   description?: string;
   available: boolean;
-  source: 'bible-api' | 'wldeh-api';
+  source: 'bible-api' | 'wldeh-api' | 'helloao-api';
   license?: string;
   licenseUrl?: string;
 }
@@ -39,6 +42,25 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
         license: 'Public Domain'
       }
     ];
+
+    // Fetch versions from HelloAO API
+    let helloAoVersions: BibleVersion[] = [];
+    try {
+      const helloAoTranslations = await getHelloAoTranslations();
+      helloAoVersions = helloAoTranslations.map((translation: HelloAoTranslation) => ({
+        id: `helloao_${translation.id}`,
+        abbreviation: translation.id.toUpperCase(),
+        name: translation.name,
+        description: `${translation.name} - Free public domain translation`,
+        available: true,
+        source: 'helloao-api' as const,
+        license: 'Public Domain',
+        language: translation.language
+      }));
+      console.log('Loaded HelloAO versions:', helloAoVersions.length);
+    } catch (error) {
+      console.warn('Failed to load HelloAO API versions:', error);
+    }
 
     // Fetch versions from wldeh API
     let wldehVersions: BibleVersion[] = [];
@@ -106,7 +128,7 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
       }
     ];
     
-    const allVersions = [...originalVersions, ...wldehVersions, ...comingSoonVersions];
+    const allVersions = [...originalVersions, ...helloAoVersions, ...wldehVersions, ...comingSoonVersions];
     console.log('Loaded Bible versions:', allVersions);
     return allVersions;
   } catch (error) {
@@ -119,6 +141,12 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
 export async function getPassageByReference(versionId: string, reference: string): Promise<any> {
   try {
     console.log(`Fetching passage: ${reference} in ${versionId}`);
+    
+    // Handle HelloAO API versions
+    if (versionId.startsWith('helloao_')) {
+      const actualVersionId = versionId.replace('helloao_', '');
+      return await getHelloAoPassage(actualVersionId, reference);
+    }
     
     // Handle wldeh API versions
     if (versionId.startsWith('wldeh_')) {
@@ -156,6 +184,34 @@ export async function getPassageByReference(versionId: string, reference: string
     return data;
   } catch (error) {
     console.error("Failed to fetch passage:", error);
+    throw error;
+  }
+}
+
+/** Fetch passage from HelloAO API */
+async function getHelloAoPassage(versionId: string, reference: string): Promise<any> {
+  try {
+    const result = await getPassageHTML(versionId, reference);
+    
+    if (!result.ok) {
+      throw new Error(`HelloAO API error: ${result.reason}`);
+    }
+    
+    // Extract plain text from HTML for compatibility
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = result.html;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Transform to match bible-api.com format
+    return {
+      reference: result.reference,
+      text: plainText.trim(),
+      translation_id: result.translationId,
+      translation_name: versionId.toUpperCase(),
+      translation_note: `Fetched from HelloAO API`
+    };
+  } catch (error) {
+    console.error('HelloAO API error:', error);
     throw error;
   }
 }
@@ -224,6 +280,11 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
   try {
     console.log(`Searching for: "${query}" in ${versionId}`);
     
+    // Handle HelloAO API versions
+    if (versionId.startsWith('helloao_')) {
+      return await searchHelloAoVerses(query, versionId.replace('helloao_', ''));
+    }
+    
     // Handle wldeh API versions
     if (versionId.startsWith('wldeh_')) {
       return await searchWldehVerses(query, versionId.replace('wldeh_', ''));
@@ -273,6 +334,25 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
   } catch (error) {
     console.error("Search failed:", error);
     return await searchPopularVerses(query, versionId);
+  }
+}
+
+/** Search HelloAO API versions */
+async function searchHelloAoVerses(query: string, versionId: string): Promise<any[]> {
+  try {
+    const { searchVerses } = await import('./helloAo');
+    const hits = await searchVerses(versionId, query);
+    
+    return hits.slice(0, 10).map((hit: any) => ({
+      reference: `${hit.book} ${hit.chapter}:${hit.verse}`,
+      text: hit.text || '',
+      translation_id: versionId,
+      translation_name: versionId.toUpperCase(),
+      translation_note: 'HelloAO API'
+    }));
+  } catch (error) {
+    console.error('HelloAO search error:', error);
+    return [];
   }
 }
 
