@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, Plus, Edit3, Tag, Clock, Heart, Globe, X } from 'lucide-react';
+import { Search, BookOpen, Plus, Edit3, Tag, Clock, Heart, Globe, Loader2, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { SearchResult, VerseNote, AppSettings } from '../types';
 import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
-import { TranslationService, SUPPORTED_LANGUAGES } from '../services/translationService';
+import { TranslationService, SUPPORTED_LANGUAGES, TranslationResult } from '../services/translationService';
 
 interface SearchPageProps {
   settings: AppSettings;
@@ -21,9 +21,9 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
   const [noteText, setNoteText] = useState('');
   const [noteTags, setNoteTags] = useState('');
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [selectedTranslationLanguage, setSelectedTranslationLanguage] = useState('');
-  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
-  const [translatedVerses, setTranslatedVerses] = useState<{[key: string]: {text: string, language: string, languageName: string}}>({});
+  const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [translations, setTranslations] = useState<{[key: string]: TranslationResult}>({});
   const [translatingVerses, setTranslatingVerses] = useState<Set<string>>(new Set());
 
   // Load notes from localStorage
@@ -41,18 +41,18 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
 
   // Load translation language preference
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('bibleSearchTranslationLanguage');
+    const savedLanguage = localStorage.getItem('bibleTranslationLanguage');
     if (savedLanguage) {
-      setSelectedTranslationLanguage(savedLanguage);
+      setSelectedLanguage(savedLanguage);
     }
   }, []);
 
   // Save translation language preference
   useEffect(() => {
-    if (selectedTranslationLanguage) {
-      localStorage.setItem('bibleSearchTranslationLanguage', selectedTranslationLanguage);
+    if (selectedLanguage) {
+      localStorage.setItem('bibleTranslationLanguage', selectedLanguage);
     }
-  }, [selectedTranslationLanguage]);
+  }, [selectedLanguage]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -115,45 +115,37 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
     setSelectedVerse(null);
   };
 
-  const handleTranslateVerse = async (verse: SearchResult) => {
-    if (!selectedTranslationLanguage) {
-      setShowLanguageSelector(true);
+  const handleTranslate = async (verse: SearchResult) => {
+    if (!selectedLanguage) {
+      setShowLanguageModal(true);
       return;
     }
 
-    const verseKey = `${verse.id}-${selectedTranslationLanguage}`;
-    
-    // Check if already translated
-    if (translatedVerses[verseKey]) {
+    const translationKey = `${verse.id}-${selectedLanguage}`;
+    if (translations[translationKey]) {
+      // Clear existing translation
+      const newTranslations = { ...translations };
+      delete newTranslations[translationKey];
+      setTranslations(newTranslations);
       return;
     }
 
     setTranslatingVerses(prev => new Set(prev).add(verse.id));
 
     try {
-      // Get the current Bible version being used
-      const currentVersion = getVersionById(settings.preferredVersion, availableBibleVersions);
-      const versionId = currentVersion?.id || 'kjv';
-      
       const result = await TranslationService.translateVerse(
         verse.text,
-        selectedTranslationLanguage,
-        versionId,
+        selectedLanguage,
+        verse.version.toLowerCase(),
         verse.reference
       );
-
-      setTranslatedVerses(prev => ({
+      
+      setTranslations(prev => ({
         ...prev,
-        [verseKey]: {
-          text: result.translatedText,
-          language: selectedTranslationLanguage,
-          languageName: result.targetLanguage
-        }
+        [translationKey]: result
       }));
     } catch (error) {
       console.error('Translation failed:', error);
-      // Show error to user
-      alert('Translation failed. Please try again.');
     } finally {
       setTranslatingVerses(prev => {
         const newSet = new Set(prev);
@@ -161,15 +153,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
         return newSet;
       });
     }
-  };
-
-  const clearTranslation = (verse: SearchResult) => {
-    const verseKey = `${verse.id}-${selectedTranslationLanguage}`;
-    setTranslatedVerses(prev => {
-      const newTranslations = { ...prev };
-      delete newTranslations[verseKey];
-      return newTranslations;
-    });
   };
 
   const getVerseNote = (verseId: string) => {
@@ -185,6 +168,28 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
       version: searchResult.version
     };
   };
+
+  const getStrategyColor = (strategy: string) => {
+    switch (strategy) {
+      case 'romance_germanic': return 'text-blue-600 bg-blue-50';
+      case 'asian_african': return 'text-green-600 bg-green-50';
+      case 'missionary_global': return 'text-purple-600 bg-purple-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const getStrategyIcon = (strategy: string) => {
+    switch (strategy) {
+      case 'romance_germanic': return '🏛️';
+      case 'asian_african': return '🌏';
+      case 'missionary_global': return '✝️';
+      default: return '🌍';
+    }
+  };
+
+  const selectedLangInfo = SUPPORTED_LANGUAGES.find(lang => lang.code === selectedLanguage);
+  const isRecommended = selectedLangInfo ? 
+    TranslationService.isRecommendedPairing(settings.preferredVersion, selectedLanguage) : false;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -226,44 +231,79 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
           <span className="font-medium">Version: {getVersionById(settings.preferredVersion, availableBibleVersions)?.name || 'King James Version'}</span>
         </div>
 
-        {/* Translation Language Selector */}
-        <div className="mt-4 flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Globe className="w-4 h-4 text-purple-600" />
+        {/* Translation Language Selection */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Globe className="w-5 h-5 text-purple-600" />
             <span className="text-sm font-medium text-gray-700">Translation Language:</span>
-          </div>
-          <select
-            value={selectedTranslationLanguage}
-            onChange={(e) => setSelectedTranslationLanguage(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-          >
-            <option value="">Select language to translate</option>
-            <optgroup label="🏛️ Romance & Germanic (Best with KJV, ASV, Darby)">
-              {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="🌏 Asian & African (Best with BBE, OEB-US)">
-              {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="✝️ Missionary & Global (Best with WEBBE, OEB-US)">
-              {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </optgroup>
-          </select>
-          {selectedTranslationLanguage && (
-            <button
-              onClick={() => setSelectedTranslationLanguage('')}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded"
-              title="Clear language selection"
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
             >
-              <X className="w-4 h-4" />
+              <option value="">Select Language</option>
+              
+              <optgroup label="🏛️ Romance & Germanic (Best with KJV, ASV, Darby)">
+                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                ))}
+              </optgroup>
+              
+              <optgroup label="🌏 Asian & African (Best with BBE, OEB-US)">
+                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                ))}
+              </optgroup>
+              
+              <optgroup label="✝️ Missionary & Global (Best with WEBBE, OEB-US)">
+                {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+          
+          {!selectedLanguage && (
+            <button
+              onClick={() => setShowLanguageModal(true)}
+              className="text-sm text-purple-600 hover:text-purple-800"
+            >
+              Choose Language
             </button>
           )}
         </div>
+
+        {/* Translation Recommendation */}
+        {selectedLangInfo && (
+          <div className={`mt-3 p-3 rounded-lg border ${
+            isRecommended 
+              ? 'border-green-200 bg-green-50' 
+              : 'border-yellow-200 bg-yellow-50'
+          }`}>
+            <div className="flex items-start space-x-2">
+              {isRecommended ? (
+                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
+              )}
+              <div>
+                <p className={`text-sm font-medium ${
+                  isRecommended ? 'text-green-800' : 'text-yellow-800'
+                }`}>
+                  {isRecommended ? 'Optimal Pairing' : 'Consider Alternative'}
+                </p>
+                <p className={`text-xs ${
+                  isRecommended ? 'text-green-700' : 'text-yellow-700'
+                }`}>
+                  {isRecommended 
+                    ? `${settings.preferredVersion.toUpperCase()} works great with ${selectedLangInfo.name}`
+                    : `For better accuracy in ${selectedLangInfo.name}, consider: ${selectedLangInfo.recommended.map(v => v.toUpperCase()).join(', ')}`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search Results */}
@@ -274,8 +314,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
           <div className="grid gap-4">
             {searchResults.map((verse) => {
               const note = getVerseNote(verse.id);
-              const verseKey = `${verse.id}-${selectedTranslationLanguage}`;
-              const translation = translatedVerses[verseKey];
+              const translationKey = `${verse.id}-${selectedLanguage}`;
+              const translation = translations[translationKey];
               const isTranslating = translatingVerses.has(verse.id);
               
               return (
@@ -296,33 +336,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       <p className="text-gray-700 leading-relaxed italic mb-3">
                         "{verse.text}"
                       </p>
-                      
-                      {/* Translation Display */}
-                      {translation && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              <Globe className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-800">{translation.languageName}</span>
-                              {TranslationService.isRecommendedPairing(verse.version.toLowerCase(), selectedTranslationLanguage) && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                  ✓ Recommended
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => clearTranslation(verse)}
-                              className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                              title="Clear translation"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <p className="text-blue-700 italic leading-relaxed">
-                            "{translation.text}"
-                          </p>
-                        </div>
-                      )}
                       
                       {note && (
                         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
@@ -346,28 +359,43 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => handleTranslateVerse(verse)}
-                      disabled={isTranslating || (!selectedTranslationLanguage && !showLanguageSelector)}
-                      className="flex items-center space-x-2 px-4 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isTranslating ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Translating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Globe className="w-4 h-4" />
-                          <span>
-                            {translation ? 'Retranslate' : 
-                             selectedTranslationLanguage ? 'Translate' : 'Select Language'}
+                  {/* Translation Result */}
+                  {translation && (
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-3 border border-blue-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">{getStrategyIcon(translation.strategy)}</span>
+                          <span className="font-medium text-gray-800">{translation.targetLanguage}</span>
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            from {translation.sourceVersion}
                           </span>
-                        </>
+                          {translation.isRecommendedPairing && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              ✓ Recommended
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            const newTranslations = { ...translations };
+                            delete newTranslations[translationKey];
+                            setTranslations(newTranslations);
+                          }}
+                          className="p-1 hover:bg-white rounded-full transition-colors"
+                        >
+                          <X className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </div>
+                      <p className="text-gray-700 text-lg leading-relaxed mb-2">
+                        "{translation.translatedText}"
+                      </p>
+                      {translation.reference && (
+                        <p className="text-purple-600 font-medium text-sm">{translation.reference}</p>
                       )}
-                    </button>
-                    
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-3">
                     <button
                       onClick={() => openNoteModal(verse)}
                       className="flex items-center space-x-2 px-4 py-2 text-sm border border-purple-200 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
@@ -388,15 +416,29 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                             addedAt: new Date()
                           };
                           localStorage.setItem('bibleMemoryFavorites', JSON.stringify([...favorites, newFavorite]));
-                          alert('Added to favorites!');
-                        } else {
-                          alert('Already in favorites!');
                         }
                       }}
                       className="flex items-center space-x-2 px-4 py-2 text-sm border border-pink-200 text-pink-600 rounded-lg hover:bg-pink-50 transition-colors"
                     >
                       <Heart className="w-4 h-4" />
                       <span>Favorite</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleTranslate(verse)}
+                      disabled={isTranslating}
+                      className="flex items-center space-x-2 px-4 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                    >
+                      {isTranslating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : translation ? (
+                        <X className="w-4 h-4" />
+                      ) : (
+                        <Globe className="w-4 h-4" />
+                      )}
+                      <span>
+                        {isTranslating ? 'Translating...' : translation ? 'Clear' : 'Translate'}
+                      </span>
                     </button>
                     
                     <button
@@ -449,6 +491,113 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                 And {notes.length - 5} more notes...
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Language Selection Modal */}
+      {showLanguageModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+                    <Globe className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">🌍 Choose Translation Language</h2>
+                    <p className="text-gray-600">Select a language for Bible verse translations</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowLanguageModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Romance & Germanic Languages */}
+              <div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="text-lg">🏛️</span>
+                  <h4 className="font-medium text-gray-800">Romance & Germanic Languages</h4>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    Best with KJV, ASV, Darby
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setSelectedLanguage(lang.code);
+                        setShowLanguageModal(false);
+                      }}
+                      className="p-3 text-left border rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
+                    >
+                      <div className="font-medium">{lang.name}</div>
+                      <div className="text-xs text-gray-500">{lang.code}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Asian & African Languages */}
+              <div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="text-lg">🌏</span>
+                  <h4 className="font-medium text-gray-800">Asian & African Languages</h4>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                    Best with BBE, OEB-US
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setSelectedLanguage(lang.code);
+                        setShowLanguageModal(false);
+                      }}
+                      className="p-3 text-left border rounded-lg hover:border-green-300 hover:bg-green-50 transition-all"
+                    >
+                      <div className="font-medium">{lang.name}</div>
+                      <div className="text-xs text-gray-500">{lang.code}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Missionary/Global Languages */}
+              <div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="text-lg">✝️</span>
+                  <h4 className="font-medium text-gray-800">Missionary & Global Languages</h4>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                    Best with WEBBE, OEB-US
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setSelectedLanguage(lang.code);
+                        setShowLanguageModal(false);
+                      }}
+                      className="p-3 text-left border rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-all"
+                    >
+                      <div className="font-medium">{lang.name}</div>
+                      <div className="text-xs text-gray-500">{lang.code}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -507,106 +656,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
               >
                 Save Note
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Language Selector Modal */}
-      {showLanguageSelector && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800">🌍 Select Translation Language</h3>
-                <button
-                  onClick={() => setShowLanguageSelector(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <p className="text-gray-600 mt-2">Choose a language to translate Bible verses into</p>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Romance & Germanic Languages */}
-              <div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-lg">🏛️</span>
-                  <h4 className="font-medium text-gray-800">Romance & Germanic Languages</h4>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                    Best with KJV, ASV, Darby
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'romance_germanic').map(lang => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedTranslationLanguage(lang.code);
-                        setShowLanguageSelector(false);
-                      }}
-                      className="p-3 text-left border rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
-                    >
-                      <div className="font-medium">{lang.name}</div>
-                      <div className="text-xs text-gray-500">{lang.code}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Asian & African Languages */}
-              <div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-lg">🌏</span>
-                  <h4 className="font-medium text-gray-800">Asian & African Languages</h4>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                    Best with BBE, OEB-US
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'asian_african').map(lang => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedTranslationLanguage(lang.code);
-                        setShowLanguageSelector(false);
-                      }}
-                      className="p-3 text-left border rounded-lg hover:border-green-300 hover:bg-green-50 transition-all"
-                    >
-                      <div className="font-medium">{lang.name}</div>
-                      <div className="text-xs text-gray-500">{lang.code}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Missionary/Global Languages */}
-              <div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-lg">✝️</span>
-                  <h4 className="font-medium text-gray-800">Missionary & Global Languages</h4>
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                    Best with WEBBE, OEB-US
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {SUPPORTED_LANGUAGES.filter(lang => lang.strategy === 'missionary_global').map(lang => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedTranslationLanguage(lang.code);
-                        setShowLanguageSelector(false);
-                      }}
-                      className="p-3 text-left border rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-all"
-                    >
-                      <div className="font-medium">{lang.name}</div>
-                      <div className="text-xs text-gray-500">{lang.code}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
