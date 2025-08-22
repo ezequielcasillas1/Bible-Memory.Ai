@@ -88,7 +88,11 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     const refreshHistory = async () => {
       try {
         const historyData = await HistoryService.getMemorizationHistory();
-        setHistory(historyData);
+        // Preserve mock entries when refreshing
+        setHistory(prev => {
+          const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
+          return [...mockEntries, ...historyData];
+        });
       } catch (error) {
         console.error('Failed to refresh history:', error);
       }
@@ -105,7 +109,11 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     const handleFocus = async () => {
       try {
         const historyData = await HistoryService.getMemorizationHistory();
-        setHistory(historyData);
+        // Preserve mock entries when refreshing on focus
+        setHistory(prev => {
+          const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
+          return [...mockEntries, ...historyData];
+        });
       } catch (error) {
         console.error('Failed to refresh history on focus:', error);
       }
@@ -123,7 +131,11 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     setIsLoading(true);
     try {
       const historyData = await HistoryService.getMemorizationHistory();
-      setHistory(historyData);
+      // Preserve mock entries during manual refresh
+      setHistory(prev => {
+        const mockEntries = prev.filter(item => item.id.startsWith('mock-'));
+        return [...mockEntries, ...historyData];
+      });
     } catch (error) {
       console.error('Failed to refresh history:', error);
     } finally {
