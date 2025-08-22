@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import AuthModal from './components/AuthModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
+import { TranslationService } from './services/translationService';
 
 const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -124,7 +125,6 @@ const AppContent: React.FC = () => {
   // Sync preferred version between settings and user stats
   useEffect(() => {
     // Update preferred version based on Bible language selection
-    const { TranslationService } = require('./services/translationService');
     const bibleTranslations = TranslationService.getBibleTranslationsForLanguage(settings.bibleLanguage);
     
     let newPreferredVersion = settings.preferredVersion;
