@@ -500,7 +500,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                     <button
                       key={lang.code}
                       onClick={() => {
-                        setSelectedLanguage(lang.code);
+                        onSettingsChange({
+                          ...settings,
+                          preferredTranslationLanguage: lang.code
+                        });
                         setShowLanguageModal(false);
                       }}
                       className="p-3 text-left border rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all"
@@ -526,7 +529,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                     <button
                       key={lang.code}
                       onClick={() => {
-                        setSelectedLanguage(lang.code);
+                        onSettingsChange({
+                          ...settings,
+                          preferredTranslationLanguage: lang.code
+                        });
                         setShowLanguageModal(false);
                       }}
                       className="p-3 text-left border rounded-lg hover:border-green-300 hover:bg-green-50 transition-all"
@@ -552,7 +558,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                     <button
                       key={lang.code}
                       onClick={() => {
-                        setSelectedLanguage(lang.code);
+                        onSettingsChange({
+                          ...settings,
+                          preferredTranslationLanguage: lang.code
+                        });
                         setShowLanguageModal(false);
                       }}
                       className="p-3 text-left border rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-all"
