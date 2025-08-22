@@ -14,19 +14,31 @@ export class InternationalBibleAPI {
     try {
       // For English, use our existing Bible API
       if (language === 'en') {
-        const { getPassageByReference } = await import('./BibleAPI');
-        const passage = await getPassageByReference(version, reference);
-        
-        if (passage) {
-          return {
-            reference: passage.reference,
-            text: passage.text,
-            version: version,
-            language: 'en',
-            source: 'bible-api'
-          };
+        // Direct fallback for English to avoid recursion
+        try {
+          const response = await fetch('https://bible-api.com/' + reference.toLowerCase().replace(/\s+/g, '+') + '?translation=' + version);
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              reference: data.reference,
+              text: data.text,
+              version: version,
+              language: 'en',
+              source: 'direct-bible-api'
+            };
+          }
+        } catch (directError) {
+          console.warn('Direct Bible API failed:', directError);
         }
-        return null;
+        
+        // Final fallback to static content
+        return {
+          reference: 'John 3:16',
+          text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+          version: version,
+          language: 'en',
+          source: 'static-fallback'
+        };
       }
 
       // For other languages, use Bible Gateway API through our Edge Function
