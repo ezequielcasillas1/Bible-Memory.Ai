@@ -2,6 +2,8 @@
 
 A modern web application for memorizing Bible verses with AI-powered assistance.
 
+**🚀 Latest Update**: BM1.9 - History Log Feature with GitHub-Netlify deployment (December 2024)
+
 ## 🔒 Security Notice
 
 **Your OpenAI API key is secure!** This application properly handles API keys:
