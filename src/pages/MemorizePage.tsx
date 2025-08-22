@@ -6,6 +6,7 @@ import { AIService } from '../services/aiService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
+import { Tab } from '../types';
 import CountdownTimer from '../components/CountdownTimer';
 
 interface MemorizePageProps {
@@ -15,6 +16,8 @@ interface MemorizePageProps {
   onBackToGenerator: () => void;
   userStats: any;
   availableBibleVersions: BibleVersion[];
+  onComparisonComplete: (result: ComparisonResult | null) => void;
+  setActiveTab: (tab: Tab) => void;
 }
 
 type MemorizationPhase = 'study' | 'input' | 'feedback';
@@ -26,6 +29,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   onBackToGenerator,
   userStats,
   availableBibleVersions,
+  onComparisonComplete,
   setActiveTab
 }) => {
   const [phase, setPhase] = useState<MemorizationPhase>('study');
