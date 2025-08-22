@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain, Target } from 'lucide-react';
 import { Verse, MemorizationSession } from '../types';
 import { calculateAccuracy, generateFeedback } from '../utils/scoring';
 import { AIService } from '../services/aiService';
@@ -623,6 +623,20 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                {/* Syntax Lab Button - only show if there are wrong words */}
+                {comparisonResult && (comparisonResult.incorrectWords > 0 || comparisonResult.missingWords > 0 || comparisonResult.extraWords > 0) && (
+                  <button
+                    onClick={() => {
+                      onComparisonComplete(comparisonResult);
+                      setActiveTab('syntax-lab');
+                    }}
+                    className="button-primary flex items-center space-x-2 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                  >
+                    <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span>Go to Syntax Lab</span>
+                  </button>
+                )}
+                
                 <button
                   onClick={retry}
                   className="button-secondary flex items-center space-x-2 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto"
