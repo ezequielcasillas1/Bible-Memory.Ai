@@ -5,6 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Enhanced security constants
+const MAX_TOKENS = 800
+const MAX_INPUT_LENGTH = 1000
+const ALLOWED_MODELS = ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo']
+
 // Rate limiting storage (in production, use Redis or similar)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
@@ -38,8 +43,19 @@ const validateRequest = (data: any): boolean => {
          typeof data.userInput === 'string' && 
          typeof data.originalVerse === 'string' && 
          typeof data.accuracy === 'number' &&
-         data.userInput.length <= 1000 &&
-         data.originalVerse.length <= 1000
+         data.userInput.length <= MAX_INPUT_LENGTH &&
+         data.originalVerse.length <= MAX_INPUT_LENGTH &&
+         data.accuracy >= 0 && data.accuracy <= 100
+}
+
+const sanitizeInput = (input: string): string => {
+  return input
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .trim()
+    .substring(0, MAX_INPUT_LENGTH)
 }
 
 serve(async (req) => {
@@ -100,6 +116,18 @@ serve(async (req) => {
       )
     }
     
+    // Additional security checks
+    const totalPayloadSize = JSON.stringify({ userInput, originalVerse, accuracy, userStats }).length
+    if (totalPayloadSize > 5000) {
+      return new Response(
+        JSON.stringify({ error: 'Request payload too large' }),
+        { 
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+    
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
     if (!openaiApiKey) {
@@ -123,25 +151,56 @@ serve(async (req) => {
         }
       )
     }
+    
+    // Validate API key format
+    if (!openaiApiKey.startsWith('sk-') || openaiApiKey.length < 20) {
+      console.error('Invalid OpenAI API key format')
+      return new Response(
+        JSON.stringify({ 
+          error: 'OpenAI API configuration error',
+          fallback: true,
+          feedback: "Great effort on your memorization! Keep practicing to improve your accuracy.",
+          suggestions: [
+            "Try breaking the verse into smaller chunks",
+            "Practice reading the verse aloud several times",
+            "Focus on understanding the meaning to help with recall"
+          ]
+        }),
+        { 
+          status: 200,
+          headers: { 
+             ...corsHeaders, 
+             'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
 
-    // Sanitize inputs before sending to OpenAI
-    const sanitizedUserInput = userInput.replace(/[<>]/g, '').trim()
-    const sanitizedOriginalVerse = originalVerse.replace(/[<>]/g, '').trim()
+    // Enhanced input sanitization
+    const sanitizedUserInput = sanitizeInput(userInput)
+    const sanitizedOriginalVerse = sanitizeInput(originalVerse)
+    const sanitizedAccuracy = Math.max(0, Math.min(100, Math.round(accuracy)))
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'Bible-Memory-AI/1.0',
       },
       body: JSON.stringify({
         model: 'gpt-4',
-        max_tokens: 800,
+        max_tokens: MAX_TOKENS,
         temperature: 0.8,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
         messages: [
           {
             role: 'system',
-            content: `You are an expert Bible memorization coach with deep knowledge of Scripture and proven memorization techniques. You provide detailed, personalized feedback that combines spiritual encouragement with practical memorization strategies. Your responses should be warm, encouraging, and actionable.`
+            content: `You are an expert Bible memorization coach with deep knowledge of Scripture and proven memorization techniques. You provide detailed, personalized feedback that combines spiritual encouragement with practical memorization strategies. Your responses should be warm, encouraging, and actionable.
+            
+            CRITICAL: You must respond ONLY with valid JSON. Do not include any text before or after the JSON.`
           },
           {
             role: 'user',
@@ -149,7 +208,7 @@ serve(async (req) => {
 
 Original Verse: "${sanitizedOriginalVerse}"
 User's Attempt: "${sanitizedUserInput}"
-Accuracy Score: ${accuracy}%
+Accuracy Score: ${sanitizedAccuracy}%
 
 USER PROGRESS CONTEXT:
 - Total verses memorized: ${userStats.versesMemorized}
@@ -165,7 +224,7 @@ PROVIDE COMPREHENSIVE FEEDBACK INCLUDING:
 4. SPIRITUAL INSIGHT: Brief reflection on the verse's meaning to aid retention
 5. NEXT STEPS: Specific practice recommendations
 
-Return JSON format:
+Return ONLY this JSON format:
 {
   "feedback": "Detailed encouraging message that acknowledges their specific progress and effort",
   "analysis": "Specific analysis of what they got right and what needs improvement",
@@ -185,6 +244,8 @@ Return JSON format:
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('OpenAI API error:', response.status, errorText)
       throw new Error(`OpenAI API error: ${response.status}`)
     }
 
@@ -194,7 +255,37 @@ Return JSON format:
       throw new Error('Invalid OpenAI API response')
     }
     
-    const feedbackData = JSON.parse(data.choices[0].message.content)
+    let feedbackData
+    try {
+      const content = data.choices[0].message.content.trim()
+      // Remove any markdown code blocks if present
+      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+      feedbackData = JSON.parse(cleanContent)
+      
+      // Validate response structure
+      if (!feedbackData.feedback || !feedbackData.analysis || !Array.isArray(feedbackData.strategies)) {
+        throw new Error('Invalid response structure from OpenAI')
+      }
+      
+      // Sanitize response data
+      feedbackData.feedback = sanitizeInput(feedbackData.feedback || '')
+      feedbackData.analysis = sanitizeInput(feedbackData.analysis || '')
+      feedbackData.spiritualInsight = sanitizeInput(feedbackData.spiritualInsight || '')
+      feedbackData.nextSteps = sanitizeInput(feedbackData.nextSteps || '')
+      feedbackData.encouragement = sanitizeInput(feedbackData.encouragement || '')
+      
+      // Sanitize strategies array
+      if (Array.isArray(feedbackData.strategies)) {
+        feedbackData.strategies = feedbackData.strategies
+          .slice(0, 6) // Limit to 6 strategies max
+          .map((strategy: any) => sanitizeInput(String(strategy)))
+          .filter((strategy: string) => strategy.length > 0)
+      }
+      
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', parseError)
+      throw new Error('Invalid JSON response from OpenAI')
+    }
 
     return new Response(
       JSON.stringify(feedbackData),
