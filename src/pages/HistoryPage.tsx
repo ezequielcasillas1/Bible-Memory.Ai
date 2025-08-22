@@ -171,7 +171,6 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
       if (e.key === 'bibleMemoryHistory') {
         console.log('Storage event detected for history');
         refreshHistory();
-        }
       }
     };
 
