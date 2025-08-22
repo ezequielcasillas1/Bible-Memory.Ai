@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { History, TrendingUp, Target, Clock, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
 import { MemorizationHistory, ImprovementPlan, AppSettings, UserStats } from '../types';
+import { HistoryService } from '../services/historyService';
 import { BibleVersion } from '../services/BibleAPI';
 
 interface HistoryPageProps {
@@ -24,72 +25,162 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     dailyPractice: 15
   });
 
-  // Load data from localStorage
+  // Load data from Supabase
   useEffect(() => {
-    setIsLoading(true);
-    const savedHistory = localStorage.getItem('bibleMemoryHistory');
-    const savedPlans = localStorage.getItem('bibleMemoryPlans');
-    
-    console.log('Loading history from localStorage:', savedHistory); // Debug log
-    
-    if (savedHistory) {
+    const loadHistory = async () => {
+      setIsLoading(true);
       try {
-        const parsedHistory = JSON.parse(savedHistory);
-        console.log('Parsed history:', parsedHistory); // Debug log
-        setHistory(parsedHistory);
+        const historyData = await HistoryService.getMemorizationHistory();
+        console.log('Loaded history from Supabase:', historyData.length, 'entries');
+        setHistory(historyData);
+        
+        // Load improvement plans from localStorage (keeping this for now)
+        const savedPlans = localStorage.getItem('bibleMemoryPlans');
+        if (savedPlans) {
+          try {
+            setImprovementPlans(JSON.parse(savedPlans));
+          } catch (error) {
+            console.error('Failed to parse plans:', error);
+            setImprovementPlans([]);
+          }
+        }
       } catch (error) {
-        console.error('Failed to parse history:', error);
+        console.error('Failed to load history:', error);
         setHistory([]);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      console.log('No saved history found in localStorage');
-      setHistory([]);
-    }
-    
-    if (savedPlans) {
-      try {
-        setImprovementPlans(JSON.parse(savedPlans));
-      } catch (error) {
-        console.error('Failed to parse plans:', error);
-        setImprovementPlans([]);
-      }
-    }
-    
-    setIsLoading(false);
+    };
+
+    loadHistory();
   }, []);
 
-  // Listen for localStorage changes from other components
+  // Refresh history when navigating to this page
   useEffect(() => {
-    const handleStorageChange = () => {
-      console.log('Storage change detected, reloading history...');
-      const savedHistory = localStorage.getItem('bibleMemoryHistory');
-      if (savedHistory) {
-        try {
-          const parsedHistory = JSON.parse(savedHistory);
-          console.log('Reloaded history after storage change:', parsedHistory);
-          setHistory(parsedHistory);
-        } catch (error) {
-          console.error('Failed to parse history after storage change:', error);
+    const refreshHistory = async () => {
+      try {
+        const historyData = await HistoryService.getMemorizationHistory();
+        setHistory(historyData);
+      } catch (error) {
+        console.error('Failed to refresh history:', error);
+      }
+    };
+
+    // Set up interval to refresh history every 5 seconds when on this page
+    const interval = setInterval(refreshHistory, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Listen for focus events to refresh history
+  useEffect(() => {
+    const handleFocus = async () => {
+      try {
+        const historyData = await HistoryService.getMemorizationHistory();
+        setHistory(historyData);
+      } catch (error) {
+        console.error('Failed to refresh history on focus:', error);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Manual refresh function
+  const refreshHistory = async () => {
+    setIsLoading(true);
+    try {
+      const historyData = await HistoryService.getMemorizationHistory();
+      setHistory(historyData);
+    } catch (error) {
+      console.error('Failed to refresh history:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Listen for custom events from other components
+  useEffect(() => {
+    const handleHistoryUpdate = () => {
+      console.log('History update event received, refreshing...');
+      refreshHistory();
+    };
+
+    window.addEventListener('bibleMemoryHistoryUpdated', handleHistoryUpdate);
+    
+    return () => {
+      window.removeEventListener('bibleMemoryHistoryUpdated', handleHistoryUpdate);
+    };
+  }, []);
+
+  // Save improvement plans to localStorage (keeping this for now)
+  useEffect(() => {
+    if (improvementPlans.length > 0) {
+      localStorage.setItem('bibleMemoryPlans', JSON.stringify(improvementPlans));
+    }
+  }, [improvementPlans]);
+
+  const deleteHistoryEntry = async (entryId: string) => {
+    try {
+      await HistoryService.deleteHistoryEntry(entryId);
+      // Refresh history after deletion
+      const updatedHistory = await HistoryService.getMemorizationHistory();
+      setHistory(updatedHistory);
+    } catch (error) {
+      console.error('Failed to delete history entry:', error);
+    }
+  };
+
+  // Add manual refresh button for debugging
+  const handleManualRefresh = () => {
+    console.log('Manual refresh triggered');
+    refreshHistory();
+  };
+
+  // Debug function to check localStorage
+  const checkLocalStorage = () => {
+    const localData = localStorage.getItem('bibleMemoryHistory');
+    console.log('Current localStorage data:', localData);
+    if (localData) {
+      try {
+        const parsed = JSON.parse(localData);
+        console.log('Parsed localStorage history:', parsed);
+      } catch (error) {
+        console.error('Failed to parse localStorage:', error);
+      }
+    }
+  };
+
+  // Clear localStorage history (cleanup)
+  useEffect(() => {
+    // Clean up old localStorage history since we're using Supabase now
+    const oldHistory = localStorage.getItem('bibleMemoryHistory');
+    if (oldHistory) {
+      console.log('Removing old localStorage history data');
+      localStorage.removeItem('bibleMemoryHistory');
+    }
+  }, []);
+
+  // Listen for storage events (in case other tabs update data)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bibleMemoryHistory') {
+        console.log('Storage event detected for history');
+        refreshHistory();
         }
       }
     };
 
-    // Listen for custom storage events
-    window.addEventListener('bibleMemoryHistoryUpdated', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
-      window.removeEventListener('bibleMemoryHistoryUpdated', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('bibleMemoryHistory', JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
-    localStorage.setItem('bibleMemoryPlans', JSON.stringify(improvementPlans));
-  }, [improvementPlans]);
 
   const createImprovementPlan = () => {
     if (!newPlan.title.trim()) return;
@@ -160,6 +251,20 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
               <h2 className="text-2xl font-bold text-gray-800">📚 Learning History & Plans</h2>
               <p className="text-gray-600">Track your progress and plan your memorization journey</p>
             </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleManualRefresh}
+              className="text-sm text-purple-600 hover:text-purple-800 px-3 py-1 border border-purple-200 rounded-lg"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={checkLocalStorage}
+              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+            >
+              Debug
+            </button>
           </div>
         </div>
       </div>
@@ -323,6 +428,12 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                   >
                     Practice Again
                   </button>
+                  <button
+                    onClick={() => deleteHistoryEntry(item.id)}
+                    className="text-xs text-red-500 hover:text-red-700 mt-1 block"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -333,9 +444,14 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
             <p className="text-gray-500 mb-2">
               {isLoading ? 'Loading your history...' : 'No memorization history yet. Start practicing to see your progress!'}
             </p>
-            <p className="text-xs text-gray-400">
-              Debug: History items in localStorage: {localStorage.getItem('bibleMemoryHistory') ? JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]').length : 0}
-            </p>
+            {!isLoading && (
+              <button
+                onClick={handleManualRefresh}
+                className="text-sm text-purple-600 hover:text-purple-800 mt-2"
+              >
+                Refresh History
+              </button>
+            )}
           </div>
         )}
       </div>

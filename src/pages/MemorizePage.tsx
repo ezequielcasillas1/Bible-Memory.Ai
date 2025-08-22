@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain, Target } from 'lucide-react';
 import { Verse, MemorizationSession, Tab } from '../types';
-import { calculateAccuracy, generateFeedback } from '../utils/scoring';
 import { AIService } from '../services/aiService';
+import { HistoryService } from '../services/historyService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
@@ -51,7 +51,6 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   } | null>(null);
   const [practiceTime, setPracticeTime] = useState(0);
 
-  // Initialize session when verse is selected
   useEffect(() => {
     if (selectedVerse && !session) {
       setSession({
@@ -95,55 +94,6 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     }
     return () => clearInterval(interval);
   }, [phase]);
-
-  const saveToHistory = (completedSession: MemorizationSession, finalAccuracy: number) => {
-    console.log('Saving to history:', { completedSession, finalAccuracy }); // Debug log
-    
-    // Load existing history
-    const existingHistory = JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]');
-    console.log('Existing history:', existingHistory); // Debug log
-    
-    // Check if this verse already exists in history
-    const existingIndex = existingHistory.findIndex((item: any) => 
-      item.verse.reference === completedSession.verse.reference
-    );
-    
-    if (existingIndex >= 0) {
-      // Update existing entry
-      const existing = existingHistory[existingIndex];
-      existingHistory[existingIndex] = {
-        ...existing,
-        attempts: existing.attempts + 1,
-        bestAccuracy: Math.max(existing.bestAccuracy, finalAccuracy),
-        averageAccuracy: ((existing.averageAccuracy * (existing.attempts - 1)) + finalAccuracy) / existing.attempts,
-        totalTime: (existing.totalTime || 0) + practiceTime,
-        lastPracticed: new Date(),
-        status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
-      };
-      console.log('Updated existing history item:', existingHistory[existingIndex]); // Debug log
-    } else {
-      // Create new history entry
-      const newHistoryItem = {
-        id: `history-${Date.now()}`,
-        verse: completedSession.verse,
-        attempts: 1,
-        bestAccuracy: finalAccuracy,
-        averageAccuracy: finalAccuracy,
-        totalTime: practiceTime,
-        lastPracticed: new Date(),
-        status: finalAccuracy >= 95 ? 'mastered' : finalAccuracy >= 80 ? 'reviewing' : 'learning'
-      };
-      existingHistory.unshift(newHistoryItem);
-      console.log('Created new history item:', newHistoryItem); // Debug log
-    }
-    
-    // Save updated history
-    localStorage.setItem('bibleMemoryHistory', JSON.stringify(existingHistory));
-    console.log('Saved history to localStorage:', existingHistory); // Debug log
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('bibleMemoryHistoryUpdated'));
-  };
 
   // Loading messages for AI feedback
   const encouragingMessages = [
@@ -208,8 +158,9 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         };
         setSession(updatedSessionWithAccuracy);
         
-        // Save to history
-        saveToHistory(updatedSessionWithAccuracy, comparison.accuracy);
+        // Save to Supabase history
+        HistoryService.saveMemorizationResult(updatedSessionWithAccuracy, comparison.accuracy, practiceTime)
+          .catch(error => console.error('Failed to save to history:', error));
         
         // Award points based on actual accuracy
         const points = Math.round(comparison.accuracy * 1.5);
@@ -234,17 +185,19 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
       })
       .catch(() => {
         // Fallback if everything fails
-        const accuracy = calculateAccuracy(userInput, session.verse.text);
-        const { feedback, suggestions } = generateFeedback(accuracy, userInput, session.verse.text);
+        const accuracy = 50; // Fallback accuracy
+        const feedback = "Keep practicing to improve your accuracy!";
+        const suggestions = ["Try breaking the verse into smaller chunks", "Practice reading aloud"];
         
-        // Save to history even with fallback
+        // Save to Supabase history even with fallback
         const fallbackSession = {
           ...session,
           attempts: session.attempts + 1,
           accuracy,
           completed: accuracy >= 70
         };
-        saveToHistory(fallbackSession, accuracy);
+        HistoryService.saveMemorizationResult(fallbackSession, accuracy, practiceTime)
+          .catch(error => console.error('Failed to save fallback to history:', error));
         
         setResult({ 
           accuracy, 
@@ -259,16 +212,9 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         setPhase('feedback');
       });
     
-    const updatedSession = {
-      ...session,
-      attempts: session.attempts + 1,
-      accuracy: 0, // Will be updated when comparison completes
-      completed: false // Will be updated when comparison completes
-    };
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('bibleMemoryHistoryUpdated'));
     
-    setSession(updatedSession);
-    
-    // Points will be awarded when we get the actual accuracy
   };
 
   const retry = () => {

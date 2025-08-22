@@ -30,6 +30,12 @@ export class HistoryService {
         return;
       }
 
+      console.log('Saving memorization result to Supabase:', {
+        verse: session.verse.reference,
+        accuracy,
+        practiceTime
+      });
+
       // Check if this verse already exists in history
       const { data: existingHistory, error: fetchError } = await supabase
         .from('memorization_history')
@@ -86,8 +92,7 @@ export class HistoryService {
       }
     } catch (error) {
       console.error('Failed to save memorization history:', error);
-      // Fallback to localStorage if Supabase fails
-      this.saveToLocalStorageFallback(session, accuracy, practiceTime);
+      throw error; // Don't use localStorage fallback anymore
     }
   }
 
@@ -99,6 +104,8 @@ export class HistoryService {
         return [];
       }
 
+      console.log('Loading memorization history from Supabase for user:', user.id);
+
       const { data, error } = await supabase
         .from('memorization_history')
         .select('*')
@@ -107,6 +114,8 @@ export class HistoryService {
         .limit(50);
 
       if (error) throw error;
+
+      console.log('Loaded history from Supabase:', data?.length || 0, 'entries');
 
       // Transform database records to MemorizationHistory format
       return (data || []).map(record => ({
@@ -126,8 +135,7 @@ export class HistoryService {
       }));
     } catch (error) {
       console.error('Failed to load memorization history:', error);
-      // Fallback to localStorage if Supabase fails
-      return this.getFromLocalStorageFallback();
+      return [];
     }
   }
 
@@ -146,60 +154,6 @@ export class HistoryService {
       console.log('Deleted history entry:', entryId);
     } catch (error) {
       console.error('Failed to delete history entry:', error);
-    }
-  }
-
-  // Fallback methods for localStorage
-  private static saveToLocalStorageFallback(
-    session: MemorizationSession,
-    accuracy: number,
-    practiceTime: number
-  ): void {
-    try {
-      const existingHistory = JSON.parse(localStorage.getItem('bibleMemoryHistory') || '[]');
-      const existingIndex = existingHistory.findIndex((item: any) => 
-        item.verse.reference === session.verse.reference
-      );
-      
-      if (existingIndex >= 0) {
-        const existing = existingHistory[existingIndex];
-        existingHistory[existingIndex] = {
-          ...existing,
-          attempts: existing.attempts + 1,
-          bestAccuracy: Math.max(existing.bestAccuracy, accuracy),
-          averageAccuracy: ((existing.averageAccuracy * (existing.attempts - 1)) + accuracy) / existing.attempts,
-          totalTime: (existing.totalTime || 0) + practiceTime,
-          lastPracticed: new Date(),
-          status: accuracy >= 95 ? 'mastered' : accuracy >= 80 ? 'reviewing' : 'learning'
-        };
-      } else {
-        const newHistoryItem = {
-          id: `history-${Date.now()}`,
-          verse: session.verse,
-          attempts: 1,
-          bestAccuracy: accuracy,
-          averageAccuracy: accuracy,
-          totalTime: practiceTime,
-          lastPracticed: new Date(),
-          status: accuracy >= 95 ? 'mastered' : accuracy >= 80 ? 'reviewing' : 'learning'
-        };
-        existingHistory.unshift(newHistoryItem);
-      }
-      
-      localStorage.setItem('bibleMemoryHistory', JSON.stringify(existingHistory));
-      console.log('Saved to localStorage fallback');
-    } catch (error) {
-      console.error('Failed to save to localStorage fallback:', error);
-    }
-  }
-
-  private static getFromLocalStorageFallback(): MemorizationHistory[] {
-    try {
-      const savedHistory = localStorage.getItem('bibleMemoryHistory');
-      return savedHistory ? JSON.parse(savedHistory) : [];
-    } catch (error) {
-      console.error('Failed to load from localStorage fallback:', error);
-      return [];
     }
   }
 }
