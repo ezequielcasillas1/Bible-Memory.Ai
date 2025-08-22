@@ -42,29 +42,30 @@ export class HistoryService {
         .select('*')
         .eq('user_id', user.id)
         .eq('verse_reference', session.verse.reference)
-        .single();
+        .limit(1);
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         throw fetchError;
       }
 
-      if (existingHistory) {
+      if (existingHistory && existingHistory.length > 0) {
+        const existing = existingHistory[0];
         // Update existing entry
-        const newAttempts = existingHistory.attempts + 1;
-        const newAverageAccuracy = ((existingHistory.average_accuracy * existingHistory.attempts) + accuracy) / newAttempts;
+        const newAttempts = existing.attempts + 1;
+        const newAverageAccuracy = ((existing.average_accuracy * existing.attempts) + accuracy) / newAttempts;
         const newStatus = accuracy >= 95 ? 'mastered' : accuracy >= 80 ? 'reviewing' : 'learning';
 
         const { error: updateError } = await supabase
           .from('memorization_history')
           .update({
             attempts: newAttempts,
-            best_accuracy: Math.max(existingHistory.best_accuracy, accuracy),
+            best_accuracy: Math.max(existing.best_accuracy, accuracy),
             average_accuracy: newAverageAccuracy,
-            total_time: existingHistory.total_time + practiceTime,
+            total_time: existing.total_time + practiceTime,
             last_practiced: new Date().toISOString(),
             status: newStatus
           })
-          .eq('id', existingHistory.id);
+          .eq('id', existing.id);
 
         if (updateError) throw updateError;
         console.log('Updated existing history entry for:', session.verse.reference);
