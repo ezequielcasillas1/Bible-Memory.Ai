@@ -142,7 +142,28 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
       }
     ];
     
-    const allVersions = [...originalVersions, ...wldehVersions, ...comingSoonVersions];
+    // Add international Bible versions based on supported languages
+    const { supportedLanguages, bibleTranslations } = await import('./translationService');
+    const internationalVersions: BibleVersion[] = [];
+    
+    for (const language of supportedLanguages) {
+      if (language.code !== 'en' && language.bibleSupported) {
+        const translations = bibleTranslations[language.code] || [];
+        for (const translation of translations) {
+          internationalVersions.push({
+            id: `${language.code}_${translation.version}`,
+            abbreviation: `${translation.abbreviation} (${language.flag})`,
+            name: `${translation.name} - ${language.name}`,
+            description: `${translation.name} in ${language.nativeName}`,
+            available: true,
+            source: 'international-api',
+            license: 'Various'
+          });
+        }
+      }
+    }
+    
+    const allVersions = [...originalVersions, ...wldehVersions, ...internationalVersions, ...comingSoonVersions];
     console.log('Loaded Bible versions:', allVersions);
     return allVersions;
   } catch (error) {
@@ -155,6 +176,15 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
 export async function getPassageByReference(versionId: string, reference: string): Promise<any> {
   try {
     console.log(`Fetching passage: ${reference} in ${versionId}`);
+    
+    // Check if this is a request for international Bible content
+    if (versionId.includes('_')) {
+      const [language, version] = versionId.split('_');
+      if (language !== 'en') {
+        const { InternationalBibleAPI } = await import('./internationalBibleAPI');
+        return await InternationalBibleAPI.getVerse(reference, version, language);
+      }
+    }
     
     // Handle wldeh API versions
     if (versionId.startsWith('wldeh_')) {
@@ -259,6 +289,15 @@ function parseReference(reference: string): { book: string, chapter: number, ver
 export async function searchVerses(query: string, versionId: string = 'kjv'): Promise<any[]> {
   try {
     console.log(`Searching for: "${query}" in ${versionId}`);
+    
+    // Check if this is a request for international Bible content
+    if (versionId.includes('_')) {
+      const [language, version] = versionId.split('_');
+      if (language !== 'en') {
+        const { InternationalBibleAPI } = await import('./internationalBibleAPI');
+        return await InternationalBibleAPI.searchVerses(query, version, language);
+      }
+    }
     
     // Handle wldeh API versions
     if (versionId.startsWith('wldeh_')) {

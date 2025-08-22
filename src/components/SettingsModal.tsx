@@ -41,6 +41,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleBibleLanguageChange = (languageCode: string) => {
     changeBibleLanguage(languageCode);
     handleSettingChange('bibleLanguage', languageCode);
+    
+    // Auto-select appropriate Bible version for the language
+    const translations = TranslationService.getBibleTranslationsForLanguage(languageCode);
+    if (translations.length > 0) {
+      const newVersionId = languageCode === 'en' ? 'kjv' : `${languageCode}_${translations[0].version}`;
+      handleSettingChange('preferredVersion', newVersionId);
+    }
   };
 
   return (

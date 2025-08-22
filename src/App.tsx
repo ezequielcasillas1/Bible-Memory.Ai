@@ -123,13 +123,33 @@ const AppContent: React.FC = () => {
 
   // Sync preferred version between settings and user stats
   useEffect(() => {
-    if (settings.preferredVersion !== userStats.preferredVersion) {
+    // Update preferred version based on Bible language selection
+    const { TranslationService } = require('./services/translationService');
+    const bibleTranslations = TranslationService.getBibleTranslationsForLanguage(settings.bibleLanguage);
+    
+    let newPreferredVersion = settings.preferredVersion;
+    
+    // If Bible language changed, update to appropriate version
+    if (settings.bibleLanguage !== 'en' && bibleTranslations.length > 0) {
+      newPreferredVersion = `${settings.bibleLanguage}_${bibleTranslations[0].version}`;
+    } else if (settings.bibleLanguage === 'en' && settings.preferredVersion.includes('_')) {
+      // Switch back to English version if language changed to English
+      newPreferredVersion = 'kjv';
+    }
+    
+    if (newPreferredVersion !== userStats.preferredVersion) {
       setUserStats(prev => ({
         ...prev,
-        preferredVersion: settings.preferredVersion
+        preferredVersion: newPreferredVersion
       }));
+      
+      if (newPreferredVersion !== settings.preferredVersion) {
+        setSettings(prev => ({
+          ...prev,
+          preferredVersion: newPreferredVersion
+        }));
+      }
     }
-  }, [settings.preferredVersion, userStats.preferredVersion]);
 
   const handleMemorizeVerse = (verse: Verse) => {
     setSelectedVerse(verse);
