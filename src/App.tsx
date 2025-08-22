@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LanguageProvider } from './contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { Tab, Verse, UserStats, AppSettings } from './types';
 import { getBibleVersions, BibleVersion } from './services/BibleAPI';
 import Header from './components/Header';
