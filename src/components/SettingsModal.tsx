@@ -22,7 +22,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   availableBibleVersions,
   isLoadingVersions
 }) => {
-  const { t, setLanguage } = useLanguage();
+  const { t, setLanguage, isTranslating, translationError } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -187,6 +187,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 })()
               )}
             </div>
+            
+            {/* Translation Status */}
+            {isTranslating && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-blue-700">Loading UI translations...</span>
+                </div>
+              </div>
+            )}
+            
+            {translationError && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-yellow-600">⚠️</span>
+                  <span className="text-sm text-yellow-700">{translationError}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Translation Language Setting */}

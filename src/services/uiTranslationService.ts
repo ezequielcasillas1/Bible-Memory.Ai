@@ -16,11 +16,14 @@ export class UITranslationService {
     targetLanguage: string
   ): Promise<UITranslationResult> {
     try {
+      console.log(`Translating ${texts.length} UI texts to ${targetLanguage}`);
+      
       // Check cache first
       const cacheKey = `${targetLanguage}-${JSON.stringify(texts)}`;
       const cached = this.cache.get(cacheKey);
       
       if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+        console.log('Using cached translations');
         return {
           translations: texts.map(text => cached.translations[text] || text),
           targetLanguage,
@@ -37,6 +40,7 @@ export class UITranslationService {
         };
       }
 
+      console.log('Calling Supabase Edge Function for translation...');
       const response = await fetch(`${SUPABASE_URL}/functions/v1/ui-translate`, {
         method: 'POST',
         headers: {
@@ -50,10 +54,13 @@ export class UITranslationService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Translation API error:', response.status, errorText);
         throw new Error(`Translation failed: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('Translation result:', result);
 
       // Cache successful translations
       if (result.translations && !result.fallback) {
@@ -66,6 +73,7 @@ export class UITranslationService {
           translations: translationMap,
           timestamp: Date.now()
         });
+        console.log('Cached translations successfully');
       }
 
       return result;

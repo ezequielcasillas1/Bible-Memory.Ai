@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onAuthClick, onSignOut }) => {
-  const { t } = useLanguage();
+  const { t, isTranslating } = useLanguage();
 
   return (
     <header className="bg-white/80 backdrop-blur-sm border-b border-purple-200 sticky top-0 z-50 safe-area-top">
@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ totalPoints, onSettingsClick, user, onA
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate">
-                {t('header.title')}
+                {t('header.title')} {isTranslating && <span className="text-xs text-gray-500">(Translating...)</span>}
               </h1>
               <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">{t('header.subtitle')}</p>
             </div>

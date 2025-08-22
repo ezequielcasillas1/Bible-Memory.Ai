@@ -160,6 +160,7 @@ serve(async (req) => {
     const googleApiKey = Deno.env.get('GOOGLE_TRANSLATE_API_KEY')
     
     if (!googleApiKey) {
+      console.log('Google Translate API key not configured, returning fallback');
       return new Response(
         JSON.stringify({ 
           error: 'Google Translate API key not configured',
@@ -199,6 +200,8 @@ serve(async (req) => {
     const sanitizedTexts = texts.map((text: string) => sanitizeInput(text))
     const sanitizedTargetLanguage = SUPPORTED_UI_LANGUAGES[targetLanguage]
 
+    console.log(`Translating ${sanitizedTexts.length} texts to ${sanitizedTargetLanguage}`);
+    
     // Call Google Cloud Translate API
     const translateUrl = `https://translation.googleapis.com/language/translate/v2?key=${googleApiKey}`
     
@@ -238,14 +241,18 @@ serve(async (req) => {
     }
 
     const data = await response.json()
+    console.log('Google Translate response received');
     
     if (!data.data || !data.data.translations) {
+      console.error('Invalid Google Translate API response structure');
       throw new Error('Invalid Google Translate API response')
     }
 
     // Extract translated texts
     const translations = data.data.translations.map((translation: any) => translation.translatedText)
 
+    console.log(`Successfully translated ${translations.length} texts`);
+    
     return new Response(
       JSON.stringify({ 
         translations,

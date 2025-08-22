@@ -306,6 +306,7 @@ interface LanguageContextType {
   t: (key: keyof Translations) => string;
   availableLanguages: UILanguage[];
   isTranslating: boolean;
+  translationError: string | null;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -322,6 +323,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [dynamicTranslations, setDynamicTranslations] = useState<Record<string, Translations>>({});
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load saved language from localStorage
@@ -348,12 +350,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       setIsTranslating(true);
+      setTranslationError(null);
       try {
         // Get all English translation keys and values
         const englishTranslations = translations['en'];
         const keys = Object.keys(englishTranslations) as (keyof Translations)[];
         const texts = keys.map(key => englishTranslations[key]);
 
+        console.log(`Loading UI translations for ${currentLanguage}...`);
         const result = await UITranslationService.translateUITexts(texts, currentLanguage);
         
         if (result.translations && !result.fallback) {
@@ -367,9 +371,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ...prev,
             [currentLanguage]: dynamicTranslation
           }));
+          console.log(`Successfully loaded ${result.translations.length} translations for ${currentLanguage}`);
+        } else if (result.fallback) {
+          console.log(`Using fallback translations for ${currentLanguage}`);
+          setTranslationError('Translation service unavailable, using English');
         }
       } catch (error) {
         console.error('Failed to load dynamic translations:', error);
+        setTranslationError(`Translation failed: ${error.message}`);
       } finally {
         setIsTranslating(false);
       }
@@ -406,7 +415,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguage,
     t,
     availableLanguages: UI_LANGUAGES,
-    isTranslating
+    isTranslating,
+    translationError
   };
 
   return (
