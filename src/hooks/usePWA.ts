@@ -25,6 +25,15 @@ export const usePWA = () => {
   });
 
   useEffect(() => {
+    // Skip Service Worker registration in StackBlitz environment
+    const isStackBlitz = window.location.hostname.includes('stackblitz') || 
+                        window.location.hostname.includes('webcontainer');
+    
+    if (isStackBlitz) {
+      console.log('PWA: Skipping Service Worker registration in StackBlitz environment');
+      return;
+    }
+
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                        (window.navigator as any).standalone === true;
@@ -82,7 +91,7 @@ export const usePWA = () => {
           });
         })
         .catch((error) => {
-          console.error('PWA: Service Worker registration failed:', error);
+          console.log('PWA: Service Worker registration failed:', error.message);
         });
     }
 
