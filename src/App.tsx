@@ -150,6 +150,7 @@ const AppContent: React.FC = () => {
         }));
       }
     }
+  }, [settings.bibleLanguage, settings.preferredVersion, userStats.preferredVersion]);
 
   const handleMemorizeVerse = (verse: Verse) => {
     setSelectedVerse(verse);
