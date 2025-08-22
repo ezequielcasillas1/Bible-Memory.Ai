@@ -98,18 +98,6 @@ serve(async (req) => {
       )
     }
 
-    // Get Bible API key from environment (server-side only)
-    const bibleApiKey = Deno.env.get('BIBLE_API_KEY')
-    
-    if (!bibleApiKey) {
-      return new Response(
-        JSON.stringify({ error: 'Bible API service temporarily unavailable' }),
-        { 
-          status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
 
     // Sanitize inputs
     const sanitizedReference = reference.replace(/[<>]/g, '').trim()
