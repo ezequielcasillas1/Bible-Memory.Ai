@@ -389,7 +389,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       <p className="text-gray-700 text-lg leading-relaxed mb-2">
                         "{translation.translatedText}"
                       </p>
-                  </p>
                       {translation.reference && (
                         <p className="text-purple-600 font-medium text-sm">{translation.reference}</p>
                       )}
