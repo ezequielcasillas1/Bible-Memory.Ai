@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Brain, Search, Heart, History, User } from 'lucide-react';
 import { Tab } from '../types';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface NavigationProps {
   activeTab: Tab;
@@ -8,13 +9,15 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
+
   const tabs = [
-    { id: 'generator' as Tab, label: 'Generator', icon: Home },
-    { id: 'memorize' as Tab, label: 'Memorize', icon: Brain },
-    { id: 'search' as Tab, label: 'Search', icon: Search },
-    { id: 'favorites' as Tab, label: 'Favorites', icon: Heart },
-    { id: 'history' as Tab, label: 'History', icon: History },
-    { id: 'profile' as Tab, label: 'Profile', icon: User }
+    { id: 'generator' as Tab, label: t('nav.generator', 'Generator'), icon: Home },
+    { id: 'memorize' as Tab, label: t('nav.memorize', 'Memorize'), icon: Brain },
+    { id: 'search' as Tab, label: t('nav.search', 'Search'), icon: Search },
+    { id: 'favorites' as Tab, label: t('nav.favorites', 'Favorites'), icon: Heart },
+    { id: 'history' as Tab, label: t('nav.history', 'History'), icon: History },
+    { id: 'profile' as Tab, label: t('nav.profile', 'Profile'), icon: User }
   ];
 
   return (

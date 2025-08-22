@@ -27,6 +27,8 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     studyTime: 10,
     preferredVersion: '', // Will be set once versions are loaded
+    uiLanguage: 'en',
+    bibleLanguage: 'en',
   });
   
   const [userStats, setUserStats] = useState<UserStats>({
