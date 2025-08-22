@@ -36,8 +36,8 @@ const isRateLimited = (clientIP: string): boolean => {
 const validateRequest = (data: any): boolean => {
   return data && 
          typeof data.reference === 'string' &&
-         ['kjv', 'asv', 'darby', 'ylt'].includes(data.version) &&
-         data.reference.length <= 500
+         ['kjv', 'asv', 'darby'].includes(data.version) &&
+         data.reference.length <= 100
 }
 
 serve(async (req) => {
@@ -116,19 +116,6 @@ serve(async (req) => {
           'User-Agent': 'Bible Memory AI App'
         }
       })
-
-      if (!response.ok) {
-        return new Response(
-          JSON.stringify({ 
-            error: `Bible API service error: ${response.status}`,
-            details: `Upstream bible-api.com returned ${response.status} for reference: ${sanitizedReference}`
-          }),
-          { 
-            status: response.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
     } else if (action === 'search') {
       // Search functionality - using popular verses as fallback
       const popularVerses = [
@@ -162,8 +149,6 @@ serve(async (req) => {
           if (verseResponse.ok) {
             const verseData = await verseResponse.json()
             results.push(verseData)
-          } else {
-            console.warn(`Failed to fetch ${verse}: ${verseResponse.status}`)
           }
         } catch (error) {
           console.warn(`Failed to fetch ${verse}:`, error)
@@ -182,6 +167,10 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
+    }
+
+    if (!response.ok) {
+      throw new Error(`Bible API error: ${response.status}`)
     }
 
     const data = await response.json()
