@@ -240,6 +240,63 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     return '_'.repeat(word.length);
   };
 
+  // Enhanced Type-Along Mode helper functions
+  const renderEnhancedTypingWord = (originalWord: string, userInput: string, round: number) => {
+    const chars = originalWord.split('');
+    const userChars = userInput.split('');
+    
+    return chars.map((char, index) => {
+      const userChar = userChars[index];
+      let className = 'transition-all duration-200 ';
+      
+      if (index < userInput.length) {
+        // User has typed this position
+        if (userChar?.toLowerCase() === char.toLowerCase()) {
+          className += 'text-green-300 bg-green-600/20 rounded px-1';
+        } else {
+          className += 'text-red-300 bg-red-600/20 rounded px-1';
+        }
+      } else if (index === userInput.length) {
+        // Current typing position
+        className += 'text-yellow-300 bg-yellow-600/30 rounded px-1 animate-pulse';
+      } else {
+        // Not yet typed
+        className += 'text-white/70';
+      }
+      
+      return (
+        <span key={index} className={className}>
+          {char}
+        </span>
+      );
+    });
+  };
+
+  const getTypingAccuracy = (userInput: string, targetWord: string) => {
+    if (!userInput || !targetWord) return 0;
+    
+    const userLower = userInput.toLowerCase();
+    const targetLower = targetWord.toLowerCase();
+    
+    // Calculate character-by-character accuracy
+    let correctChars = 0;
+    const minLength = Math.min(userInput.length, targetWord.length);
+    
+    for (let i = 0; i < minLength; i++) {
+      if (userLower[i] === targetLower[i]) {
+        correctChars++;
+      }
+    }
+    
+    // Bonus for complete word match
+    if (userLower === targetLower) {
+      return 1.0;
+    }
+    
+    // Calculate accuracy based on correct characters vs target length
+    return correctChars / targetWord.length;
+  };
+
   const startPractice = (mode: PracticeMode) => {
     setPracticeMode(mode);
     setPhase('practice');
@@ -591,39 +648,128 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             )}
 
             {practiceMode === 'type-along' && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-xl p-6 text-center">
-                  <p className="text-lg leading-relaxed">
-                    {currentSession.verse.text.split(' ').map((word, index) => {
-                      const currentWord = currentSession.wrongWords[currentWordIndex];
-                      if (word.toLowerCase() === currentWord.originalWord.toLowerCase()) {
+              <div className="space-y-8">
+                {/* Enhanced Verse Display with Real-time Typing */}
+                <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-indigo-200 shadow-lg">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-indigo-800 mb-2">🧠 Type-Along Practice</h3>
+                    <p className="text-sm text-indigo-600">Type each word as it appears. Watch the real-time feedback!</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl p-6 shadow-inner border border-indigo-100">
+                    <p className="text-xl leading-relaxed text-center font-medium">
+                      {currentSession.verse.text.split(' ').map((word, index) => {
+                        const currentWord = currentSession.wrongWords[currentWordIndex];
+                        const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
+                        const isWordCompleted = wordsFixed.includes(currentWord.originalWord.toLowerCase());
+                        
+                        if (isCurrentTargetWord) {
+                          // Enhanced current word display with typing feedback
+                          return (
+                            <span key={index} className="relative inline-block mx-1">
+                              <span className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
+                              <span className="relative bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
+                                {renderEnhancedTypingWord(word, userInput, currentRound)}
+                              </span>
+                            </span>
+                          );
+                        } else if (isWordCompleted) {
+                          // Completed words get success styling
+                          return (
+                            <span key={index} className="relative inline-block mx-1">
+                              <span className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
+                                {word}
+                              </span>
+                              <span className="absolute -top-1 -right-1 text-green-500 animate-bounce">✓</span>
+                            </span>
+                          );
+                        }
+                        
+                        // Regular words
                         return (
-                          <span key={index} className="bg-yellow-200 px-2 py-1 rounded mx-1">
-                            {renderWordWithMask(word, currentRound)}
+                          <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-indigo-600">
+                            {word}
                           </span>
                         );
-                      }
-                      return <span key={index} className="mx-1">{word}</span>;
-                    })}
-                  </p>
+                      })}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="text-center space-y-4">
-                  <input
-                    type="text"
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
-                    placeholder="Type the word..."
-                    className="w-full max-w-md p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center text-lg"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleWordSubmit}
-                    className="button-primary"
-                  >
-                    Check Word
-                  </button>
+                {/* Enhanced Input Section */}
+                <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-purple-200">
+                  <div className="text-center space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-semibold text-gray-800">
+                        Type the highlighted word:
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Target: <span className="font-bold text-purple-600">{currentSession.wrongWords[currentWordIndex]?.originalWord}</span>
+                      </p>
+                    </div>
+                    
+                    {/* Real-time typing input with enhanced styling */}
+                    <div className="relative max-w-lg mx-auto">
+                      <input
+                        type="text"
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
+                        placeholder="Start typing the word..."
+                        className="w-full p-4 text-xl text-center border-3 border-purple-300 rounded-2xl focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 bg-gradient-to-r from-purple-50 to-indigo-50 font-medium shadow-lg"
+                        autoFocus
+                      />
+                      
+                      {/* Real-time typing feedback indicator */}
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                        {userInput && (
+                          <div className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 ${
+                            getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) > 0.8
+                              ? 'bg-green-100 text-green-700 border border-green-200'
+                              : getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) > 0.5
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}>
+                            {Math.round(getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) * 100)}% match
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Enhanced submit button */}
+                    <button
+                      onClick={handleWordSubmit}
+                      disabled={!userInput.trim()}
+                      className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <span className="relative z-10 flex items-center justify-center space-x-2">
+                        <Brain className="w-5 h-5 group-hover:animate-pulse" />
+                        <span>Check Word</span>
+                        <span className="text-sm opacity-75">(Enter ↵)</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress indicator */}
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-700">
+                      Progress: {wordsFixed.length} / {currentSession.wrongWords.length} words
+                    </span>
+                    <span className="text-purple-600 font-bold">
+                      {Math.round((wordsFixed.length / currentSession.wrongWords.length) * 100)}% Complete
+                    </span>
+                  </div>
+                  <div className="w-full bg-purple-200 rounded-full h-3 mt-2 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out relative"
+                      style={{ width: `${(wordsFixed.length / currentSession.wrongWords.length) * 100}%` }}
+                    >
+                      <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
