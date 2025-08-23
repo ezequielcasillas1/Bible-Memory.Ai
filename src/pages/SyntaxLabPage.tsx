@@ -32,6 +32,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showHistoryLog, setShowHistoryLog] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [currentHint, setCurrentHint] = useState<string>('');
+  const [isLoadingHint, setIsLoadingHint] = useState(false);
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -175,6 +177,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       const newWordsFixed = [...wordsFixed, currentWord.originalWord];
       setWordsFixed(newWordsFixed);
       setShowHint(false); // Reset hint for next word
+      setCurrentHint(''); // Clear previous hint
       
       // Track weak word improvement
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
@@ -249,19 +252,58 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     return '____'; // Always show blank, no hints
   };
 
-  // Generate hint for word (first letter + sound description)
-  const generateHint = (word: string): string => {
-    if (!word) return '';
+  // Generate AI-powered hint for word (cryptic clues, no spoilers)
+  const generateHint = async (word: string): Promise<string> => {
+    if (!word) return 'No hint available';
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ 
+          hintRequest: true,
+          targetWord: word,
+          context: 'bible_verse_memorization'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AI hint generation failed');
+      }
+
+      const data = await response.json();
+      return data.hint || getFallbackHint(word);
+    } catch (error) {
+      console.error('AI hint generation failed:', error);
+      return getFallbackHint(word);
+    }
+  };
+
+  // Fallback non-spoiler hints
+  const getFallbackHint = (word: string): string => {
     const firstLetter = word.charAt(0).toUpperCase();
-    const soundHints: Record<string, string> = {
-      'world': 'sounds like "whirled"',
-      'God': 'sounds like "gawd"', 
-      'loved': 'sounds like "luvd"',
-      'gave': 'sounds like "gayv"',
-      'believes': 'sounds like "bee-leevs"'
+    const length = word.length;
+    
+    // Generic cryptic hints without revealing the word
+    const categoryHints: Record<string, string> = {
+      'God': 'A three-letter divine name that commands reverence',
+      'world': 'A five-letter noun describing our entire planet or realm',
+      'loved': 'Past tense of a deep emotional connection (5 letters)',
+      'gave': 'Past tense of granting or bestowing (4 letters)',
+      'believes': 'Present tense of having faith or trust (8 letters)',
+      'eternal': 'Describes something without beginning or end (7 letters)',
+      'life': 'What makes us living beings (4 letters)',
+      'perish': 'The opposite of surviving (6 letters)'
     };
-    const soundHint = soundHints[word.toLowerCase()] || `sounds like "${word.toLowerCase()}"`;
-    return `Starts with "${firstLetter}" and ${soundHint}`;
+    
+    const specificHint = categoryHints[word.toLowerCase()];
+    if (specificHint) return specificHint;
+    
+    // Generic hint pattern
+    return `A ${length}-letter word starting with "${firstLetter}" - think about the verse context`;
   };
 
   // Enhanced Type-Along Mode helper functions
@@ -691,15 +733,33 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                       </h4>
                       <div className="flex items-center justify-center space-x-4">
                         <button
-                          onClick={() => setShowHint(!showHint)}
-                          className="text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1 rounded-full transition-colors duration-200"
+                          onClick={async () => {
+                            if (showHint) {
+                              setShowHint(false);
+                              setCurrentHint('');
+                            } else {
+                              setIsLoadingHint(true);
+                              setShowHint(true);
+                              try {
+                                const hint = await generateHint(currentSession.wrongWords[currentWordIndex]?.originalWord || '');
+                                setCurrentHint(hint);
+                              } catch (error) {
+                                console.error('Hint generation failed:', error);
+                                setCurrentHint(getFallbackHint(currentSession.wrongWords[currentWordIndex]?.originalWord || ''));
+                              } finally {
+                                setIsLoadingHint(false);
+                              }
+                            }
+                          }}
+                          className="text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1 rounded-full transition-colors duration-200 disabled:opacity-50"
+                          disabled={isLoadingHint}
                         >
-                          💡 {showHint ? 'Hide Hint' : 'Get Hint'}
+                          💡 {isLoadingHint ? 'Generating...' : showHint ? 'Hide Hint' : 'Get Hint'}
                         </button>
                       </div>
                       {showHint && (
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
-                          <strong>Hint:</strong> {generateHint(currentSession.wrongWords[currentWordIndex]?.originalWord || '')}
+                          <strong>Hint:</strong> {isLoadingHint ? 'Generating smart hint...' : currentHint}
                         </div>
                       )}
                     </div>
