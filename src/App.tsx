@@ -268,6 +268,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'syntax-lab' && (
               <SyntaxLabPage
                 comparisonResult={syntaxLabComparisonResult}
+                selectedVerse={selectedVerse}
                 onBack={() => {
                   setActiveTab('memorize');
                   setSyntaxLabComparisonResult(null);

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3 } from 'lucide-react';
-import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory } from '../types';
+import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
+import { OriginalVerseService } from '../services/originalVerseService';
 
 interface SyntaxLabPageProps {
   comparisonResult: ComparisonResult | null;
+  selectedVerse: Verse | null;
   onBack: () => void;
   onStartNewSession: () => void;
 }
@@ -13,7 +15,7 @@ interface SyntaxLabPageProps {
 type PracticeMode = 'blank' | 'type-along';
 type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'scorecard';
 
-const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack, onStartNewSession }) => {
+const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selectedVerse, onBack, onStartNewSession }) => {
   const { t } = useLanguage();
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
@@ -58,15 +60,26 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         ...comparisonResult.originalComparison.filter(w => w.status === 'missing')
       ];
 
+      // Extract the actual verse text from the comparison result
+      const originalVerseText = OriginalVerseService.getCleanOriginalVerse(comparisonResult);
+      
+      // Use selectedVerse for reference and testament, fallback to extracted data
+      const verseData = selectedVerse || {
+        id: `verse-${Date.now()}`,
+        text: originalVerseText,
+        reference: "Unknown Reference",
+        testament: "NT" as const
+      };
+
       const session: SyntaxLabSession = {
         id: `session-${Date.now()}`,
         startTime: new Date(),
-        verseId: `verse-${Date.now()}`,
+        verseId: verseData.id,
         verse: {
-          id: `verse-${Date.now()}`,
-          text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
-          reference: "John 3:16",
-          testament: "NT" as const
+          id: verseData.id,
+          text: originalVerseText, // Always use the comparison result text as it's the accurate version
+          reference: verseData.reference,
+          testament: verseData.testament
         },
         originalComparison: comparisonResult,
         wrongWords,
@@ -80,7 +93,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
 
       setCurrentSession(session);
     }
-  }, [comparisonResult, currentSession]);
+  }, [comparisonResult, selectedVerse, currentSession]);
 
   // Load memorization history
   const loadHistory = async () => {
