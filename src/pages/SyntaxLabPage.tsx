@@ -31,6 +31,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   const [memorizationHistory, setMemorizationHistory] = useState<MemorizationHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showHistoryLog, setShowHistoryLog] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -173,6 +174,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     if (isCorrect) {
       const newWordsFixed = [...wordsFixed, currentWord.originalWord];
       setWordsFixed(newWordsFixed);
+      setShowHint(false); // Reset hint for next word
       
       // Track weak word improvement
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
@@ -240,6 +242,26 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       return word.substring(0, visibleChars) + '_'.repeat(word.length - visibleChars);
     }
     return '_'.repeat(word.length);
+  };
+
+  // Create proper blank for Fill-in-the-Blank mode
+  const renderBlankWord = (word: string): string => {
+    return '____'; // Always show blank, no hints
+  };
+
+  // Generate hint for word (first letter + sound description)
+  const generateHint = (word: string): string => {
+    if (!word) return '';
+    const firstLetter = word.charAt(0).toUpperCase();
+    const soundHints: Record<string, string> = {
+      'world': 'sounds like "whirled"',
+      'God': 'sounds like "gawd"', 
+      'loved': 'sounds like "luvd"',
+      'gave': 'sounds like "gayv"',
+      'believes': 'sounds like "bee-leevs"'
+    };
+    const soundHint = soundHints[word.toLowerCase()] || `sounds like "${word.toLowerCase()}"`;
+    return `Starts with "${firstLetter}" and ${soundHint}`;
   };
 
   // Enhanced Type-Along Mode helper functions
@@ -621,19 +643,19 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   </div>
                   
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
-                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
+                    <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
                       {currentSession.verse.text.split(' ').map((word, index) => {
                         const currentWord = currentSession.wrongWords[currentWordIndex];
                         const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
                         const isWordCompleted = wordsFixed.includes(currentWord.originalWord.toLowerCase());
                         
                         if (isCurrentTargetWord) {
-                          // Enhanced current word display for fill-in-the-blank
+                          // Show proper blank for fill-in-the-blank mode
                           return (
                             <span key={index} className="relative inline-block mx-1">
                               <span className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
                               <span className="relative bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
-                                {renderWordWithMask(word, currentRound)}
+                                {renderBlankWord(word)}
                               </span>
                             </span>
                           );
@@ -656,7 +678,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                           </span>
                         );
                       })}
-                    </p>
+                    </div>
                   </div>
                 </div>
 
@@ -667,9 +689,19 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                       <h4 className="text-lg font-semibold text-gray-800">
                         Fill in the missing word:
                       </h4>
-                      <p className="text-sm text-gray-600">
-                        Target: <span className="font-bold text-emerald-600">{currentSession.wrongWords[currentWordIndex]?.originalWord}</span>
-                      </p>
+                      <div className="flex items-center justify-center space-x-4">
+                        <button
+                          onClick={() => setShowHint(!showHint)}
+                          className="text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1 rounded-full transition-colors duration-200"
+                        >
+                          💡 {showHint ? 'Hide Hint' : 'Get Hint'}
+                        </button>
+                      </div>
+                      {showHint && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
+                          <strong>Hint:</strong> {generateHint(currentSession.wrongWords[currentWordIndex]?.originalWord || '')}
+                        </div>
+                      )}
                     </div>
                     
                     {/* Enhanced input with better styling */}
