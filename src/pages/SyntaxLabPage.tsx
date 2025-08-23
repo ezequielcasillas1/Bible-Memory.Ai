@@ -107,19 +107,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       detailedFeedback: `Practice session for ${historyEntry.verse.reference}`
     };
 
-    // Generate some practice words based on accuracy
-    const practiceWords: WordComparison[] = [];
-    const wordsToGenerate = Math.max(1, Math.round(((100 - historyEntry.bestAccuracy) / 100) * 10));
+    // Extract actual words from the verse for practice
+    const verseWords = historyEntry.verse.text.split(' ').filter(word => word.length > 2); // Skip short words like "a", "to"
+    const wordsToGenerate = Math.max(3, Math.min(verseWords.length, Math.round(((100 - historyEntry.bestAccuracy) / 100) * 8)));
     
-    for (let i = 0; i < wordsToGenerate; i++) {
-      practiceWords.push({
-        userWord: `word${i}`,
-        originalWord: `target${i}`,
-        status: 'incorrect' as const,
-        position: i,
-        suggestion: `target${i}`
-      });
-    }
+    // Randomly select words from the verse for practice
+    const shuffledWords = [...verseWords].sort(() => Math.random() - 0.5);
+    const selectedWords = shuffledWords.slice(0, wordsToGenerate);
+    
+    const practiceWords: WordComparison[] = selectedWords.map((word, i) => ({
+      userWord: '', // User hasn't typed anything yet
+      originalWord: word.replace(/[.,!?;:"']/g, ''), // Clean punctuation
+      status: 'incorrect' as const,
+      position: i,
+      suggestion: word.replace(/[.,!?;:"']/g, '')
+    }));
 
     const newSession: SyntaxLabSession = {
       id: `session-${Date.now()}`,
@@ -185,7 +187,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
-    } else {
+        } else {
       // Add to weak words if not already there
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
       if (!existingWeakWord) {
@@ -203,7 +205,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         const updatedWeakWords = [...weakWords, newWeakWord];
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
-      } else {
+          } else {
         existingWeakWord.timesWrong += 1;
         existingWeakWord.lastMissed = new Date();
         existingWeakWord.mastered = false;
@@ -214,19 +216,19 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
     }
-
-    if (currentWordIndex < currentSession.wrongWords.length - 1) {
-      setCurrentWordIndex(currentWordIndex + 1);
-      setUserInput('');
-    } else {
+        
+        if (currentWordIndex < currentSession.wrongWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setUserInput('');
+        } else {
       // End of round
-      if (currentRound < currentSession.maxRounds) {
-        setCurrentRound(currentRound + 1);
-        setCurrentWordIndex(0);
-        setUserInput('');
-      } else {
-        setPhase('flashcards');
-      }
+          if (currentRound < currentSession.maxRounds) {
+            setCurrentRound(currentRound + 1);
+            setCurrentWordIndex(0);
+            setUserInput('');
+          } else {
+            setPhase('flashcards');
+          }
       return;
     }
   };
@@ -259,7 +261,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       } else if (index === userInput.length) {
         // Current typing position
         className += 'text-yellow-300 bg-yellow-600/30 rounded px-1 animate-pulse';
-      } else {
+    } else {
         // Not yet typed
         className += 'text-white/70';
       }
@@ -433,13 +435,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                     <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-600 mb-2">No History Yet</h3>
                     <p className="text-gray-500 mb-6">Start memorizing verses to build your practice history!</p>
-                    <button
-                      onClick={onStartNewSession}
-                      className="button-primary flex items-center space-x-2 mx-auto"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      <span>Start Memorizing</span>
-                    </button>
+          <button
+            onClick={onStartNewSession}
+            className="button-primary flex items-center space-x-2 mx-auto"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Start Memorizing</span>
+          </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -610,39 +612,113 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             </div>
 
             {practiceMode === 'blank' && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-xl p-6 text-center">
-                  <p className="text-lg leading-relaxed">
-                    {currentSession.verse.text.split(' ').map((word, index) => {
-                      const currentWord = currentSession.wrongWords[currentWordIndex];
-                      if (word.toLowerCase() === currentWord.originalWord.toLowerCase()) {
+              <div className="space-y-8">
+                {/* Enhanced Fill-in-the-Blank Display */}
+                <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl p-8 border-2 border-emerald-200 shadow-lg">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-emerald-800 mb-2">🎯 Fill in the Blank Practice</h3>
+                    <p className="text-sm text-emerald-600">Fill in the highlighted blanks. Watch your progress!</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
+                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
+                      {currentSession.verse.text.split(' ').map((word, index) => {
+                        const currentWord = currentSession.wrongWords[currentWordIndex];
+                        const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
+                        const isWordCompleted = wordsFixed.includes(currentWord.originalWord.toLowerCase());
+                        
+                        if (isCurrentTargetWord) {
+                          // Enhanced current word display for fill-in-the-blank
+                          return (
+                            <span key={index} className="relative inline-block mx-1">
+                              <span className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
+                              <span className="relative bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
+                                {renderWordWithMask(word, currentRound)}
+                              </span>
+                            </span>
+                          );
+                        } else if (isWordCompleted) {
+                          // Completed words get success styling
+                          return (
+                            <span key={index} className="relative inline-block mx-1">
+                              <span className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
+                                {word}
+                              </span>
+                              <span className="absolute -top-1 -right-1 text-green-500 animate-bounce">✓</span>
+                            </span>
+                          );
+                        }
+                        
+                        // Regular words
                         return (
-                          <span key={index} className="bg-yellow-200 px-2 py-1 rounded mx-1">
-                            {renderWordWithMask(word, currentRound)}
+                          <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-emerald-600">
+                            {word}
                           </span>
                         );
-                      }
-                      return <span key={index} className="mx-1">{word}</span>;
-                    })}
-                  </p>
+                      })}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="text-center space-y-4">
-                  <input
-                    type="text"
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
-                    placeholder="Type the missing word..."
-                    className="w-full max-w-md p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center text-lg"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleWordSubmit}
-                    className="button-primary"
-                  >
-                    Check Word
-                  </button>
+                {/* Enhanced Input Section */}
+                <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-emerald-200">
+                  <div className="text-center space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-semibold text-gray-800">
+                        Fill in the missing word:
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Target: <span className="font-bold text-emerald-600">{currentSession.wrongWords[currentWordIndex]?.originalWord}</span>
+                      </p>
+                    </div>
+                    
+                    {/* Enhanced input with better styling */}
+                    <div className="relative max-w-lg mx-auto">
+                      <input
+                        type="text"
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
+                        placeholder="Type the missing word..."
+                        className="w-full p-4 text-xl text-center border-3 border-emerald-300 rounded-2xl focus:ring-4 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-gradient-to-r from-emerald-50 to-teal-50 font-medium shadow-lg"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Enhanced submit button */}
+                    <button
+                      onClick={handleWordSubmit}
+                      disabled={!userInput.trim()}
+                      className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <span className="relative z-10 flex items-center justify-center space-x-2">
+                        <Target className="w-5 h-5 group-hover:animate-spin" />
+                        <span>Check Word</span>
+                        <span className="text-sm opacity-75">(Enter ↵)</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Progress indicator */}
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-700">
+                      Progress: {wordsFixed.length} / {currentSession.wrongWords.length} words
+                    </span>
+                    <span className="text-emerald-600 font-bold">
+                      {Math.round((wordsFixed.length / currentSession.wrongWords.length) * 100)}% Complete
+                    </span>
+                  </div>
+                  <div className="w-full bg-emerald-200 rounded-full h-3 mt-2 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500 ease-out relative"
+                      style={{ width: `${(wordsFixed.length / currentSession.wrongWords.length) * 100}%` }}
+                    >
+                      <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -656,8 +732,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                     <p className="text-sm text-indigo-600">Type each word as it appears. Watch the real-time feedback!</p>
                   </div>
                   
-                  <div className="bg-white rounded-xl p-6 shadow-inner border border-indigo-100">
-                    <p className="text-xl leading-relaxed text-center font-medium">
+                  <div className="bg-white rounded-xl p-6 shadow-inner border border-indigo-100 overflow-hidden">
+                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
                       {currentSession.verse.text.split(' ').map((word, index) => {
                         const currentWord = currentSession.wrongWords[currentWordIndex];
                         const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
@@ -665,14 +741,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                         
                         if (isCurrentTargetWord) {
                           // Enhanced current word display with typing feedback
-                          return (
+                      return (
                             <span key={index} className="relative inline-block mx-1">
                               <span className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
                               <span className="relative bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
                                 {renderEnhancedTypingWord(word, userInput, currentRound)}
                               </span>
-                            </span>
-                          );
+                        </span>
+                      );
                         } else if (isWordCompleted) {
                           // Completed words get success styling
                           return (
@@ -702,24 +778,24 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                     <div className="space-y-2">
                       <h4 className="text-lg font-semibold text-gray-800">
                         Type the highlighted word:
-                      </h4>
+                    </h4>
                       <p className="text-sm text-gray-600">
                         Target: <span className="font-bold text-purple-600">{currentSession.wrongWords[currentWordIndex]?.originalWord}</span>
-                      </p>
-                    </div>
-                    
+                    </p>
+                  </div>
+                  
                     {/* Real-time typing input with enhanced styling */}
                     <div className="relative max-w-lg mx-auto">
                       <input
                         type="text"
-                        value={userInput}
+                    value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
                         placeholder="Start typing the word..."
                         className="w-full p-4 text-xl text-center border-3 border-purple-300 rounded-2xl focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 bg-gradient-to-r from-purple-50 to-indigo-50 font-medium shadow-lg"
-                        autoFocus
-                      />
-                      
+                    autoFocus
+                  />
+                  
                       {/* Real-time typing feedback indicator */}
                       <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
                         {userInput && (
@@ -731,14 +807,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                               : 'bg-red-100 text-red-700 border border-red-200'
                           }`}>
                             {Math.round(getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) * 100)}% match
-                          </div>
-                        )}
-                      </div>
                     </div>
-
+                  )}
+                </div>
+                    </div>
+                    
                     {/* Enhanced submit button */}
-                    <button
-                      onClick={handleWordSubmit}
+                  <button
+                    onClick={handleWordSubmit}
                       disabled={!userInput.trim()}
                       className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
                     >
@@ -748,9 +824,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                         <span>Check Word</span>
                         <span className="text-sm opacity-75">(Enter ↵)</span>
                       </span>
-                    </button>
-                  </div>
+                  </button>
                 </div>
+              </div>
 
                 {/* Progress indicator */}
                 <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
@@ -768,12 +844,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                       style={{ width: `${(wordsFixed.length / currentSession.wrongWords.length) * 100}%` }}
                     >
                       <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
-                    </div>
+                      </div>
+                      </div>
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
         )}
 
         {/* Phase: Flashcards */}
@@ -784,14 +860,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             <div className="text-center space-y-6">
               <p className="text-gray-600">Review the words you practiced with flashcards</p>
               
-              <button
-                onClick={startChallenge}
+                  <button
+                    onClick={startChallenge}
                 className="button-primary flex items-center space-x-2 mx-auto"
-              >
+                  >
                 <Zap className="w-4 h-4" />
                 <span>Start Challenge</span>
-              </button>
-            </div>
+                  </button>
+              </div>
           </div>
         )}
 
@@ -802,8 +878,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
               <h2 className="text-xl font-bold text-gray-800 mb-2">⚡ Speed Challenge</h2>
               <div className="text-2xl font-bold text-red-600">
                 {challengeTimeLeft}s
-              </div>
             </div>
+              </div>
 
             <div className="text-center space-y-6">
               <p className="text-gray-600">Type the words as fast as you can!</p>
@@ -823,7 +899,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         {phase === 'scorecard' && stats && (
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
             <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">🏆 Session Complete!</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
                 <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession?.wrongWords.length || 0}</div>
