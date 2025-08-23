@@ -10,6 +10,13 @@
   body {
     @apply font-sans bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 text-gray-900 overflow-x-hidden;
   }
+
+  /* Global hyphenation and line-breaking for all text content */
+  p, div, span {
+    hyphens: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
   
   /* Safe area support for mobile devices */
   .safe-area-top {

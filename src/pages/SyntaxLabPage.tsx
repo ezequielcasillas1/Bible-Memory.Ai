@@ -685,7 +685,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   </div>
                   
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
-                    <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
+                    <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {currentSession.verse.text.split(' ').map((word, index) => {
                         const currentWord = currentSession.wrongWords[currentWordIndex];
                         const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
@@ -731,6 +731,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                       <h4 className="text-lg font-semibold text-gray-800">
                         Fill in the missing word:
                       </h4>
+                      <p className="text-sm text-gray-600 font-medium">
+                        📍 <span className="text-emerald-700">STARTING FROM LEFT TO RIGHT</span> - Fill in each highlighted blank in sequence
+                      </p>
                       <div className="flex items-center justify-center space-x-4">
                         <button
                           onClick={async () => {
@@ -825,7 +828,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   </div>
                   
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-indigo-100 overflow-hidden">
-                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full">
+                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {currentSession.verse.text.split(' ').map((word, index) => {
                         const currentWord = currentSession.wrongWords[currentWordIndex];
                         const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
