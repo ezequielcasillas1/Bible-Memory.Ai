@@ -17,6 +17,22 @@
     word-break: break-word;
     overflow-wrap: break-word;
   }
+
+  /* Floating emoji animation */
+  @keyframes floatUp {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.5);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-50%, -100px) scale(1.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -200px) scale(0.8);
+    }
+  }
   
   /* Safe area support for mobile devices */
   .safe-area-top {

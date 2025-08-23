@@ -34,6 +34,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   const [showHint, setShowHint] = useState(false);
   const [currentHint, setCurrentHint] = useState<string>('');
   const [isLoadingHint, setIsLoadingHint] = useState(false);
+  const [floatingEmoji, setFloatingEmoji] = useState<{ id: string; emoji: string; x: number; y: number } | null>(null);
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -179,6 +180,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       setShowHint(false); // Reset hint for next word
       setCurrentHint(''); // Clear previous hint
       
+      // Show floating correct emoji
+      showFloatingEmoji('✅', true);
+      
       // Track weak word improvement
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
       if (existingWeakWord) {
@@ -193,6 +197,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
         } else {
+      // Show floating incorrect emoji
+      showFloatingEmoji('❌', false);
+      
       // Add to weak words if not already there
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
       if (!existingWeakWord) {
@@ -280,6 +287,20 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       console.error('AI hint generation failed:', error);
       return getFallbackHint(word);
     }
+  };
+
+  // Create floating emoji animation
+  const showFloatingEmoji = (emoji: string, isCorrect: boolean) => {
+    const x = Math.random() * 200 + 100; // Random horizontal position
+    const y = Math.random() * 100 + 50;  // Random vertical position
+    const id = Date.now().toString();
+    
+    setFloatingEmoji({ id, emoji, x, y });
+    
+    // Clear emoji after animation
+    setTimeout(() => {
+      setFloatingEmoji(null);
+    }, 2000);
   };
 
   // Fallback non-spoiler hints
@@ -702,13 +723,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                             </span>
                           );
                         } else if (isWordCompleted) {
-                          // Completed words get success styling
+                          // Completed words - clean styling without green highlights
                           return (
                             <span key={index} className="relative inline-block mx-1">
-                              <span className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
+                              <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
                                 {word}
                               </span>
-                              <span className="absolute -top-1 -right-1 text-green-500 animate-bounce">✓</span>
                             </span>
                           );
                         }
@@ -845,13 +865,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                         </span>
                       );
                         } else if (isWordCompleted) {
-                          // Completed words get success styling
+                          // Completed words - clean styling without green highlights
                           return (
                             <span key={index} className="relative inline-block mx-1">
-                              <span className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
+                              <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
                                 {word}
                               </span>
-                              <span className="absolute -top-1 -right-1 text-green-500 animate-bounce">✓</span>
                             </span>
                           );
                         }
@@ -1052,7 +1071,26 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             </div>
           </div>
         )}
+
+        {/* Floating Emoji Animation Overlay */}
+        {floatingEmoji && (
+          <div
+            className="fixed pointer-events-none z-50 transition-all duration-2000 ease-out"
+            style={{
+              left: `${floatingEmoji.x}px`,
+              top: `${floatingEmoji.y}px`,
+              transform: 'translate(-50%, -50%)',
+              animation: 'floatUp 2s ease-out forwards'
+            }}
+          >
+            <div className="text-6xl animate-bounce">
+              {floatingEmoji.emoji}
+            </div>
+          </div>
+        )}
       </div>
+
+
     </div>
   );
 };
