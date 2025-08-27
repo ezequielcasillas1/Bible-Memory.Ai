@@ -938,6 +938,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                         <span className="text-sm opacity-75">(Enter ↵)</span>
                       </span>
                     </button>
+                    
+                    {/* Proceed to Results button when 100% complete */}
+                    {getProgressiveCompletionData().percentage >= 100 && (
+                      <button
+                        onClick={completeSession}
+                        className="group relative px-8 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg mt-4"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                        <span className="relative z-10 flex items-center justify-center space-x-2">
+                          <Trophy className="w-5 h-5 group-hover:animate-bounce" />
+                          <span>Proceed to Results</span>
+                          <span className="text-sm opacity-75">✨</span>
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1064,6 +1079,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                         <span className="text-sm opacity-75">(Enter ↵)</span>
                       </span>
                   </button>
+                  
+                  {/* Proceed to Results button when 100% complete */}
+                  {getProgressiveCompletionData().percentage >= 100 && (
+                    <button
+                      onClick={completeSession}
+                      className="group relative px-8 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg mt-4"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <span className="relative z-10 flex items-center justify-center space-x-2">
+                        <Trophy className="w-5 h-5 group-hover:animate-bounce" />
+                        <span>Proceed to Results</span>
+                        <span className="text-sm opacity-75">✨</span>
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 

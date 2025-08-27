@@ -1,4 +1,4 @@
-{the next screen flow does not initiate after fill in the blank mode reaches the end of the fill in the blank words, again this issue may be persisting, but check if there are files that counter reacting this file since it may be that there was originally 1 flow that was supposed to go after this flow, after completion but then I remember that you must have iniatiated a different flow, check if that may be the problem if it is, then the new screen flow, should be the one to have, again the completion bar is at 80 percent when indeed the rounds are even at one at this entry and it doesnt even say 100 percent or achieve the next screen flow, PLEASE FIX! }
+{OKAY WE FIXED THE PERCENTAGE METER, BUT WE STILL DONT SEE A NEXT SCREEN FLOW, SHOULD WE ADD A BUTTON THAT SAYS SOMETHING LIKE PROCEED TO RESULTS?  }
 
 ---
 
