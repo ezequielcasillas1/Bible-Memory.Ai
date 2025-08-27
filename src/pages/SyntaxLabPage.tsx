@@ -192,19 +192,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
   // Helper function to get progressive completion data
   const getProgressiveCompletionData = () => {
-    if (!currentSession?.fillInBlankResult || !comparisonResult) {
+    if (!currentSession?.fillInBlankResult) {
       return { completed: 0, total: 0, percentage: 0 };
     }
 
-    // Use the same logic as the progressive fill-in-blank system
-    // Count only wrong words that actually appear in the sentence
+    // Use the EXACT same logic as the progressive fill-in-blank system
+    // The session's wrongWords are WordComparison[] objects
     const verseWords = currentSession.verse.text.split(' ');
-    const wrongWords = [
-      ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra').map(w => w.originalWord),
-      ...comparisonResult.originalComparison.filter(w => w.status === 'missing').map(w => w.originalWord)
-    ];
-
-    // Find positions of wrong words that actually exist in the sentence (like progressive system)
+    const wrongWords = currentSession.wrongWords.map(ww => ww.originalWord); // Extract string values
+    
+    // Replicate the wrongWordPositions logic from FillInBlankService.calculateProgressiveFillInBlanks
     const wrongWordPositions: Array<{word: string, position: number}> = [];
     
     verseWords.forEach((word, index) => {
@@ -214,19 +211,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       );
       
       if (wrongWord) {
-        // Only add if this word position isn't already tracked
-        const existingPos = wrongWordPositions.find(wp => wp.position === index);
-        if (!existingPos) {
-          wrongWordPositions.push({
-            word: wrongWord,
-            position: index
-          });
-        }
+        // Only count unique word positions (same as progressive system)
+        wrongWordPositions.push({
+          word: wrongWord,
+          position: index
+        });
       }
     });
 
     const completed = wordsFixed.length;
-    const total = wrongWordPositions.length; // Count only words that appear in sentence
+    const total = wrongWordPositions.length; // Count unique wrong word positions in sentence
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { completed, total, percentage };
