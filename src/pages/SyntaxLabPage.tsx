@@ -197,31 +197,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       return { completed: 0, total: 0, percentage: 0 };
     }
 
-    // Use the EXACT same logic as the progressive fill-in-blank system
-    // The session's wrongWords are WordComparison[] objects
+    // ROUND-BASED COMPLETION: Each round is independent
+    // Get current fillInBlankResult which reflects the current progressive state
+    const currentBlanks = currentSession.fillInBlankResult.blanks;
+    const activeBlanks = currentBlanks.filter(blank => blank.isBlank);
+    
+    // For round-based practice:
+    // - completed = words fixed in this round (wordsFixed.length)
+    // - total = total words that need to be fixed in this round
+    // - In progressive mode, there's typically only 1 active blank at a time
+    
+    if (activeBlanks.length === 0 && wordsFixed.length > 0) {
+      // No more blanks and we've fixed some words = 100% for this round
+      return { completed: wordsFixed.length, total: wordsFixed.length, percentage: 100 };
+    }
+    
+    // Calculate based on current progress vs total words for this round
     const verseWords = currentSession.verse.text.split(' ');
-    const wrongWords = currentSession.wrongWords.map(ww => ww.originalWord); // Extract string values
+    const wrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
     
-    // Replicate the wrongWordPositions logic from FillInBlankService.calculateProgressiveFillInBlanks
-    const wrongWordPositions: Array<{word: string, position: number}> = [];
-    
-    verseWords.forEach((word, index) => {
+    // Count total wrong word positions that exist in this verse
+    const totalWrongPositions = verseWords.filter((word, index) => {
       const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-      const wrongWord = wrongWords.find(ww => 
+      return wrongWords.some(ww => 
         ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
       );
-      
-      if (wrongWord) {
-        // Only count unique word positions (same as progressive system)
-        wrongWordPositions.push({
-          word: wrongWord,
-          position: index
-        });
-      }
-    });
-
+    }).length;
+    
     const completed = wordsFixed.length;
-    const total = wrongWordPositions.length; // Count unique wrong word positions in sentence
+    const total = totalWrongPositions;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { completed, total, percentage };
@@ -332,8 +336,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         // Stay in practice mode for next round
         setPhase('practice');
       } else {
-        // All rounds complete - show final completion screen
-        setPhase('completion');
+        // All rounds complete - call original completion flow
+        completeSession();
       }
     }
   };
