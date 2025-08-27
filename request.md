@@ -1,4 +1,4 @@
-{Your feature, refactoring, or change request here. Be specific about WHAT you want and WHY it is valuable.}
+{add a show answer button that complements the hint feature in fill in the blank practice mode; this feature shows the answer to the blank; word}
 
 ---
 

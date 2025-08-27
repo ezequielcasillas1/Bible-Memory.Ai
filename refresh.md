@@ -1,4 +1,4 @@
-{ERROR/BUG, FILL IN THE BLANK PRACTICE SHOULD START THE FILL IN THE BLANK WORDS STARTING FROM THE BEGININING OF THE SENTENCE: FOR EXAMPLE ForIknowtheplansIhaveforyou,declarestheLord,plansfor____andnotforevil,togiveyouafutureandahope. That verse should start with this formatization first ForIknowtheplansI____foryou,declarestheLord,plansforwelfareandnotforevil,togiveyouafutureandahope. instead of the first one I gave when the user asks for the word welfare, so it should scan from the beginning of the sentence first from left to right; fill in the blank words.  }
+{there is a persisting issue where I complete the fill in the blank words, and when it comes to the end of the sentence, nothing happens, next, show answer also just says N/A; which means that it also is an error that it does not show either 100% complete and show the next page, which if it can should reward the user for doing a 100% complete job; again it still shows none of that. }
 
 ---
 
