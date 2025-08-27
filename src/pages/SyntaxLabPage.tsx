@@ -37,6 +37,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const [showHint, setShowHint] = useState(false);
   const [currentHint, setCurrentHint] = useState<string>('');
   const [isLoadingHint, setIsLoadingHint] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
   const [floatingEmoji, setFloatingEmoji] = useState<{ id: string; emoji: string; x: number; y: number } | null>(null);
 
   // Load stats and weak words from localStorage
@@ -56,40 +57,42 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   // Initialize session when comparison result is available
   useEffect(() => {
     if (comparisonResult && !currentSession) {
+      // Create session using SyntaxLabAPI to ensure fillInBlankResult is properly initialized
+      const sessionData = SyntaxLabAPI.createSession(comparisonResult);
+      
+      // Extract wrongWords as WordComparison[] (as expected by SyntaxLabSession type)
       const wrongWords = [
         ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra'),
         ...comparisonResult.originalComparison.filter(w => w.status === 'missing')
       ];
-
-      // Extract the actual verse text from the comparison result
-      const originalVerseText = OriginalVerseService.getCleanOriginalVerse(comparisonResult);
       
       // Use selectedVerse for reference and testament, fallback to extracted data
       const verseData = selectedVerse || {
         id: `verse-${Date.now()}`,
-        text: originalVerseText,
-        reference: "Unknown Reference",
+        text: sessionData.verseText,
+        reference: sessionData.verseReference,
         testament: "NT" as const
       };
 
       const session: SyntaxLabSession = {
-        id: `session-${Date.now()}`,
-        startTime: new Date(),
+        id: sessionData.id,
+        startTime: sessionData.createdAt,
         verseId: verseData.id,
         verse: {
           id: verseData.id,
-          text: originalVerseText, // Always use the comparison result text as it's the accurate version
+          text: sessionData.verseText, // Use the clean verse text from sessionData
           reference: verseData.reference,
           testament: verseData.testament
         },
         originalComparison: comparisonResult,
-        wrongWords,
+        wrongWords, // Use the WordComparison[] format
         practiceMode: 'blank',
         currentRound: 1,
         maxRounds: 3,
         wordsFixed: [],
         finalAccuracy: 0,
-        improvementScore: 0
+        improvementScore: 0,
+        fillInBlankResult: sessionData.fillInBlankResult // ✅ CRITICAL FIX: Add the missing fillInBlankResult
       };
 
       setCurrentSession(session);
@@ -178,6 +181,15 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return () => clearInterval(interval);
   }, [challengeActive, challengeTimeLeft]);
 
+  // Helper function to get the current blank word in progressive fill-in-blank mode
+  const getCurrentBlankWord = (): string | null => {
+    if (!currentSession?.fillInBlankResult) return null;
+    
+    // Find the first blank that is currently active (isBlank = true)
+    const currentBlank = currentSession.fillInBlankResult.blanks.find(blank => blank.isBlank);
+    return currentBlank ? currentBlank.word : null;
+  };
+
   const checkWord = (input: string, targetWord: string): boolean => {
     return input.toLowerCase().trim() === targetWord.toLowerCase().trim();
   };
@@ -185,27 +197,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const handleWordSubmit = () => {
     if (!currentSession || !userInput.trim()) return;
 
-    const currentWord = currentSession.wrongWords[currentWordIndex];
-    const isCorrect = checkWord(userInput, currentWord.originalWord);
+    // For fill-in-blank mode, use the current blank word instead of currentWordIndex
+    const currentBlankWord = getCurrentBlankWord();
+    if (!currentBlankWord) return;
+    
+    // Clean the blank word for comparison (remove punctuation)
+    const cleanBlankWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+    const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    const isCorrect = cleanUserInput === cleanBlankWord;
 
     if (isCorrect) {
-      const newWordsFixed = [...wordsFixed, currentWord.originalWord];
+      // Store the cleaned version for consistency with progressive fill-in-blank system
+      const newWordsFixed = [...wordsFixed, cleanBlankWord];
       setWordsFixed(newWordsFixed);
       setShowHint(false); // Reset hint for next word
       setCurrentHint(''); // Clear previous hint
+      setShowAnswer(false); // Reset answer for next word
       
       // Show floating correct emoji
       showFloatingEmoji('✅', true);
       
       // Track weak word improvement
-      const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
+      const existingWeakWord = weakWords.find(w => w.word === cleanBlankWord);
       if (existingWeakWord) {
         existingWeakWord.timesCorrect += 1;
         if (existingWeakWord.timesCorrect >= 3) {
           existingWeakWord.mastered = true;
         }
         const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
+          w.word === cleanBlankWord ? existingWeakWord : w
         );
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
@@ -229,12 +249,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       showFloatingEmoji('❌', false);
       
       // Add to weak words if not already there
-      const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
+      const existingWeakWord = weakWords.find(w => w.word === cleanBlankWord);
       if (!existingWeakWord) {
         const newWeakWord: WeakWord = {
           id: Date.now().toString(),
-          word: currentWord.originalWord,
-          originalWord: currentWord.originalWord,
+          word: cleanBlankWord,
+          originalWord: currentBlankWord, // Keep original case for display
           verse: comparisonResult?.originalComparison[0]?.verse || 'Unknown',
           reference: 'Unknown Reference',
           timesWrong: 1,
@@ -250,7 +270,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         existingWeakWord.lastMissed = new Date();
         existingWeakWord.mastered = false;
         const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
+          w.word === cleanBlankWord ? existingWeakWord : w
         );
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
@@ -749,7 +769,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                           fixed.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
                         );
                         
-                        if (isCurrentBlank) {
+                        if (isCurrentBlank && blankWord) {
                           // Show proper blank for fill-in-the-blank mode (progressive left-to-right)
                           return (
                             <span key={index} className="relative inline-block mx-1">
@@ -801,11 +821,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                               setIsLoadingHint(true);
                               setShowHint(true);
                               try {
-                                const hint = await generateHint(currentSession.wrongWords[currentWordIndex]?.originalWord || '');
+                                const currentBlankWord = getCurrentBlankWord();
+                                const hint = await generateHint(currentBlankWord || '');
                                 setCurrentHint(hint);
                               } catch (error) {
                                 console.error('Hint generation failed:', error);
-                                setCurrentHint(getFallbackHint(currentSession.wrongWords[currentWordIndex]?.originalWord || ''));
+                                const currentBlankWord = getCurrentBlankWord();
+                                setCurrentHint(getFallbackHint(currentBlankWord || ''));
                               } finally {
                                 setIsLoadingHint(false);
                               }
@@ -816,10 +838,24 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                         >
                           💡 {isLoadingHint ? 'Generating...' : showHint ? 'Hide Hint' : 'Get Hint'}
                         </button>
+                        
+                        <button
+                          onClick={() => {
+                            setShowAnswer(!showAnswer);
+                          }}
+                          className="text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-full transition-colors duration-200"
+                        >
+                          🔍 {showAnswer ? 'Hide Answer' : 'Show Answer'}
+                        </button>
                       </div>
                       {showHint && (
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
                           <strong>Hint:</strong> {isLoadingHint ? 'Generating smart hint...' : currentHint}
+                        </div>
+                      )}
+                      {showAnswer && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700">
+                          <strong>Answer:</strong> <span className="font-bold text-orange-800">{getCurrentBlankWord() || 'N/A'}</span>
                         </div>
                       )}
                     </div>
