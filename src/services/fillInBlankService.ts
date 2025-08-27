@@ -49,6 +49,67 @@ export class FillInBlankService {
     };
   }
 
+  /**
+   * NEW: Progressive fill-in-blank - only blanks the leftmost remaining wrong word
+   * This ensures left-to-right progression as requested in refresh.md
+   */
+  static calculateProgressiveFillInBlanks(originalText: string, wrongWords: string[], completedWords: string[] = []): FillInBlankResult {
+    const words = originalText.split(' ');
+    const blanks: BlankWord[] = [];
+    
+    // Find positions of all wrong words in the sentence
+    const wrongWordPositions: Array<{word: string, position: number, completed: boolean}> = [];
+    
+    words.forEach((word, index) => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      const wrongWord = wrongWords.find(ww => 
+        ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+      );
+      
+      if (wrongWord) {
+        const isCompleted = completedWords.some(cw => 
+          cw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+        );
+        wrongWordPositions.push({
+          word: wrongWord,
+          position: index,
+          completed: isCompleted
+        });
+      }
+    });
+    
+    // Sort by position to ensure left-to-right order
+    wrongWordPositions.sort((a, b) => a.position - b.position);
+    
+    // Find the leftmost uncompleted wrong word
+    const nextTargetWord = wrongWordPositions.find(wp => !wp.completed);
+    
+    words.forEach((word, index) => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      
+      // Only blank the next target word (leftmost uncompleted)
+      const shouldBlank = nextTargetWord && 
+        nextTargetWord.position === index &&
+        nextTargetWord.word.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord;
+      
+      blanks.push({
+        word,
+        isBlank: shouldBlank || false,
+        underscores: shouldBlank ? this.generateUnderscores(word) : '',
+        position: index
+      });
+    });
+
+    const formattedText = this.generateFormattedText(blanks);
+    const totalBlanks = blanks.filter(b => b.isBlank).length;
+
+    return {
+      blanks,
+      formattedText,
+      totalBlanks
+    };
+  }
+
   static generateUnderscores(word: string): string {
     const cleanWord = word.replace(/[.,!?;:"']/g, '');
     const length = cleanWord.length;

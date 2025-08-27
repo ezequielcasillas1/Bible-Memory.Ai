@@ -19,8 +19,8 @@ export class SyntaxLabAPI {
     const cleanOriginalText = OriginalVerseService.getCleanOriginalVerse(comparisonResult);
     const wordsToFix = OriginalVerseService.getWordsToFix(comparisonResult);
     
-    // Generate fill-in-blank data
-    const fillInBlankResult = FillInBlankService.calculateFillInBlanks(cleanOriginalText, wordsToFix);
+    // Generate fill-in-blank data using progressive method for left-to-right blanking
+    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(cleanOriginalText, wordsToFix, []);
     
     return {
       id: `syntax-lab-${Date.now()}`,
@@ -30,6 +30,22 @@ export class SyntaxLabAPI {
       fillInBlankResult,
       originalVerseText: cleanOriginalText,
       createdAt: new Date()
+    };
+  }
+
+  /**
+   * NEW: Update session with progressive fill-in-blanks as words are completed
+   */
+  static updateSessionProgress(sessionData: SyntaxLabSessionData, completedWords: string[]): SyntaxLabSessionData {
+    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+      sessionData.verseText, 
+      sessionData.wrongWords, 
+      completedWords
+    );
+    
+    return {
+      ...sessionData,
+      fillInBlankResult
     };
   }
 

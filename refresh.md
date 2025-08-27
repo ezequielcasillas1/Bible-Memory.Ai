@@ -1,4 +1,4 @@
-{GET RID OF THE HIGHLIGHTED GREEN AND CHECK MARKS, UNNECCESSARY, HOWEVER STILL MAKE IT LOOK GOOD, ALSO THE USER SHOULD SEE A CORRECT SYMBOL EMOJI THAT APPEARS ON THE SCREEN FLOATING UP, ALSO IF THE USER TYPES IN THE A WORD AND ITS INCORRECT, PUT A INCORRECT EMOJI, REMEMBER TO IMPLEMENT CORRECT line-break hyphenation}
+{ERROR/BUG, FILL IN THE BLANK PRACTICE SHOULD START THE FILL IN THE BLANK WORDS STARTING FROM THE BEGININING OF THE SENTENCE: FOR EXAMPLE ForIknowtheplansIhaveforyou,declarestheLord,plansfor____andnotforevil,togiveyouafutureandahope. That verse should start with this formatization first ForIknowtheplansI____foryou,declarestheLord,plansforwelfareandnotforevil,togiveyouafutureandahope. instead of the first one I gave when the user asks for the word welfare, so it should scan from the beginning of the sentence first from left to right; fill in the blank words.  }
 
 ---
 

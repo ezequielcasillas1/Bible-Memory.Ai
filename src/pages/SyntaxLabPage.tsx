@@ -4,6 +4,7 @@ import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordCompa
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
+import { SyntaxLabAPI } from '../services/syntaxLabAPI';
 
 interface SyntaxLabPageProps {
   comparisonResult: ComparisonResult | null;
@@ -209,7 +210,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
-        } else {
+      
+      // Update session with progressive fill-in-blank for left-to-right progression
+      if (comparisonResult) {
+        const updatedSessionData = SyntaxLabAPI.updateSessionProgress(
+          SyntaxLabAPI.createSession(comparisonResult),
+          newWordsFixed
+        );
+        // Update the session to reflect the new progressive state
+        setCurrentSession(prevSession => ({
+          ...prevSession!,
+          wordsFixed: newWordsFixed,
+          fillInBlankResult: updatedSessionData.fillInBlankResult
+        }));
+      }
+    } else {
       // Show floating incorrect emoji
       showFloatingEmoji('❌', false);
       
@@ -230,7 +245,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         const updatedWeakWords = [...weakWords, newWeakWord];
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
-          } else {
+      } else {
         existingWeakWord.timesWrong += 1;
         existingWeakWord.lastMissed = new Date();
         existingWeakWord.mastered = false;
@@ -242,18 +257,18 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       }
     }
         
-        if (currentWordIndex < currentSession.wrongWords.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1);
-          setUserInput('');
-        } else {
+    if (currentWordIndex < currentSession.wrongWords.length - 1) {
+      setCurrentWordIndex(currentWordIndex + 1);
+      setUserInput('');
+    } else {
       // End of round
-          if (currentRound < currentSession.maxRounds) {
-            setCurrentRound(currentRound + 1);
-            setCurrentWordIndex(0);
-            setUserInput('');
-          } else {
-            setPhase('flashcards');
-          }
+      if (currentRound < currentSession.maxRounds) {
+        setCurrentRound(currentRound + 1);
+        setCurrentWordIndex(0);
+        setUserInput('');
+      } else {
+        setPhase('flashcards');
+      }
       return;
     }
   };
@@ -721,22 +736,31 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
                     <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {currentSession.verse.text.split(' ').map((word, index) => {
-                        const currentWord = currentSession.wrongWords[currentWordIndex];
-                        const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
-                        const isWordCompleted = wordsFixed.includes(currentWord.originalWord.toLowerCase());
+                        // Use progressive fill-in-blank logic if available
+                        const fillInBlankResult = currentSession.fillInBlankResult;
+                        const blankWord = fillInBlankResult?.blanks?.[index];
                         
-                        if (isCurrentTargetWord) {
-                          // Show proper blank for fill-in-the-blank mode
+                        // Check if this word should be blanked according to progressive logic
+                        const isCurrentBlank = blankWord?.isBlank || false;
+                        
+                        // Check if word is completed (for styling)
+                        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                        const isWordCompleted = wordsFixed.some(fixed => 
+                          fixed.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+                        );
+                        
+                        if (isCurrentBlank) {
+                          // Show proper blank for fill-in-the-blank mode (progressive left-to-right)
                           return (
                             <span key={index} className="relative inline-block mx-1">
                               <span className="absolute -inset-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
                               <span className="relative bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
-                                {renderBlankWord(word)}
+                                {blankWord.underscores}
                               </span>
                             </span>
                           );
                         } else if (isWordCompleted) {
-                          // Completed words - clean styling without green highlights
+                          // Completed words - clean styling with blue gradient
                           return (
                             <span key={index} className="relative inline-block mx-1">
                               <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">

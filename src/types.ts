@@ -144,6 +144,7 @@ export interface SyntaxLabSession {
   endTime?: Date;
   finalAccuracy: number;
   improvementScore: number;
+  fillInBlankResult?: import('./services/fillInBlankService').FillInBlankResult;
 }
 
 export interface WeakWord {
