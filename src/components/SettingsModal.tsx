@@ -77,6 +77,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* Practice Rounds Setting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Practice Rounds
+            </label>
+            <div className="space-y-3">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                value={settings.maxRounds || 3}
+                onChange={(e) => handleSettingChange('maxRounds', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>1 round</span>
+                <span className="font-medium text-purple-600">{settings.maxRounds || 3} rounds</span>
+                <span>5 rounds</span>
+              </div>
+            </div>
+          </div>
+
           {/* Bible Version Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

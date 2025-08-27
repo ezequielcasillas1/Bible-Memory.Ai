@@ -1,4 +1,4 @@
-{there is a persisting issue where I complete the fill in the blank words, and when it comes to the end of the sentence, nothing happens, next, show answer also just says N/A; which means that it also is an error that it does not show either 100% complete and show the next page, which if it can should reward the user for doing a 100% complete job; again it still shows none of that. }
+{in the settings, allow the user to pick how many rounds they want to have in fill in the blank practice mode and type along mode, apply state managment so that the settings can reflect to the those modes, }
 
 ---
 

@@ -49,6 +49,7 @@ export interface AppSettings {
   preferredVersion: string;
   uiLanguage: string;
   preferredTranslationLanguage: string; // Keep this for Bible verse translation
+  maxRounds: number; // Number of rounds for fill-in-blank and type-along practice
 }
 
 export interface WordComparison {

@@ -33,6 +33,7 @@ const AppContent: React.FC = () => {
     preferredVersion: '', // Will be set once versions are loaded
     uiLanguage: 'en', // This will be synced with LanguageContext
     preferredTranslationLanguage: '', // Will be set to default language
+    maxRounds: 3, // Default number of rounds for practice modes
   });
   
   const [userStats, setUserStats] = useState<UserStats>({
@@ -269,6 +270,7 @@ const AppContent: React.FC = () => {
               <SyntaxLabPage
                 comparisonResult={syntaxLabComparisonResult}
                 selectedVerse={selectedVerse}
+                settings={settings}
                 onBack={() => {
                   setActiveTab('memorize');
                   setSyntaxLabComparisonResult(null);

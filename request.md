@@ -1,4 +1,4 @@
-{add a show answer button that complements the hint feature in fill in the blank practice mode; this feature shows the answer to the blank; word}
+{in the image I sent you, the fill in the blank words should also have all the words, they either missed on the memory game, extra, and or incorrect words should all be displayed the proper word count in the image, it shows 1/23 words, and in the progress card it shows 15/20 words, why is there a mismatch, and btw the word count maxed at 15 words not 20. the biggest factor is that when user is done with matching the words, the round 1/3 stays at round 1/3 and not 2/3 vice versa}
 
 ---
 

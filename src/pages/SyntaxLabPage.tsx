@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3 } from 'lucide-react';
-import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse } from '../types';
+import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
@@ -11,12 +11,13 @@ interface SyntaxLabPageProps {
   selectedVerse: Verse | null;
   onBack: () => void;
   onStartNewSession: () => void;
+  settings: AppSettings; // Add settings prop
 }
 
 type PracticeMode = 'blank' | 'type-along';
 type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'scorecard' | 'completion';
 
-const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selectedVerse, onBack, onStartNewSession }) => {
+const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selectedVerse, onBack, onStartNewSession, settings }) => {
   const { t } = useLanguage();
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
@@ -88,7 +89,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         wrongWords, // Use the WordComparison[] format
         practiceMode: 'blank',
         currentRound: 1,
-        maxRounds: 3,
+        maxRounds: settings?.maxRounds || 3,
         wordsFixed: [],
         finalAccuracy: 0,
         improvementScore: 0,
@@ -153,7 +154,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       wrongWords: practiceWords,
       practiceMode: 'blank',
       currentRound: 1,
-      maxRounds: 3,
+      maxRounds: settings?.maxRounds || 3,
       wordsFixed: [],
       improvementScore: 0,
       finalAccuracy: 0
@@ -319,8 +320,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Check if all words are completed in progressive fill-in-blank mode
     const progressData = getProgressiveCompletionData();
     if (progressData.percentage >= 100) {
-      // All words fixed - session complete! Show completion screen with rewards
-      setPhase('completion');
+      // All words fixed for this round!
+      if (currentRound < (currentSession.maxRounds || 3)) {
+        // Advance to next round
+        setCurrentRound(currentRound + 1);
+        setWordsFixed([]); // Reset progress for next round
+        setCurrentWordIndex(0);
+        setUserInput('');
+        setShowHint(false);
+        setShowAnswer(false);
+        // Stay in practice mode for next round
+        setPhase('practice');
+      } else {
+        // All rounds complete - show final completion screen
+        setPhase('completion');
+      }
     }
   };
 
@@ -763,7 +777,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 {practiceMode === 'blank' ? 'Fill in the Blank Mode' : 'Type-Along Mode'}
               </h2>
               <div className="text-sm text-gray-600">
-                Round {currentRound}/{currentSession.maxRounds} • Word {currentWordIndex + 1}/{currentSession.wrongWords.length}
+                Round {currentRound}/{currentSession.maxRounds} • Word {getProgressiveCompletionData().completed + 1}/{getProgressiveCompletionData().total}
               </div>
             </div>
 
