@@ -190,6 +190,25 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return currentBlank ? currentBlank.word : null;
   };
 
+  // Helper function to get progressive completion data
+  const getProgressiveCompletionData = () => {
+    if (!currentSession?.fillInBlankResult || !comparisonResult) {
+      return { completed: 0, total: 0, percentage: 0 };
+    }
+
+    // Get unique wrong words from the original comparison result
+    const wordsToFix = [...new Set([
+      ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra').map(w => w.originalWord.toLowerCase().replace(/[.,!?;:"']/g, '')),
+      ...comparisonResult.originalComparison.filter(w => w.status === 'missing').map(w => w.originalWord.toLowerCase().replace(/[.,!?;:"']/g, ''))
+    ])];
+
+    const completed = wordsFixed.length;
+    const total = wordsToFix.length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    return { completed, total, percentage };
+  };
+
   const checkWord = (input: string, targetWord: string): boolean => {
     return input.toLowerCase().trim() === targetWord.toLowerCase().trim();
   };
@@ -276,20 +295,15 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
     }
-        
-    if (currentWordIndex < currentSession.wrongWords.length - 1) {
-      setCurrentWordIndex(currentWordIndex + 1);
-      setUserInput('');
-    } else {
-      // End of round
-      if (currentRound < currentSession.maxRounds) {
-        setCurrentRound(currentRound + 1);
-        setCurrentWordIndex(0);
-        setUserInput('');
-      } else {
-        setPhase('flashcards');
-      }
-      return;
+    
+    // Reset input for next word
+    setUserInput('');
+    
+    // Check if all words are completed in progressive fill-in-blank mode
+    const progressData = getProgressiveCompletionData();
+    if (progressData.percentage >= 100) {
+      // All words fixed - session complete!
+      setPhase('flashcards');
     }
   };
 
@@ -450,11 +464,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const completeSession = () => {
     if (!currentSession) return;
 
+    const progressData = getProgressiveCompletionData();
     const finalSession = {
       ...currentSession,
       endTime: new Date(),
-      finalAccuracy: (wordsFixed.length / currentSession.wrongWords.length) * 100,
-      improvementScore: Math.min(100, (wordsFixed.length / currentSession.wrongWords.length) * 100 + 10)
+      finalAccuracy: progressData.percentage,
+      improvementScore: Math.min(100, progressData.percentage + 10)
     };
 
     // Update stats
@@ -893,16 +908,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">
-                      Progress: {wordsFixed.length} / {currentSession.wrongWords.length} words
+                      Progress: {getProgressiveCompletionData().completed} / {getProgressiveCompletionData().total} words
                     </span>
                     <span className="text-emerald-600 font-bold">
-                      {Math.round((wordsFixed.length / currentSession.wrongWords.length) * 100)}% Complete
+                      {getProgressiveCompletionData().percentage}% Complete
                     </span>
                   </div>
                   <div className="w-full bg-emerald-200 rounded-full h-3 mt-2 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500 ease-out relative"
-                      style={{ width: `${(wordsFixed.length / currentSession.wrongWords.length) * 100}%` }}
+                      style={{ width: `${getProgressiveCompletionData().percentage}%` }}
                     >
                       <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
                     </div>
@@ -1019,16 +1034,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">
-                      Progress: {wordsFixed.length} / {currentSession.wrongWords.length} words
+                      Progress: {getProgressiveCompletionData().completed} / {getProgressiveCompletionData().total} words
                     </span>
                     <span className="text-purple-600 font-bold">
-                      {Math.round((wordsFixed.length / currentSession.wrongWords.length) * 100)}% Complete
+                      {getProgressiveCompletionData().percentage}% Complete
                     </span>
                   </div>
                   <div className="w-full bg-purple-200 rounded-full h-3 mt-2 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out relative"
-                      style={{ width: `${(wordsFixed.length / currentSession.wrongWords.length) * 100}%` }}
+                      style={{ width: `${getProgressiveCompletionData().percentage}%` }}
                     >
                       <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
                       </div>
@@ -1089,12 +1104,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession?.wrongWords.length || 0}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{getProgressiveCompletionData().completed}/{getProgressiveCompletionData().total}</div>
                 <div className="text-green-700">Mistakes Fixed</div>
               </div>
               
               <div className="bg-blue-50 rounded-xl p-6 text-center border border-blue-200">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{Math.round((wordsFixed.length / (currentSession?.wrongWords.length || 1)) * 100)}%</div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">{getProgressiveCompletionData().percentage}%</div>
                 <div className="text-blue-700">Improvement Score</div>
               </div>
             </div>
@@ -1118,8 +1133,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div>
                   <h4 className="font-semibold text-yellow-800 mb-2">Encouragement</h4>
                   <p className="text-yellow-700 text-sm">
-                    You mastered {wordsFixed.length} challenging words today—keep it up! 
-                    {wordsFixed.length >= (currentSession?.wrongWords.length || 1) * 0.8 && " You're becoming a Scripture master!"}
+                    You mastered {getProgressiveCompletionData().completed} challenging words today—keep it up! 
+                    {getProgressiveCompletionData().percentage >= 80 && " You're becoming a Scripture master!"}
                   </p>
                 </div>
               </div>
