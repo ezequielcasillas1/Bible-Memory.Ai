@@ -196,14 +196,37 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       return { completed: 0, total: 0, percentage: 0 };
     }
 
-    // Get unique wrong words from the original comparison result
-    const wordsToFix = [...new Set([
-      ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra').map(w => w.originalWord.toLowerCase().replace(/[.,!?;:"']/g, '')),
-      ...comparisonResult.originalComparison.filter(w => w.status === 'missing').map(w => w.originalWord.toLowerCase().replace(/[.,!?;:"']/g, ''))
-    ])];
+    // Use the same logic as the progressive fill-in-blank system
+    // Count only wrong words that actually appear in the sentence
+    const verseWords = currentSession.verse.text.split(' ');
+    const wrongWords = [
+      ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra').map(w => w.originalWord),
+      ...comparisonResult.originalComparison.filter(w => w.status === 'missing').map(w => w.originalWord)
+    ];
+
+    // Find positions of wrong words that actually exist in the sentence (like progressive system)
+    const wrongWordPositions: Array<{word: string, position: number}> = [];
+    
+    verseWords.forEach((word, index) => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      const wrongWord = wrongWords.find(ww => 
+        ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+      );
+      
+      if (wrongWord) {
+        // Only add if this word position isn't already tracked
+        const existingPos = wrongWordPositions.find(wp => wp.position === index);
+        if (!existingPos) {
+          wrongWordPositions.push({
+            word: wrongWord,
+            position: index
+          });
+        }
+      }
+    });
 
     const completed = wordsFixed.length;
-    const total = wordsToFix.length;
+    const total = wrongWordPositions.length; // Count only words that appear in sentence
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { completed, total, percentage };
