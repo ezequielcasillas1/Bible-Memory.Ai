@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3, Bot, ChevronRight, BarChart, SkipForward } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
@@ -40,6 +40,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const [isLoadingHint, setIsLoadingHint] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [floatingEmoji, setFloatingEmoji] = useState<{ id: string; emoji: string; x: number; y: number } | null>(null);
+  
+  // Type-Along mode state
+  const [typeAlongVerses, setTypeAlongVerses] = useState<Verse[]>([]);
+  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
+  const [verseCompletionData, setVerseCompletionData] = useState<Array<{verse: Verse, accuracy: number, timeSpent: number, completedAt: Date}>>([]);
+  const [hasCompletedFirstVerse, setHasCompletedFirstVerse] = useState(false);
+  const [showTypeAlongResults, setShowTypeAlongResults] = useState(false);
+  const [verseStartTime, setVerseStartTime] = useState<Date | null>(null);
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -165,6 +173,93 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     setShowHistoryLog(false);
   };
 
+  // Create an auto-generated practice session with random verses
+  const startAutoPractice = () => {
+    // Predefined sample verses for auto practice
+    const sampleVerses: Verse[] = [
+      {
+        id: 'john-3-16',
+        text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+        reference: 'John 3:16',
+        testament: 'NT'
+      },
+      {
+        id: 'psalm-23-1',
+        text: 'The LORD is my shepherd, I lack nothing.',
+        reference: 'Psalm 23:1',
+        testament: 'OT'
+      },
+      {
+        id: 'romans-8-28',
+        text: 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.',
+        reference: 'Romans 8:28',
+        testament: 'NT'
+      },
+      {
+        id: 'philippians-4-13',
+        text: 'I can do all this through him who gives me strength.',
+        reference: 'Philippians 4:13',
+        testament: 'NT'
+      },
+      {
+        id: 'jeremiah-29-11',
+        text: 'For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, to give you hope and a future.',
+        reference: 'Jeremiah 29:11',
+        testament: 'OT'
+      }
+    ];
+
+    // Randomly select a verse
+    const randomVerse = sampleVerses[Math.floor(Math.random() * sampleVerses.length)];
+    
+    // Create a mock comparison result for auto practice
+    const mockComparisonResult: ComparisonResult = {
+      accuracy: 0, // Start with 0% to practice everything
+      totalWords: randomVerse.text.split(' ').length,
+      correctWords: 0,
+      incorrectWords: randomVerse.text.split(' ').length,
+      missingWords: 0,
+      extraWords: 0,
+      userComparison: [],
+      originalComparison: [],
+      detailedFeedback: `Auto-generated practice session for ${randomVerse.reference}`
+    };
+
+    // Extract words from the verse for practice (skip very short words)
+    const verseWords = randomVerse.text.split(' ').filter(word => word.length > 2);
+    const wordsToGenerate = Math.max(4, Math.min(verseWords.length, 8)); // Practice 4-8 words
+    
+    // Randomly select words from the verse for practice
+    const shuffledWords = [...verseWords].sort(() => Math.random() - 0.5);
+    const selectedWords = shuffledWords.slice(0, wordsToGenerate);
+    
+    const practiceWords: WordComparison[] = selectedWords.map((word, i) => ({
+      userWord: '', // User hasn't typed anything yet
+      originalWord: word.replace(/[.,!?;:"']/g, ''), // Clean punctuation
+      status: 'incorrect' as const,
+      position: i,
+      suggestion: word.replace(/[.,!?;:"']/g, '')
+    }));
+
+    const newSession: SyntaxLabSession = {
+      id: `auto-session-${Date.now()}`,
+      startTime: new Date(),
+      verseId: randomVerse.id,
+      verse: randomVerse,
+      originalComparison: mockComparisonResult,
+      wrongWords: practiceWords,
+      practiceMode: 'blank',
+      currentRound: 1,
+      maxRounds: settings?.maxRounds || 3,
+      wordsFixed: [],
+      improvementScore: 0,
+      finalAccuracy: 0
+    };
+
+    setCurrentSession(newSession);
+    setPhase('summary');
+  };
+
   // Challenge timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -181,6 +276,120 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     }
     return () => clearInterval(interval);
   }, [challengeActive, challengeTimeLeft]);
+
+  // Type-Along Mode Functions
+  const initializeTypeAlongSession = () => {
+    // Predefined verses for Type-Along sessions
+    const typeAlongVersesList: Verse[] = [
+      {
+        id: 'john-3-16',
+        text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+        reference: 'John 3:16',
+        testament: 'NT'
+      },
+      {
+        id: 'psalm-23-1',
+        text: 'The LORD is my shepherd, I lack nothing.',
+        reference: 'Psalm 23:1',
+        testament: 'OT'
+      },
+      {
+        id: 'romans-8-28',
+        text: 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.',
+        reference: 'Romans 8:28',
+        testament: 'NT'
+      },
+      {
+        id: 'philippians-4-13',
+        text: 'I can do all this through him who gives me strength.',
+        reference: 'Philippians 4:13',
+        testament: 'NT'
+      },
+      {
+        id: 'jeremiah-29-11',
+        text: 'For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, to give you hope and a future.',
+        reference: 'Jeremiah 29:11',
+        testament: 'OT'
+      }
+    ];
+    
+    setTypeAlongVerses(typeAlongVersesList);
+    setCurrentVerseIndex(0);
+    setVerseCompletionData([]);
+    setHasCompletedFirstVerse(false);
+    setShowTypeAlongResults(false);
+    setVerseStartTime(new Date());
+  };
+
+  const getCurrentTypeAlongVerse = (): Verse | null => {
+    if (typeAlongVerses.length === 0 || currentVerseIndex >= typeAlongVerses.length) {
+      return null;
+    }
+    return typeAlongVerses[currentVerseIndex];
+  };
+
+  const calculateVerseAccuracy = (userText: string, targetText: string): number => {
+    if (!userText || !targetText) return 0;
+    
+    const userWords = userText.toLowerCase().trim().split(/\s+/);
+    const targetWords = targetText.toLowerCase().trim().split(/\s+/);
+    
+    let correctWords = 0;
+    const maxLength = Math.max(userWords.length, targetWords.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      if (userWords[i] && targetWords[i] && userWords[i] === targetWords[i]) {
+        correctWords++;
+      }
+    }
+    
+    return targetWords.length > 0 ? Math.round((correctWords / targetWords.length) * 100) : 0;
+  };
+
+  const handleVerseCompletion = (accuracy: number) => {
+    const currentVerse = getCurrentTypeAlongVerse();
+    if (!currentVerse || !verseStartTime) return;
+    
+    const timeSpent = Math.round((new Date().getTime() - verseStartTime.getTime()) / 1000);
+    
+    const completionData = {
+      verse: currentVerse,
+      accuracy,
+      timeSpent,
+      completedAt: new Date()
+    };
+    
+    setVerseCompletionData(prev => [...prev, completionData]);
+    setHasCompletedFirstVerse(true);
+    
+    // Show success animation
+    showFloatingEmoji('🎉', true);
+  };
+
+  const moveToNextVerse = () => {
+    if (currentVerseIndex < typeAlongVerses.length - 1) {
+      setCurrentVerseIndex(prev => prev + 1);
+      setUserInput('');
+      setVerseStartTime(new Date());
+    }
+  };
+
+  const skipCurrentVerse = () => {
+    const currentVerse = getCurrentTypeAlongVerse();
+    if (!currentVerse || !verseStartTime) return;
+    
+    const timeSpent = Math.round((new Date().getTime() - verseStartTime.getTime()) / 1000);
+    
+    const completionData = {
+      verse: currentVerse,
+      accuracy: 0, // Skipped verses get 0% accuracy
+      timeSpent,
+      completedAt: new Date()
+    };
+    
+    setVerseCompletionData(prev => [...prev, completionData]);
+    moveToNextVerse();
+  };
 
   // Helper function to get the current blank word in progressive fill-in-blank mode
   const getCurrentBlankWord = (): string | null => {
@@ -486,6 +695,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     setPhase('practice');
     setCurrentWordIndex(0);
     setUserInput('');
+    
+    // Initialize Type-Along mode with multiple verses
+    if (mode === 'type-along') {
+      initializeTypeAlongSession();
+    }
   };
 
   const startChallenge = () => {
@@ -541,7 +755,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               <span>Back</span>
             </button>
             <h1 className="text-3xl font-bold text-gray-800">📖 Syntax Lab</h1>
-            <div className="w-16"></div>
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Close Syntax Lab"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {!showHistoryLog ? (
@@ -590,6 +810,28 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                     )}
                     <span className="relative z-10">📚 Practice From History</span>
                   </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">or</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={startAutoPractice}
+                    className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white px-10 py-5 rounded-2xl hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm w-full max-w-md mx-auto"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <Bot className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="relative z-10">🤖 Auto Practice</span>
+                  </button>
+                  
+                  <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                    Jump into automatically generated practice sessions with verses and mock exercises—no setup required.
+                  </p>
                 </div>
               </div>
             </div>
@@ -980,144 +1222,212 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             {practiceMode === 'type-along' && (
               <div className="space-y-8">
-                {/* Enhanced Verse Display with Real-time Typing */}
-                <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-indigo-200 shadow-lg">
-                  <div className="text-center mb-6">
-                    <h3 className="text-lg font-semibold text-indigo-800 mb-2">🧠 Type-Along Practice</h3>
-                    <p className="text-sm text-indigo-600">Type each word as it appears. Watch the real-time feedback!</p>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl p-6 shadow-inner border border-indigo-100 overflow-hidden">
-                    <p className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                      {currentSession.verse.text.split(' ').map((word, index) => {
-                        const currentWord = currentSession.wrongWords[currentWordIndex];
-                        const isCurrentTargetWord = word.toLowerCase() === currentWord.originalWord.toLowerCase();
-                        const isWordCompleted = wordsFixed.includes(currentWord.originalWord.toLowerCase());
-                        
-                        if (isCurrentTargetWord) {
-                          // Enhanced current word display with typing feedback
-                      return (
-                            <span key={index} className="relative inline-block mx-1">
-                              <span className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg blur-sm opacity-30 animate-pulse"></span>
-                              <span className="relative bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg transform hover:scale-105 transition-all duration-300">
-                                {renderEnhancedTypingWord(word, userInput, currentRound)}
-                              </span>
-                        </span>
-                      );
-                        } else if (isWordCompleted) {
-                          // Completed words - clean styling without green highlights
-                          return (
-                            <span key={index} className="relative inline-block mx-1">
-                              <span className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-3 py-1 rounded-lg font-medium shadow-md">
-                                {word}
-                              </span>
-                            </span>
-                          );
-                        }
-                        
-                        // Regular words
-                        return (
-                          <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-indigo-600">
-                            {word}
-                          </span>
-                        );
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Enhanced Input Section */}
-                <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-purple-200">
-                  <div className="text-center space-y-6">
-                    <div className="space-y-2">
-                      <h4 className="text-lg font-semibold text-gray-800">
-                        Type the highlighted word:
-                    </h4>
-                      <p className="text-sm text-gray-600">
-                        Target: <span className="font-bold text-purple-600">{currentSession.wrongWords[currentWordIndex]?.originalWord}</span>
-                    </p>
-                  </div>
-                  
-                    {/* Real-time typing input with enhanced styling */}
-                    <div className="relative max-w-lg mx-auto">
-                      <input
-                        type="text"
-                    value={userInput}
-                        onChange={(e) => setUserInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
-                        placeholder="Start typing the word..."
-                        className="w-full p-4 text-xl text-center border-3 border-purple-300 rounded-2xl focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 bg-gradient-to-r from-purple-50 to-indigo-50 font-medium shadow-lg"
-                    autoFocus
-                  />
-                  
-                      {/* Real-time typing feedback indicator */}
-                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
-                        {userInput && (
-                          <div className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 ${
-                            getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) > 0.8
-                              ? 'bg-green-100 text-green-700 border border-green-200'
-                              : getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) > 0.5
-                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                              : 'bg-red-100 text-red-700 border border-red-200'
-                          }`}>
-                            {Math.round(getTypingAccuracy(userInput, currentSession.wrongWords[currentWordIndex]?.originalWord) * 100)}% match
-                    </div>
-                  )}
-                </div>
+                {showTypeAlongResults ? (
+                  /* Type-Along Results Dashboard */
+                  <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center flex items-center justify-center">
+                      <BarChart className="w-8 h-8 mr-3 text-purple-600" />
+                      📊 Type-Along Session Results
+                    </h2>
+                    
+                    {/* Session Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 text-center border border-emerald-200">
+                        <div className="text-4xl font-bold text-emerald-600 mb-2">{verseCompletionData.length}</div>
+                        <div className="text-emerald-700 font-medium">Verses Completed</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 text-center border border-blue-200">
+                        <div className="text-4xl font-bold text-blue-600 mb-2">
+                          {verseCompletionData.length > 0 ? Math.round(verseCompletionData.reduce((sum, v) => sum + v.accuracy, 0) / verseCompletionData.length) : 0}%
+                        </div>
+                        <div className="text-blue-700 font-medium">Average Accuracy</div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 text-center border border-purple-200">
+                        <div className="text-4xl font-bold text-purple-600 mb-2">
+                          {verseCompletionData.length > 0 ? Math.round(verseCompletionData.reduce((sum, v) => sum + v.timeSpent, 0) / verseCompletionData.length) : 0}s
+                        </div>
+                        <div className="text-purple-700 font-medium">Avg Time per Verse</div>
+                      </div>
                     </div>
                     
-                    {/* Enhanced submit button */}
-                  <button
-                    onClick={handleWordSubmit}
-                      disabled={!userInput.trim()}
-                      className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-                      <span className="relative z-10 flex items-center justify-center space-x-2">
-                        <Brain className="w-5 h-5 group-hover:animate-pulse" />
-                        <span>Check Word</span>
-                        <span className="text-sm opacity-75">(Enter ↵)</span>
-                      </span>
-                  </button>
-                  
-                  {/* Proceed to Results button when 100% complete */}
-                  {getProgressiveCompletionData().percentage >= 100 && (
-                    <button
-                      onClick={completeSession}
-                      className="group relative px-8 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg mt-4"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-                      <span className="relative z-10 flex items-center justify-center space-x-2">
-                        <Trophy className="w-5 h-5 group-hover:animate-bounce" />
-                        <span>Proceed to Results</span>
-                        <span className="text-sm opacity-75">✨</span>
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-                {/* Progress indicator */}
-                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-700">
-                      Progress: {getProgressiveCompletionData().completed} / {getProgressiveCompletionData().total} words
-                    </span>
-                    <span className="text-purple-600 font-bold">
-                      {getProgressiveCompletionData().percentage}% Complete
-                    </span>
+                    {/* Individual Verse Results */}
+                    <div className="space-y-4 mb-8">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">📝 Individual Verse Performance</h3>
+                      {verseCompletionData.map((result, index) => (
+                        <div key={index} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-gray-800">{result.verse.reference}</h4>
+                            <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              result.accuracy >= 90 ? 'bg-green-100 text-green-700' :
+                              result.accuracy >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                              result.accuracy > 0 ? 'bg-orange-100 text-orange-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {result.accuracy > 0 ? `${result.accuracy}% accuracy` : 'Skipped'}
+                            </div>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-2 line-clamp-2">{result.verse.text}</p>
+                          <div className="text-xs text-gray-500">
+                            Time spent: {result.timeSpent}s • Completed: {result.completedAt.toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                      <button
+                        onClick={() => {
+                          setShowTypeAlongResults(false);
+                          initializeTypeAlongSession();
+                        }}
+                        className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white px-8 py-4 rounded-2xl hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                        <RotateCcw className="w-5 h-5 relative z-10 group-hover:rotate-180 transition-transform duration-300" />
+                        <span className="relative z-10">🔄 Start New Session</span>
+                      </button>
+                      
+                      <button
+                        onClick={onStartNewSession}
+                        className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white px-8 py-4 rounded-2xl hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                        <BookOpen className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                        <span className="relative z-10">📚 Practice Different Verses</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-full bg-purple-200 rounded-full h-3 mt-2 overflow-hidden">
-                    <div 
-                      className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out relative"
-                      style={{ width: `${getProgressiveCompletionData().percentage}%` }}
-                    >
-                      <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
+                ) : (
+                  /* Type-Along Practice Interface */
+                  <>
+                    {/* Session Progress Header */}
+                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-indigo-200 shadow-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-indigo-800">🧠 Type-Along Practice</h3>
+                        <div className="text-sm text-indigo-600 font-medium">
+                          Verse {currentVerseIndex + 1} of {typeAlongVerses.length}
+                        </div>
                       </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-1">
+                          <div className="w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
+                            <div 
+                              className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
+                              style={{ width: `${((currentVerseIndex + 1) / typeAlongVerses.length) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-indigo-600 font-medium">
+                          {currentVerseIndex + 1}/{typeAlongVerses.length}
+                        </div>
                       </div>
-                  </div>
-                  </div>
+                    </div>
+                    
+                    {getCurrentTypeAlongVerse() && (
+                      <>
+                        {/* Verse Display */}
+                        <div className="bg-white rounded-2xl p-8 shadow-xl border border-indigo-200">
+                          <div className="text-center mb-6">
+                            <h4 className="text-2xl font-bold text-gray-800 mb-2">{getCurrentTypeAlongVerse()!.reference}</h4>
+                            <p className="text-sm text-gray-600">Type the complete verse below. Watch the real-time feedback!</p>
+                          </div>
+                          
+                          <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-xl p-6 border border-gray-200 mb-6">
+                            <p className="text-lg leading-relaxed text-center font-medium text-gray-700">
+                              {getCurrentTypeAlongVerse()!.text}
+                            </p>
+                          </div>
+                          
+                          {/* Full Verse Input */}
+                          <div className="space-y-4">
+                            <div className="relative">
+                              <textarea
+                                value={userInput}
+                                onChange={(e) => setUserInput(e.target.value)}
+                                placeholder="Start typing the complete verse here..."
+                                className="w-full p-4 text-lg border-2 border-purple-300 rounded-2xl focus:ring-4 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 bg-gradient-to-r from-purple-50 to-indigo-50 font-medium shadow-lg resize-none"
+                                rows={4}
+                                autoFocus
+                              />
+                              
+                              {/* Real-time accuracy feedback */}
+                              {userInput && (
+                                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                                  <div className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                                    calculateVerseAccuracy(userInput, getCurrentTypeAlongVerse()!.text) >= 80
+                                      ? 'bg-green-100 text-green-700 border-2 border-green-200'
+                                      : calculateVerseAccuracy(userInput, getCurrentTypeAlongVerse()!.text) >= 60
+                                      ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-200'
+                                      : 'bg-red-100 text-red-700 border-2 border-red-200'
+                                  }`}>
+                                    {calculateVerseAccuracy(userInput, getCurrentTypeAlongVerse()!.text)}% accuracy
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200">
+                          <div className="flex flex-col space-y-4">
+                            {/* Next Verse Button - Only show when accuracy >= 80% */}
+                            {calculateVerseAccuracy(userInput, getCurrentTypeAlongVerse()!.text) >= 80 && (
+                              <button
+                                onClick={() => {
+                                  const accuracy = calculateVerseAccuracy(userInput, getCurrentTypeAlongVerse()!.text);
+                                  handleVerseCompletion(accuracy);
+                                  if (currentVerseIndex < typeAlongVerses.length - 1) {
+                                    moveToNextVerse();
+                                  } else {
+                                    setShowTypeAlongResults(true);
+                                  }
+                                }}
+                                className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white px-8 py-4 rounded-2xl hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm"
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                                <ChevronRight className="w-6 h-6 relative z-10 group-hover:translate-x-1 transition-transform duration-300" />
+                                <span className="relative z-10">
+                                  🎉 {currentVerseIndex < typeAlongVerses.length - 1 ? 'Next Verse' : 'View Results'}
+                                </span>
+                              </button>
+                            )}
+                            
+                            {/* Secondary Action Buttons */}
+                            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                              <button
+                                onClick={() => setShowTypeAlongResults(true)}
+                                disabled={!hasCompletedFirstVerse}
+                                className={`group relative flex items-center justify-center space-x-3 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 transform hover:scale-105 shadow-md ${
+                                  hasCompletedFirstVerse
+                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 hover:shadow-xl'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                              >
+                                <BarChart className="w-4 h-4" />
+                                <span>📊 View Results</span>
+                              </button>
+                              
+                              <button
+                                onClick={skipCurrentVerse}
+                                className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white px-6 py-3 rounded-xl hover:from-gray-500 hover:to-gray-600 transition-all duration-300 transform hover:scale-105 shadow-md font-medium text-sm"
+                              >
+                                <SkipForward className="w-4 h-4" />
+                                <span>⏭️ Skip Verse</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
                 )}
+              </div>
+            )}
               </div>
         )}
 
