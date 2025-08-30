@@ -1,4 +1,9 @@
-{OKAY WE FIXED THE PERCENTAGE METER, BUT WE STILL DONT SEE A NEXT SCREEN FLOW, SHOULD WE ADD A BUTTON THAT SAYS SOMETHING LIKE PROCEED TO RESULTS?  }
+{DO YOU KNOW WHY IN THE LANGAUGE INTERFACE LANGAUGE, ONLY THE ENGLISH SPANISH AND FRENCH WORK, THE REST OF THE LANGUAGES DO NOT APPEAR TRANSLATED THROUGHOUT THE INTERNAL UI; so yes this is a possible bug, let me know if its because there are certain web restrictions as well. in fact I get this error via the console log: Failed to load resource: the server responded with a status of 400 ()
+uiTranslationService.ts:58  Translation API error: 400 {"error":"Suspicious input detected"}
+translateUITexts @ uiTranslationService.ts:58
+uiTranslationService.ts:81  UI translation failed: Error: Translation failed: 400
+    at UITranslationService.translateUITexts (uiTranslationService.ts:59:15)
+    at async loadDynamicTranslations (LanguageContext.tsx:361:24)}
 
 ---
 

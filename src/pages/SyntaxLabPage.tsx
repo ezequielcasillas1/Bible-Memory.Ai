@@ -262,6 +262,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       fillInBlankResult: fillInBlankResult // Add the proper fill-in-blank UI data
     };
 
+    // Reset state for fresh session
+    setCurrentRound(1);
+    setWordsFixed([]);
+    setCurrentWordIndex(0);
+    setUserInput('');
+    setShowHint(false);
+    setShowAnswer(false);
+    
     setCurrentSession(newSession);
     setPhase('summary');
   };
@@ -489,15 +497,27 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       
       // Update session with progressive fill-in-blank for left-to-right progression
       if (comparisonResult) {
+        // Regular session (from MemorizePage) - use SyntaxLabAPI
         const updatedSessionData = SyntaxLabAPI.updateSessionProgress(
           SyntaxLabAPI.createSession(comparisonResult),
           newWordsFixed
         );
-        // Update the session to reflect the new progressive state
         setCurrentSession(prevSession => ({
           ...prevSession!,
           wordsFixed: newWordsFixed,
           fillInBlankResult: updatedSessionData.fillInBlankResult
+        }));
+      } else {
+        // Auto practice session - update fillInBlankResult directly
+        const selectedWords = currentSession?.wrongWords.map(w => w.originalWord) || [];
+        const updatedFillInBlankResult = FillInBlankService.calculateFillInBlanks(
+          currentSession?.verse.text || '', 
+          selectedWords.filter(word => !newWordsFixed.includes(word.toLowerCase().replace(/[.,!?;:"']/g, '')))
+        );
+        setCurrentSession(prevSession => ({
+          ...prevSession!,
+          wordsFixed: newWordsFixed,
+          fillInBlankResult: updatedFillInBlankResult
         }));
       }
     } else {
@@ -1594,6 +1614,14 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
             </div>
 
             <div className="text-center space-y-4">
+              <button
+                onClick={startAutoPractice}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 shadow-lg font-medium flex items-center space-x-2 mx-auto"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>🔄 Restart Auto Practice</span>
+              </button>
+              
               <button
                 onClick={onStartNewSession}
                 className="button-primary flex items-center space-x-2 mx-auto"

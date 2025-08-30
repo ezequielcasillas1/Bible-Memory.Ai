@@ -107,10 +107,24 @@ const trackSuspiciousActivity = (clientIP: string, type: 'sql' | 'xss' | 'oversi
 const detectSQLInjection = (input: string): boolean => {
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
-    /(--|\/\*|\*\/|;|'|"|`)/,
-    /(\bOR\b|\bAND\b).*[=<>]/i,
     /(INFORMATION_SCHEMA|SYSOBJECTS|SYSCOLUMNS)/i,
     /(WAITFOR|DELAY|BENCHMARK)/i
+  ]
+  
+  return sqlPatterns.some(pattern => pattern.test(input))
+}
+
+// UI-safe version for translation strings (less aggressive)
+const detectSQLInjectionUI = (input: string): boolean => {
+  const sqlPatterns = [
+    // Only flag obvious SQL commands, not punctuation
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\s+\w+)/i,
+    /(INFORMATION_SCHEMA|SYSOBJECTS|SYSCOLUMNS)/i,
+    /(WAITFOR\s+DELAY|BENCHMARK\s*\()/i,
+    // Only flag SQL comments with context, not standalone dashes
+    /(--\s*\w+|\/\*.*\*\/)/,
+    // Only flag suspicious combinations, not individual quotes
+    /('.*OR.*'|".*AND.*")/i
   ]
   
   return sqlPatterns.some(pattern => pattern.test(input))
@@ -131,6 +145,21 @@ const detectXSS = (input: string): boolean => {
   return xssPatterns.some(pattern => pattern.test(input))
 }
 
+// UI-safe version for translation strings (much less aggressive)
+const detectXSSUI = (input: string): boolean => {
+  const xssPatterns = [
+    // Only flag actual script tags, not angle brackets in general
+    /<script[^>]*>.*?<\/script>/gi,
+    /javascript:\s*\w+/gi, // Only flag javascript: with actual code
+    /on\w+\s*=\s*["'][^"']*["']/gi, // Only flag complete event handlers
+    /<iframe[^>]*src\s*=/gi, // Only flag iframes with src
+    /data:text\/html[^;]*;/gi, // Only flag data URLs with HTML content
+    /vbscript:\s*\w+/gi // Only flag vbscript: with actual code
+  ]
+  
+  return xssPatterns.some(pattern => pattern.test(input))
+}
+
 const sanitizeInput = (input: string): string => {
   if (!input || typeof input !== 'string') return ''
   
@@ -140,6 +169,19 @@ const sanitizeInput = (input: string): string => {
     .replace(/data:/gi, '') // Remove data protocol
     .replace(/on\w+=/gi, '') // Remove event handlers
     .replace(/['"`;]/g, '') // Remove quotes and semicolons
+    .trim()
+    .substring(0, MAX_TEXT_LENGTH)
+}
+
+// UI-safe sanitization for translation strings (preserve legitimate punctuation)
+const sanitizeInputUI = (input: string): string => {
+  if (!input || typeof input !== 'string') return ''
+  
+  return input
+    .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+    .replace(/javascript:\s*\w+/gi, '') // Remove javascript: with code
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove complete event handlers
+    .replace(/<iframe[^>]*>/gi, '') // Remove iframes
     .trim()
     .substring(0, MAX_TEXT_LENGTH)
 }
@@ -191,8 +233,8 @@ const validateRequest = (data: any): { valid: boolean; error?: string } => {
       return { valid: false, error: 'Invalid text format or length' }
     }
     
-    // Check for malicious patterns
-    if (detectSQLInjection(text) || detectXSS(text)) {
+    // Check for malicious patterns (UI-safe for translation strings)
+    if (detectSQLInjectionUI(text) || detectXSSUI(text)) {
       return { valid: false, error: 'Suspicious input detected' }
     }
   }
@@ -391,8 +433,8 @@ serve(async (req) => {
       )
     }
 
-    // Sanitize inputs
-    const sanitizedTexts = texts.map((text: string) => sanitizeInput(text))
+    // Sanitize inputs (UI-safe for translation strings)
+    const sanitizedTexts = texts.map((text: string) => sanitizeInputUI(text))
     const sanitizedTargetLanguage = SUPPORTED_UI_LANGUAGES[targetLanguage]
 
     // Additional validation after sanitization
@@ -456,9 +498,9 @@ serve(async (req) => {
       throw new Error('Invalid Google Translate API response')
     }
 
-    // Extract and sanitize translated texts
+    // Extract and sanitize translated texts (UI-safe)
     const translations = data.data.translations.map((translation: any) => 
-      sanitizeInput(translation.translatedText || '')
+      sanitizeInputUI(translation.translatedText || '')
     ).filter((text: string) => text.length > 0)
 
     // Ensure we have the same number of translations as inputs
