@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { BibleVersion } from '../services/BibleAPI';
 import { AppSettings } from '../types';
 import { SUPPORTED_LANGUAGES } from '../services/translationService';
 import { useLanguage, UI_LANGUAGES } from '../contexts/LanguageContext';
+import { UITranslationService } from '../services/uiTranslationService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,6 +25,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { t, setLanguage, isTranslating, translationError } = useLanguage();
 
+  // Test API state
+  const [isTestingAPI, setIsTestingAPI] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
+
   if (!isOpen) return null;
 
   const handleSettingChange = (key: keyof AppSettings, value: any) => {
@@ -36,6 +45,59 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       ...settings,
       [key]: value
     });
+  };
+
+  // Test Translation API function
+  const testTranslationAPI = async () => {
+    setIsTestingAPI(true);
+    setTestResult(null);
+
+    try {
+      console.log('🧪 Testing Translation API...');
+      
+      // Test with simple text that should work
+      const testTexts = ['Hello', 'Settings', 'Test'];
+      const targetLanguage = 'es'; // Spanish
+      
+      console.log('Test data:', { testTexts, targetLanguage });
+      
+      const result = await UITranslationService.translateUITexts(testTexts, targetLanguage);
+      
+      console.log('API Response:', result);
+      
+      if (result && result.translations && result.translations.length > 0) {
+        setTestResult({
+          success: true,
+          message: `Successfully translated ${result.translations.length} texts to ${targetLanguage}`,
+          details: {
+            input: testTexts,
+            output: result.translations,
+            targetLanguage,
+            source: result.source,
+            fallback: result.fallback
+          }
+        });
+      } else {
+        setTestResult({
+          success: false,
+          message: 'API returned empty result',
+          details: { result }
+        });
+      }
+    } catch (error: any) {
+      console.error('Translation API test failed:', error);
+      setTestResult({
+        success: false,
+        message: `API Error: ${error.message || 'Unknown error'}`,
+        details: {
+          error: error.toString(),
+          stack: error.stack,
+          name: error.name
+        }
+      });
+    } finally {
+      setIsTestingAPI(false);
+    }
   };
 
   return (
@@ -271,6 +333,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-yellow-600">⚠️</span>
                   <span className="text-sm text-yellow-700">{translationError}</span>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Translation Test Button */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">🧪 Translation API Test</h4>
+            <button
+              onClick={testTranslationAPI}
+              disabled={isTestingAPI}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {isTestingAPI ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Testing API...</span>
+                </div>
+              ) : (
+                'Test Translation API'
+              )}
+            </button>
+            {testResult && (
+              <div className={`mt-3 p-3 rounded-lg text-sm ${
+                testResult.success 
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
+                <div className="font-medium mb-1">
+                  {testResult.success ? '✅ API Working' : '❌ API Failed'}
+                </div>
+                <div className="text-xs opacity-75">
+                  {testResult.message}
+                </div>
+                {testResult.details && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs opacity-60">Show Details</summary>
+                    <pre className="mt-1 text-xs bg-black bg-opacity-10 p-2 rounded overflow-x-auto">
+                      {JSON.stringify(testResult.details, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </div>
             )}
           </div>

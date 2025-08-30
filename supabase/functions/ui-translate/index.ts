@@ -265,7 +265,8 @@ const validateAuthToken = (authHeader: string | null): boolean => {
 const validateGoogleApiKey = (apiKey: string): boolean => {
   if (!apiKey || typeof apiKey !== 'string') return false
   if (apiKey.length < 20) return false
-  if (detectSQLInjection(apiKey) || detectXSS(apiKey)) return false
+  // Use UI-safe validation for API keys (less aggressive)
+  if (detectSQLInjectionUI(apiKey) || detectXSSUI(apiKey)) return false
   return true
 }
 
