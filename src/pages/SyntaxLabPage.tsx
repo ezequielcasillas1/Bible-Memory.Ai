@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
 import { SyntaxLabAPI } from '../services/syntaxLabAPI';
+import { FillInBlankService } from '../services/fillInBlankService';
 
 interface SyntaxLabPageProps {
   comparisonResult: ComparisonResult | null;
@@ -225,13 +226,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       detailedFeedback: `Auto-generated practice session for ${randomVerse.reference}`
     };
 
-    // Extract words from the verse for practice (skip very short words)
-    const verseWords = randomVerse.text.split(' ').filter(word => word.length > 2);
-    const wordsToGenerate = Math.max(4, Math.min(verseWords.length, 8)); // Practice 4-8 words
-    
-    // Randomly select words from the verse for practice
-    const shuffledWords = [...verseWords].sort(() => Math.random() - 0.5);
-    const selectedWords = shuffledWords.slice(0, wordsToGenerate);
+    // Use adaptive word selection based on user's fillInBlankRange setting
+    const selectedWords = FillInBlankService.selectWordsForBlankRange(
+      randomVerse.text, 
+      settings?.fillInBlankRange || 'short'
+    );
     
     const practiceWords: WordComparison[] = selectedWords.map((word, i) => ({
       userWord: '', // User hasn't typed anything yet
@@ -240,6 +239,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       position: i,
       suggestion: word.replace(/[.,!?;:"']/g, '')
     }));
+
+    // Generate proper fill-in-blank result for UI display
+    const fillInBlankResult = FillInBlankService.calculateAdaptiveFillInBlanks(
+      randomVerse.text, 
+      settings?.fillInBlankRange || 'short'
+    );
 
     const newSession: SyntaxLabSession = {
       id: `auto-session-${Date.now()}`,
@@ -253,7 +258,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       maxRounds: settings?.maxRounds || 3,
       wordsFixed: [],
       improvementScore: 0,
-      finalAccuracy: 0
+      finalAccuracy: 0,
+      fillInBlankResult: fillInBlankResult // Add the proper fill-in-blank UI data
     };
 
     setCurrentSession(newSession);

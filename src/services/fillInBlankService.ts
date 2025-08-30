@@ -176,4 +176,88 @@ export class FillInBlankService {
     const filledBlanks = Object.keys(filledWords).length;
     return totalBlanks - filledBlanks;
   }
+
+  /**
+   * NEW: Adaptive word selection for auto-generation based on range setting
+   * Selects words to blank based on user's fillInBlankRange preference
+   */
+  static selectWordsForBlankRange(originalText: string, range: 'short' | 'long'): string[] {
+    const words = originalText.split(' ');
+    const meaningfulWords = words
+      .map((word, index) => ({
+        word: word.toLowerCase().replace(/[.,!?;:"']/g, ''),
+        originalWord: word,
+        index,
+        length: word.replace(/[.,!?;:"']/g, '').length,
+        importance: this.calculateWordImportance(word)
+      }))
+      .filter(item => item.length > 2) // Skip very short words
+      .sort((a, b) => b.importance - a.importance); // Sort by importance (most important first)
+
+    // Calculate target word count based on range
+    let targetCount: number;
+    if (range === 'short') {
+      // SHORT: 20-40% of verse words (minimum 2, maximum 5)
+      const percentage = 0.2 + Math.random() * 0.2; // Random between 20-40%
+      targetCount = Math.max(2, Math.min(5, Math.round(words.length * percentage)));
+    } else {
+      // LONG: 50-80% of verse words (minimum 4, maximum 12)
+      const percentage = 0.5 + Math.random() * 0.3; // Random between 50-80%
+      targetCount = Math.max(4, Math.min(12, Math.round(words.length * percentage)));
+    }
+
+    // Select a mix of important and random words
+    const importantWords = meaningfulWords.slice(0, Math.ceil(targetCount * 0.6)); // 60% important
+    const remainingWords = meaningfulWords.slice(Math.ceil(targetCount * 0.6));
+    const randomWords = remainingWords
+      .sort(() => Math.random() - 0.5) // Shuffle
+      .slice(0, targetCount - importantWords.length); // Fill remaining slots
+
+    const selectedWords = [...importantWords, ...randomWords]
+      .map(item => item.originalWord)
+      .slice(0, targetCount);
+
+    return selectedWords;
+  }
+
+  /**
+   * Calculate word importance for better blank selection
+   * Higher scores mean more important words to practice
+   */
+  private static calculateWordImportance(word: string): number {
+    const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+    let score = 0;
+
+    // Length bonus (longer words are more challenging)
+    score += cleanWord.length * 2;
+
+    // Theological/biblical terms get higher priority
+    const biblicalTerms = ['god', 'lord', 'jesus', 'christ', 'spirit', 'holy', 'blessed', 'salvation', 'righteousness', 'faith', 'love', 'grace', 'mercy', 'truth', 'light', 'kingdom', 'heaven', 'eternal', 'glory', 'worship'];
+    if (biblicalTerms.some(term => cleanWord.includes(term) || term.includes(cleanWord))) {
+      score += 15;
+    }
+
+    // Action verbs get medium priority
+    const actionVerbs = ['shall', 'will', 'give', 'gave', 'take', 'come', 'go', 'know', 'believe', 'trust', 'follow', 'obey', 'serve', 'praise', 'pray', 'forgive', 'heal', 'save', 'deliver'];
+    if (actionVerbs.some(verb => cleanWord.includes(verb) || verb.includes(cleanWord))) {
+      score += 10;
+    }
+
+    // Avoid very common words unless they're meaningful
+    const commonWords = ['the', 'and', 'but', 'for', 'are', 'was', 'his', 'her', 'him', 'she', 'you', 'your', 'they', 'them', 'this', 'that', 'with', 'from', 'into', 'unto'];
+    if (commonWords.includes(cleanWord)) {
+      score -= 5;
+    }
+
+    return Math.max(0, score);
+  }
+
+  /**
+   * Generate fill-in-blanks using adaptive range selection
+   * Combines range-based word selection with existing blank generation
+   */
+  static calculateAdaptiveFillInBlanks(originalText: string, range: 'short' | 'long'): FillInBlankResult {
+    const selectedWords = this.selectWordsForBlankRange(originalText, range);
+    return this.calculateFillInBlanks(originalText, selectedWords);
+  }
 }

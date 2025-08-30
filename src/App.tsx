@@ -34,6 +34,7 @@ const AppContent: React.FC = () => {
     uiLanguage: 'en', // This will be synced with LanguageContext
     preferredTranslationLanguage: '', // Will be set to default language
     maxRounds: 3, // Default number of rounds for practice modes
+    fillInBlankRange: 'short', // Default to fewer blanks for easier practice
   });
   
   const [userStats, setUserStats] = useState<UserStats>({

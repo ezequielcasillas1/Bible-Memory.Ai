@@ -100,6 +100,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* Fill-in-Blank Range Setting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              📝 Fill-in-Blank Difficulty
+            </label>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleSettingChange('fillInBlankRange', 'short')}
+                  className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    (settings.fillInBlankRange || 'short') === 'short'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-1">🟡</div>
+                    <div>Short</div>
+                    <div className="text-xs opacity-75">Fewer blanks</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSettingChange('fillInBlankRange', 'long')}
+                  className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    settings.fillInBlankRange === 'long'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-lg mb-1">🔴</div>
+                    <div>Long</div>
+                    <div className="text-xs opacity-75">More blanks</div>
+                  </div>
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                {(settings.fillInBlankRange || 'short') === 'short' 
+                  ? 'Easier practice with 20-40% of words blanked' 
+                  : 'Advanced practice with 50-80% of words blanked'}
+              </p>
+            </div>
+          </div>
+
           {/* Bible Version Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
