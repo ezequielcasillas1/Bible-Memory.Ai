@@ -1,9 +1,9 @@
-{DO YOU KNOW WHY IN THE LANGAUGE INTERFACE LANGAUGE, ONLY THE ENGLISH SPANISH AND FRENCH WORK, THE REST OF THE LANGUAGES DO NOT APPEAR TRANSLATED THROUGHOUT THE INTERNAL UI; so yes this is a possible bug, let me know if its because there are certain web restrictions as well. in fact I get this error via the console log: Failed to load resource: the server responded with a status of 400 ()
-uiTranslationService.ts:58  Translation API error: 400 {"error":"Suspicious input detected"}
-translateUITexts @ uiTranslationService.ts:58
-uiTranslationService.ts:81  UI translation failed: Error: Translation failed: 400
-    at UITranslationService.translateUITexts (uiTranslationService.ts:59:15)
-    at async loadDynamicTranslations (LanguageContext.tsx:361:24)}
+{API Response: {error: 'Translation service temporarily unavailable', fallback: true, translations: Array(3)}
+LanguageContext.tsx:360 Loading UI translations for vi...
+uiTranslationService.ts:19 Translating 51 UI texts to vi
+uiTranslationService.ts:43 Calling Supabase Edge Function for translation...
+uiTranslationService.ts:63 Translation result: {error: 'Translation service temporarily unavailable', fallback: true, translations: Array(51)}
+LanguageContext.tsx:376 Using fallback translations for vi error persisting, I just updated the api to receive api translation as enabled so what could be the issue? WAIT I JUST REPLACED THE SECRET VALUE TO A NEW UPDATED API KEY, TEST IF THAT KEY WORKS}
 
 ---
 

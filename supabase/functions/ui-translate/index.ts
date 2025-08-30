@@ -474,12 +474,18 @@ serve(async (req) => {
       const errorText = await response.text()
       console.error('Google Translate API error:', response.status, errorText)
       
-      // Return fallback response
+      // Return detailed error for debugging
       return new Response(
         JSON.stringify({ 
-          error: 'Translation service temporarily unavailable',
+          error: `Google API Error: ${response.status} - ${errorText}`,
           fallback: true,
-          translations: texts
+          translations: texts,
+          debug: {
+            status: response.status,
+            statusText: response.statusText,
+            errorDetails: errorText,
+            apiUrl: 'https://translation.googleapis.com/language/translate/v2'
+          }
         }),
         { 
           status: 200,

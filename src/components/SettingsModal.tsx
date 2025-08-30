@@ -55,9 +55,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       console.log('🧪 Testing Translation API...');
       
-      // Test with simple text that should work
+      // Test with simple text that should work - testing Chinese specifically
       const testTexts = ['Hello', 'Settings', 'Test'];
-      const targetLanguage = 'es'; // Spanish
+      const targetLanguage = 'zh-cn'; // Chinese (Simplified)
       
       console.log('Test data:', { testTexts, targetLanguage });
       
@@ -68,7 +68,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       if (result && result.translations && result.translations.length > 0) {
         setTestResult({
           success: true,
-          message: `Successfully translated ${result.translations.length} texts to ${targetLanguage}`,
+          message: `Successfully translated ${result.translations.length} texts to Chinese (${targetLanguage})`,
           details: {
             input: testTexts,
             output: result.translations,
@@ -339,7 +339,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Translation Test Button */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">🧪 Translation API Test</h4>
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">🧪 Translation API Test (Chinese)</h4>
             <button
               onClick={testTranslationAPI}
               disabled={isTestingAPI}
@@ -350,9 +350,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Testing API...</span>
                 </div>
-              ) : (
-                'Test Translation API'
-              )}
+                              ) : (
+                  'Test Chinese Translation'
+                )}
             </button>
             {testResult && (
               <div className={`mt-3 p-3 rounded-lg text-sm ${
