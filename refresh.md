@@ -1,9 +1,5 @@
-{API Response: {error: 'Translation service temporarily unavailable', fallback: true, translations: Array(3)}
-LanguageContext.tsx:360 Loading UI translations for vi...
-uiTranslationService.ts:19 Translating 51 UI texts to vi
-uiTranslationService.ts:43 Calling Supabase Edge Function for translation...
-uiTranslationService.ts:63 Translation result: {error: 'Translation service temporarily unavailable', fallback: true, translations: Array(51)}
-LanguageContext.tsx:376 Using fallback translations for vi error persisting, I just updated the api to receive api translation as enabled so what could be the issue? WAIT I JUST REPLACED THE SECRET VALUE TO A NEW UPDATED API KEY, TEST IF THAT KEY WORKS}
+{ ERROR IS PERSISTING, MAKE SURE TO TEST, EXAMINE ALL THE FILES OF THIS PAGE OF AUTO PRACTICE, AND THE WORD "shepard," is not working, THE USER EVEN TYPES IN THE COMMMA AND IT STILL DOES NOT WORK; FIX THAT ON TOP OF THE POSSIBLE ROUND COUNT ERROR, BUT MOST IMPORTANTLY THE WORD THE USER IS TRYING TO TYPE IN TO GET THE NEXT WORD COUNT GOING IN.
+}}
 
 ---
 

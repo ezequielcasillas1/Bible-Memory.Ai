@@ -102,10 +102,36 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         wordsFixed: [],
         finalAccuracy: 0,
         improvementScore: 0,
-        fillInBlankResult: sessionData.fillInBlankResult // ✅ CRITICAL FIX: Add the missing fillInBlankResult
+        fillInBlankResult: undefined // Will be set with round-based logic
       };
 
+      // Set session first so getWordsForCurrentRound() works
       setCurrentSession(session);
+      
+      // Calculate round 1 words using improved distribution algorithm
+      const allWrongWords = wrongWords.map(w => w.originalWord || w.userWord);
+      const maxRounds = settings?.maxRounds || 3;
+      const totalWords = allWrongWords.length;
+      const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+      const extraWords = totalWords % maxRounds;
+      
+      // Round 1 gets base words + 1 if there are extra words
+      const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
+      const round1Words = allWrongWords.slice(0, round1WordCount);
+      
+      const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+        sessionData.verseText,
+        round1Words,
+        [] // No words fixed yet
+      );
+      
+      // Update session with proper fill-in-blank data
+      const finalSession = {
+        ...session,
+        fillInBlankResult: fillInBlankResult
+      };
+      
+      setCurrentSession(finalSession);
     }
   }, [comparisonResult, selectedVerse, currentSession]);
 
@@ -166,10 +192,36 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       maxRounds: settings?.maxRounds || 3,
       wordsFixed: [],
       improvementScore: 0,
-      finalAccuracy: 0
+      finalAccuracy: 0,
+      fillInBlankResult: undefined // Will be set after session creation
     };
 
+    // Set session first so getWordsForCurrentRound() works
     setCurrentSession(newSession);
+    
+    // Calculate round 1 words using improved distribution algorithm  
+    const maxRounds = settings?.maxRounds || 3;
+    const totalWords = selectedWords.length;
+    const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+    const extraWords = totalWords % maxRounds;
+    
+    // Round 1 gets base words + 1 if there are extra words
+    const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
+    const round1Words = selectedWords.slice(0, round1WordCount);
+    
+    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+      historyEntry.verse.text,
+      round1Words,
+      [] // No words fixed yet
+    );
+    
+    // Update session with proper fill-in-blank data
+    const finalSession = {
+      ...newSession,
+      fillInBlankResult: fillInBlankResult
+    };
+    
+    setCurrentSession(finalSession);
     setPhase('summary');
     setShowHistoryLog(false);
   };
@@ -240,12 +292,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       suggestion: word.replace(/[.,!?;:"']/g, '')
     }));
 
-    // Generate proper fill-in-blank result for UI display
-    const fillInBlankResult = FillInBlankService.calculateAdaptiveFillInBlanks(
-      randomVerse.text, 
-      settings?.fillInBlankRange || 'short'
-    );
-
     const newSession: SyntaxLabSession = {
       id: `auto-session-${Date.now()}`,
       startTime: new Date(),
@@ -259,7 +305,32 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       wordsFixed: [],
       improvementScore: 0,
       finalAccuracy: 0,
-      fillInBlankResult: fillInBlankResult // Add the proper fill-in-blank UI data
+      fillInBlankResult: undefined // Will be set after session creation
+    };
+
+    // Set session first so getWordsForCurrentRound() works
+    setCurrentSession(newSession);
+    
+    // Calculate round 1 words using improved distribution algorithm
+    const maxRounds = settings?.maxRounds || 3;
+    const totalWords = selectedWords.length;
+    const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+    const extraWords = totalWords % maxRounds;
+    
+    // Round 1 gets base words + 1 if there are extra words
+    const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
+    const round1Words = selectedWords.slice(0, round1WordCount);
+    
+    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+      randomVerse.text,
+      round1Words,
+      [] // No words fixed yet
+    );
+    
+    // Update session with proper fill-in-blank data
+    const finalSession = {
+      ...newSession,
+      fillInBlankResult: fillInBlankResult
     };
 
     // Reset state for fresh session
@@ -270,7 +341,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     setShowHint(false);
     setShowAnswer(false);
     
-    setCurrentSession(newSession);
+    setCurrentSession(finalSession);
     setPhase('summary');
   };
 
@@ -414,44 +485,102 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return currentBlank ? currentBlank.word : null;
   };
 
-  // Helper function to get progressive completion data
-  const getProgressiveCompletionData = () => {
+  // Helper function to get round-specific word distribution
+  const getWordsForCurrentRound = () => {
+    if (!currentSession) return [];
+    
+    const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
+    const maxRounds = currentSession.maxRounds || 3;
+    
+    // More even distribution algorithm
+    const totalWords = allWrongWords.length;
+    const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+    const extraWords = totalWords % maxRounds;
+    
+    // Calculate start index for current round
+    let startIndex = 0;
+    for (let round = 1; round < currentRound; round++) {
+      const wordsInThisRound = baseWordsPerRound + (round <= extraWords ? 1 : 0);
+      startIndex += wordsInThisRound;
+    }
+    
+    // Calculate words for current round
+    const wordsInCurrentRound = baseWordsPerRound + (currentRound <= extraWords ? 1 : 0);
+    const endIndex = startIndex + wordsInCurrentRound;
+    
+    const roundWords = allWrongWords.slice(startIndex, endIndex);
+    
+    // Safety check: if current round has no words, complete the session
+    if (roundWords.length === 0) {
+      console.log(`Round ${currentRound} has no words - completing session`);
+      setTimeout(() => completeSession(), 100); // Complete after current render cycle
+      return [];
+    }
+    
+    return roundWords;
+  };
+
+  // Helper function to get GLOBAL progress data (for word meter display)
+  const getGlobalProgressData = () => {
+    if (!currentSession) {
+      return { completed: 0, total: 0, currentWord: 1 };
+    }
+
+    const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
+    const totalWordsCompleted = wordsFixed.length;
+    
+    // Calculate global position: which word are we working on across all rounds
+    const currentRoundWords = getWordsForCurrentRound();
+    const currentRoundProgress = Math.min(totalWordsCompleted, currentRoundWords.length);
+    
+    // Calculate how many words completed in previous rounds
+    const maxRounds = currentSession.maxRounds || 3;
+    const totalWords = allWrongWords.length;
+    const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+    const extraWords = totalWords % maxRounds;
+    
+    let wordsInPreviousRounds = 0;
+    for (let round = 1; round < currentRound; round++) {
+      const wordsInRound = baseWordsPerRound + (round <= extraWords ? 1 : 0);
+      wordsInPreviousRounds += wordsInRound;
+    }
+    
+    const globalCompleted = wordsInPreviousRounds + currentRoundProgress;
+    const currentWordNumber = Math.min(globalCompleted + 1, totalWords);
+    
+    return { 
+      completed: globalCompleted, 
+      total: totalWords, 
+      currentWord: currentWordNumber 
+    };
+  };
+
+  // Helper function to get CURRENT ROUND completion data (for round advancement logic)
+  const getCurrentRoundCompletionData = () => {
     if (!currentSession?.fillInBlankResult) {
       return { completed: 0, total: 0, percentage: 0 };
     }
 
     // ROUND-BASED COMPLETION: Each round is independent
-    // Get current fillInBlankResult which reflects the current progressive state
-    const currentBlanks = currentSession.fillInBlankResult.blanks;
-    const activeBlanks = currentBlanks.filter(blank => blank.isBlank);
+    // Get words assigned to current round only
+    const currentRoundWords = getWordsForCurrentRound();
     
-    // For round-based practice:
-    // - completed = words fixed in this round (wordsFixed.length)
-    // - total = total words that need to be fixed in this round
-    // - In progressive mode, there's typically only 1 active blank at a time
-    
-    if (activeBlanks.length === 0 && wordsFixed.length > 0) {
-      // No more blanks and we've fixed some words = 100% for this round
-      return { completed: wordsFixed.length, total: wordsFixed.length, percentage: 100 };
-    }
-    
-    // Calculate based on current progress vs total words for this round
-    const verseWords = currentSession.verse.text.split(' ');
-    const wrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
-    
-    // Count total wrong word positions that exist in this verse
-    const totalWrongPositions = verseWords.filter((word, index) => {
-      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-      return wrongWords.some(ww => 
-        ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-      );
-    }).length;
-    
+    // Calculate completion based on current round's words only
     const completed = wordsFixed.length;
-    const total = totalWrongPositions;
+    const total = currentRoundWords.length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { completed, total, percentage };
+  };
+
+  // Legacy function for backward compatibility - uses global data for display
+  const getProgressiveCompletionData = () => {
+    const globalData = getGlobalProgressData();
+    return {
+      completed: globalData.completed,
+      total: globalData.total,
+      percentage: globalData.total > 0 ? Math.round((globalData.completed / globalData.total) * 100) : 0
+    };
   };
 
   const checkWord = (input: string, targetWord: string): boolean => {
@@ -459,16 +588,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   };
 
   const handleWordSubmit = () => {
-    if (!currentSession || !userInput.trim()) return;
+    if (!currentSession || !userInput.trim()) {
+      console.log('🚨 handleWordSubmit: Early exit - no session or input');
+      return;
+    }
 
     // For fill-in-blank mode, use the current blank word instead of currentWordIndex
     const currentBlankWord = getCurrentBlankWord();
-    if (!currentBlankWord) return;
+    console.log('🔍 handleWordSubmit: currentBlankWord =', currentBlankWord);
+    console.log('🔍 handleWordSubmit: userInput =', userInput);
+    console.log('🔍 handleWordSubmit: fillInBlankResult =', currentSession?.fillInBlankResult);
+    
+    if (!currentBlankWord) {
+      console.log('🚨 handleWordSubmit: Early exit - no currentBlankWord');
+      return;
+    }
     
     // Clean the blank word for comparison (remove punctuation)
     const cleanBlankWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
     const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
     const isCorrect = cleanUserInput === cleanBlankWord;
+    
+    console.log('🔍 Word comparison:', {
+      currentBlankWord,
+      cleanBlankWord,
+      userInput,
+      cleanUserInput,
+      isCorrect,
+      comparison: `"${cleanUserInput}" === "${cleanBlankWord}"`
+    });
 
     if (isCorrect) {
       // Store the cleaned version for consistency with progressive fill-in-blank system
@@ -508,17 +656,32 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           fillInBlankResult: updatedSessionData.fillInBlankResult
         }));
       } else {
-        // Auto practice session - update fillInBlankResult directly
-        const selectedWords = currentSession?.wrongWords.map(w => w.originalWord) || [];
-        const updatedFillInBlankResult = FillInBlankService.calculateFillInBlanks(
-          currentSession?.verse.text || '', 
-          selectedWords.filter(word => !newWordsFixed.includes(word.toLowerCase().replace(/[.,!?;:"']/g, '')))
-        );
-        setCurrentSession(prevSession => ({
-          ...prevSession!,
-          wordsFixed: newWordsFixed,
-          fillInBlankResult: updatedFillInBlankResult
-        }));
+        // Auto practice session - update fillInBlankResult for current round only
+        const currentRoundWords = getWordsForCurrentRound();
+        const remainingWordsInRound = currentRoundWords.filter(word => {
+          const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+          return !newWordsFixed.includes(cleanWord);
+        });
+        
+        // Only update fillInBlankResult if there are remaining words in current round
+        if (remainingWordsInRound.length > 0) {
+          const updatedFillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+            currentSession?.verse.text || '', 
+            currentRoundWords, // Use ORIGINAL round words, not filtered ones
+            newWordsFixed
+          );
+          setCurrentSession(prevSession => ({
+            ...prevSession!,
+            wordsFixed: newWordsFixed,
+            fillInBlankResult: updatedFillInBlankResult
+          }));
+        } else {
+          // No more words in current round - just update wordsFixed
+          setCurrentSession(prevSession => ({
+            ...prevSession!,
+            wordsFixed: newWordsFixed
+          }));
+        }
       }
     } else {
       // Show floating incorrect emoji
@@ -556,18 +719,50 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Reset input for next word
     setUserInput('');
     
-    // Check if all words are completed in progressive fill-in-blank mode
-    const progressData = getProgressiveCompletionData();
-    if (progressData.percentage >= 100) {
+    // Check if all words are completed in current round
+    const roundProgressData = getCurrentRoundCompletionData();
+    if (roundProgressData.percentage >= 100) {
       // All words fixed for this round!
       if (currentRound < (currentSession.maxRounds || 3)) {
         // Advance to next round
-        setCurrentRound(currentRound + 1);
+        const nextRound = currentRound + 1;
+        setCurrentRound(nextRound);
         setWordsFixed([]); // Reset progress for next round
         setCurrentWordIndex(0);
         setUserInput('');
         setShowHint(false);
         setShowAnswer(false);
+        
+        // Calculate words for next round using improved distribution algorithm
+        const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
+        const maxRounds = currentSession.maxRounds || 3;
+        const totalWords = allWrongWords.length;
+        const baseWordsPerRound = Math.floor(totalWords / maxRounds);
+        const extraWords = totalWords % maxRounds;
+        
+        // Calculate start index for next round
+        let startIndex = 0;
+        for (let round = 1; round < nextRound; round++) {
+          const wordsInThisRound = baseWordsPerRound + (round <= extraWords ? 1 : 0);
+          startIndex += wordsInThisRound;
+        }
+        
+        // Calculate words for next round
+        const wordsInNextRound = baseWordsPerRound + (nextRound <= extraWords ? 1 : 0);
+        const endIndex = startIndex + wordsInNextRound;
+        const nextRoundWords = allWrongWords.slice(startIndex, endIndex);
+        
+        const nextRoundFillInBlank = FillInBlankService.calculateProgressiveFillInBlanks(
+          currentSession.verse.text,
+          nextRoundWords,
+          [] // No words fixed in new round yet
+        );
+        
+        setCurrentSession(prevSession => ({
+          ...prevSession!,
+          fillInBlankResult: nextRoundFillInBlank
+        }));
+        
         // Stay in practice mode for next round
         setPhase('practice');
       } else {
@@ -1048,8 +1243,76 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               <h2 className="text-xl font-bold text-gray-800">
                 {practiceMode === 'blank' ? 'Fill in the Blank Mode' : 'Type-Along Mode'}
               </h2>
-              <div className="text-sm text-gray-600">
-                Round {currentRound}/{currentSession.maxRounds} • Word {getProgressiveCompletionData().completed + 1}/{getProgressiveCompletionData().total}
+              <div className="flex items-center space-x-3">
+                <div className="text-sm text-gray-600">
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getGlobalProgressData().currentWord}/{getGlobalProgressData().total}
+                </div>
+                {/* Enhanced Test Button for Word Submission Debug */}
+                <button
+                  onClick={() => {
+                    console.log('🧪 ENHANCED TEST: Complete state analysis');
+                    console.log('📊 Current State:', {
+                      currentRound,
+                      maxRounds: currentSession.maxRounds,
+                      wordsFixed,
+                      wordsFixedLength: wordsFixed.length,
+                      userInput,
+                      currentBlankWord: getCurrentBlankWord(),
+                      currentRoundWords: getWordsForCurrentRound(),
+                      roundProgress: getCurrentRoundCompletionData(),
+                      globalProgress: getGlobalProgressData(),
+                      fillInBlankResult: currentSession.fillInBlankResult
+                    });
+                    
+                    // Test word filtering logic
+                    const currentRoundWords = getWordsForCurrentRound();
+                    const testWordsFixed = [...wordsFixed, 'lord']; // Simulate adding 'lord'
+                    const remainingWords = currentRoundWords.filter(word => {
+                      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                      return !testWordsFixed.includes(cleanWord);
+                    });
+                    
+                    console.log('🔍 Word Filtering Test:', {
+                      currentRoundWords,
+                      testWordsFixed,
+                      remainingWords,
+                      filteringWorks: remainingWords.length < currentRoundWords.length
+                    });
+                  }}
+                  className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded-md transition-colors"
+                  title="Enhanced Debug: Complete word submission analysis"
+                >
+                  🔬 Debug
+                </button>
+                
+                {/* Specific Test for Shepherd Bug */}
+                <button
+                  onClick={() => {
+                    console.log('🐑 SHEPHERD TEST: Debugging word acceptance');
+                    const currentBlankWord = getCurrentBlankWord();
+                    const testInputs = ['shepherd', 'shepherd,', 'Shepherd', 'Shepherd,'];
+                    
+                    console.log('📝 Current blank word:', currentBlankWord);
+                    
+                    testInputs.forEach(input => {
+                      const cleanBlankWord = currentBlankWord?.toLowerCase().replace(/[.,!?;:"']/g, '') || '';
+                      const cleanUserInput = input.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+                      const isCorrect = cleanUserInput === cleanBlankWord;
+                      
+                      console.log(`Testing "${input}":`, {
+                        input,
+                        cleanUserInput,
+                        cleanBlankWord,
+                        isCorrect,
+                        comparison: `"${cleanUserInput}" === "${cleanBlankWord}"`
+                      });
+                    });
+                  }}
+                  className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded-md transition-colors"
+                  title="Test shepherd word specifically"
+                >
+                  🐑 Test
+                </button>
               </div>
             </div>
 
