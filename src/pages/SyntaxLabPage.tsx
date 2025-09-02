@@ -6,6 +6,7 @@ import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
 import { SyntaxLabAPI } from '../services/syntaxLabAPI';
 import { FillInBlankService } from '../services/fillInBlankService';
+import { RoundProgressionAPI, RoundProgressionState } from '../services/roundProgressionAPI';
 
 interface SyntaxLabPageProps {
   comparisonResult: ComparisonResult | null;
@@ -482,6 +483,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     
     // Find the first blank that is currently active (isBlank = true)
     const currentBlank = currentSession.fillInBlankResult.blanks.find(blank => blank.isBlank);
+    
+    console.log('🔍 getCurrentBlankWord:', {
+      totalBlanks: currentSession.fillInBlankResult.blanks.length,
+      allBlanks: currentSession.fillInBlankResult.blanks.map(b => ({
+        word: b.word,
+        isBlank: b.isBlank,
+        position: b.position
+      })),
+      currentBlank: currentBlank ? {
+        word: currentBlank.word,
+        isBlank: currentBlank.isBlank,
+        position: currentBlank.position
+      } : null
+    });
+    
     return currentBlank ? currentBlank.word : null;
   };
 
@@ -520,66 +536,43 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return roundWords;
   };
 
-  // Helper function to get GLOBAL progress data (for word meter display)
-  const getGlobalProgressData = () => {
+  // NEW: Get progress data using RoundProgressionAPI (replaces all legacy functions)
+  const getProgressData = () => {
     if (!currentSession) {
-      return { completed: 0, total: 0, currentWord: 1 };
+      return {
+        global: { completed: 0, total: 0, currentWord: 1, percentage: 0 },
+        round: { completed: 0, total: 0, percentage: 0 }
+      };
     }
 
     const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
-    const totalWordsCompleted = wordsFixed.length;
-    
-    // Calculate global position: which word are we working on across all rounds
-    const currentRoundWords = getWordsForCurrentRound();
-    const currentRoundProgress = Math.min(totalWordsCompleted, currentRoundWords.length);
-    
-    // Calculate how many words completed in previous rounds
-    const maxRounds = currentSession.maxRounds || 3;
-    const totalWords = allWrongWords.length;
-    const baseWordsPerRound = Math.floor(totalWords / maxRounds);
-    const extraWords = totalWords % maxRounds;
-    
-    let wordsInPreviousRounds = 0;
-    for (let round = 1; round < currentRound; round++) {
-      const wordsInRound = baseWordsPerRound + (round <= extraWords ? 1 : 0);
-      wordsInPreviousRounds += wordsInRound;
-    }
-    
-    const globalCompleted = wordsInPreviousRounds + currentRoundProgress;
-    const currentWordNumber = Math.min(globalCompleted + 1, totalWords);
-    
-    return { 
-      completed: globalCompleted, 
-      total: totalWords, 
-      currentWord: currentWordNumber 
+    const progressionState: RoundProgressionState = {
+      currentRound,
+      maxRounds: currentSession.maxRounds || 3,
+      wordsFixed: wordsFixed,
+      currentRoundWords: getWordsForCurrentRound(),
+      totalWords: allWrongWords
     };
-  };
 
-  // Helper function to get CURRENT ROUND completion data (for round advancement logic)
-  const getCurrentRoundCompletionData = () => {
-    if (!currentSession?.fillInBlankResult) {
-      return { completed: 0, total: 0, percentage: 0 };
-    }
+    // Use RoundProgressionAPI to get accurate progress data
+    const dummyResult = RoundProgressionAPI.processWordSubmission(
+      progressionState,
+      '', // Empty word for progress calculation only
+      false // Not processing actual submission
+    );
 
-    // ROUND-BASED COMPLETION: Each round is independent
-    // Get words assigned to current round only
-    const currentRoundWords = getWordsForCurrentRound();
-    
-    // Calculate completion based on current round's words only
-    const completed = wordsFixed.length;
-    const total = currentRoundWords.length;
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return { completed, total, percentage };
-  };
-
-  // Legacy function for backward compatibility - uses global data for display
-  const getProgressiveCompletionData = () => {
-    const globalData = getGlobalProgressData();
     return {
-      completed: globalData.completed,
-      total: globalData.total,
-      percentage: globalData.total > 0 ? Math.round((globalData.completed / globalData.total) * 100) : 0
+      global: {
+        completed: dummyResult.progressData.globalProgress.completed,
+        total: dummyResult.progressData.globalProgress.total,
+        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total),
+        percentage: dummyResult.progressData.globalProgress.percentage
+      },
+      round: {
+        completed: dummyResult.progressData.roundProgress.completed,
+        total: dummyResult.progressData.roundProgress.total,
+        percentage: dummyResult.progressData.roundProgress.percentage
+      }
     };
   };
 
@@ -607,6 +600,18 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Clean the blank word for comparison (remove punctuation)
     const cleanBlankWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
     const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    
+    // DUPLICATE PREVENTION: Check if this word is already fixed to prevent multiple submissions for same blank
+    const isAlreadyFixed = wordsFixed.some(word => 
+      word.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanBlankWord
+    );
+    
+    if (isAlreadyFixed) {
+      console.log('🚫 DUPLICATE PREVENTION: Word already fixed, skipping submission:', cleanBlankWord);
+      setUserInput(''); // Clear input but don't process
+      return;
+    }
+    
     const isCorrect = cleanUserInput === cleanBlankWord;
     
     console.log('🔍 Word comparison:', {
@@ -615,12 +620,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       userInput,
       cleanUserInput,
       isCorrect,
+      isAlreadyFixed,
       comparison: `"${cleanUserInput}" === "${cleanBlankWord}"`
     });
 
     if (isCorrect) {
       // Store the cleaned version for consistency with progressive fill-in-blank system
       const newWordsFixed = [...wordsFixed, cleanBlankWord];
+      const updatedWordsFixed = newWordsFixed; // Create consistent reference
+      
+      console.log('🔍 BEFORE UPDATE:', { 
+        currentWordsFixed: wordsFixed, 
+        newWord: cleanBlankWord, 
+        updatedWordsFixed 
+      });
+      
       setWordsFixed(newWordsFixed);
       setShowHint(false); // Reset hint for next word
       setCurrentHint(''); // Clear previous hint
@@ -644,44 +658,111 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       }
       
       // Update session with progressive fill-in-blank for left-to-right progression
+      // CONSOLIDATED: Single session update to avoid React batching issues
+      
       if (comparisonResult) {
         // Regular session (from MemorizePage) - use SyntaxLabAPI
         const updatedSessionData = SyntaxLabAPI.updateSessionProgress(
           SyntaxLabAPI.createSession(comparisonResult),
-          newWordsFixed
+          updatedWordsFixed
         );
+        
+        console.log('🔄 UPDATING SESSION (Regular):', {
+          updatedWordsFixed,
+          newFillInBlankResult: updatedSessionData.fillInBlankResult?.blanks.map(b => ({
+            word: b.word,
+            isBlank: b.isBlank
+          })) || []
+        });
+        
         setCurrentSession(prevSession => ({
           ...prevSession!,
-          wordsFixed: newWordsFixed,
+          wordsFixed: updatedWordsFixed,
           fillInBlankResult: updatedSessionData.fillInBlankResult
         }));
       } else {
         // Auto practice session - update fillInBlankResult for current round only
         const currentRoundWords = getWordsForCurrentRound();
-        const remainingWordsInRound = currentRoundWords.filter(word => {
-          const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-          return !newWordsFixed.includes(cleanWord);
+        const updatedFillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+          currentSession?.verse.text || '', 
+          currentRoundWords, // Use ORIGINAL round words, not filtered ones
+          updatedWordsFixed
+        );
+        
+        console.log('🔄 UPDATING SESSION (Auto Practice):', {
+          currentRoundWords,
+          updatedWordsFixed,
+          newFillInBlankResult: updatedFillInBlankResult.blanks.map(b => ({
+            word: b.word,
+            isBlank: b.isBlank
+          }))
         });
         
-        // Only update fillInBlankResult if there are remaining words in current round
-        if (remainingWordsInRound.length > 0) {
-          const updatedFillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
-            currentSession?.verse.text || '', 
-            currentRoundWords, // Use ORIGINAL round words, not filtered ones
-            newWordsFixed
-          );
-          setCurrentSession(prevSession => ({
-            ...prevSession!,
-            wordsFixed: newWordsFixed,
-            fillInBlankResult: updatedFillInBlankResult
-          }));
-        } else {
-          // No more words in current round - just update wordsFixed
-          setCurrentSession(prevSession => ({
-            ...prevSession!,
-            wordsFixed: newWordsFixed
-          }));
-        }
+        setCurrentSession(prevSession => ({
+          ...prevSession!,
+          wordsFixed: updatedWordsFixed,
+          fillInBlankResult: updatedFillInBlankResult
+        }));
+      }
+      
+      // Use RoundProgressionAPI to handle round completion logic (only for correct answers)
+      const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
+      const progressionState: RoundProgressionState = {
+        currentRound,
+        maxRounds: currentSession.maxRounds || 3,
+        wordsFixed: updatedWordsFixed, // Use the updated array
+        currentRoundWords: getWordsForCurrentRound(),
+        totalWords: allWrongWords
+      };
+      
+      const progressionResult = RoundProgressionAPI.processWordSubmission(
+        progressionState,
+        cleanBlankWord,
+        true // Word was correct since we're in the isCorrect block
+      );
+      
+      console.log('🎯 Round completion check:', {
+        currentRound,
+        maxRounds: progressionResult.progressData.maxRounds,
+        roundProgress: progressionResult.progressData.roundProgress,
+        shouldAdvanceRound: progressionResult.shouldAdvanceRound,
+        shouldCompleteSession: progressionResult.shouldCompleteSession,
+        currentWordsFixedState: wordsFixed,
+        updatedWordsFixedUsed: updatedWordsFixed
+      });
+      
+      if (progressionResult.shouldAdvanceRound && progressionResult.nextRoundState) {
+        // Advance to next round using API state
+        console.log('🚀 ADVANCING ROUND:', {
+          from: `${currentRound}/${progressionResult.progressData.maxRounds}`,
+          to: `${progressionResult.nextRoundState.currentRound}/${progressionResult.progressData.maxRounds}`,
+          resettingWordsFixedTo: progressionResult.nextRoundState.wordsFixed
+        });
+        
+        setCurrentRound(progressionResult.nextRoundState.currentRound);
+        setWordsFixed(progressionResult.nextRoundState.wordsFixed); // Reset to empty array
+        setCurrentWordIndex(0);
+        setUserInput('');
+        setShowHint(false);
+        setShowAnswer(false);
+        
+        // Generate fill-in-blank for next round using API-provided words
+        const nextRoundFillInBlank = FillInBlankService.calculateProgressiveFillInBlanks(
+          currentSession.verse.text,
+          progressionResult.nextRoundState.currentRoundWords,
+          [] // No words fixed in new round yet
+        );
+        
+        setCurrentSession(prevSession => ({
+          ...prevSession!,
+          fillInBlankResult: nextRoundFillInBlank
+        }));
+        
+        // Stay in practice mode for next round
+        setPhase('practice');
+      } else if (progressionResult.shouldCompleteSession) {
+        // All rounds complete - call original completion flow
+        completeSession();
       }
     } else {
       // Show floating incorrect emoji
@@ -716,60 +797,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       }
     }
     
-    // Reset input for next word
+    // Reset input for next word (moved to end of function)
     setUserInput('');
-    
-    // Check if all words are completed in current round
-    const roundProgressData = getCurrentRoundCompletionData();
-    if (roundProgressData.percentage >= 100) {
-      // All words fixed for this round!
-      if (currentRound < (currentSession.maxRounds || 3)) {
-        // Advance to next round
-        const nextRound = currentRound + 1;
-        setCurrentRound(nextRound);
-        setWordsFixed([]); // Reset progress for next round
-        setCurrentWordIndex(0);
-        setUserInput('');
-        setShowHint(false);
-        setShowAnswer(false);
-        
-        // Calculate words for next round using improved distribution algorithm
-        const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
-        const maxRounds = currentSession.maxRounds || 3;
-        const totalWords = allWrongWords.length;
-        const baseWordsPerRound = Math.floor(totalWords / maxRounds);
-        const extraWords = totalWords % maxRounds;
-        
-        // Calculate start index for next round
-        let startIndex = 0;
-        for (let round = 1; round < nextRound; round++) {
-          const wordsInThisRound = baseWordsPerRound + (round <= extraWords ? 1 : 0);
-          startIndex += wordsInThisRound;
-        }
-        
-        // Calculate words for next round
-        const wordsInNextRound = baseWordsPerRound + (nextRound <= extraWords ? 1 : 0);
-        const endIndex = startIndex + wordsInNextRound;
-        const nextRoundWords = allWrongWords.slice(startIndex, endIndex);
-        
-        const nextRoundFillInBlank = FillInBlankService.calculateProgressiveFillInBlanks(
-          currentSession.verse.text,
-          nextRoundWords,
-          [] // No words fixed in new round yet
-        );
-        
-        setCurrentSession(prevSession => ({
-          ...prevSession!,
-          fillInBlankResult: nextRoundFillInBlank
-        }));
-        
-        // Stay in practice mode for next round
-        setPhase('practice');
-      } else {
-        // All rounds complete - call original completion flow
-        completeSession();
-      }
-    }
   };
 
   const renderWordWithMask = (word: string, round: number): string => {
@@ -934,7 +963,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const completeSession = () => {
     if (!currentSession) return;
 
-    const progressData = getProgressiveCompletionData();
+    const progressData = getProgressData().global;
     const finalSession = {
       ...currentSession,
       endTime: new Date(),
@@ -1245,7 +1274,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
-                  Round {currentRound}/{currentSession.maxRounds} • Word {getGlobalProgressData().currentWord}/{getGlobalProgressData().total}
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().global.total}
                 </div>
                 {/* Enhanced Test Button for Word Submission Debug */}
                 <button
@@ -1259,8 +1288,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                       userInput,
                       currentBlankWord: getCurrentBlankWord(),
                       currentRoundWords: getWordsForCurrentRound(),
-                      roundProgress: getCurrentRoundCompletionData(),
-                      globalProgress: getGlobalProgressData(),
+                      progressData: getProgressData(),
                       fillInBlankResult: currentSession.fillInBlankResult
                     });
                     
@@ -1437,7 +1465,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                       {showAnswer && (
                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700">
                           <strong>Answer:</strong> <span className="font-bold text-orange-800">
-                            {getCurrentBlankWord() || (getProgressiveCompletionData().percentage >= 100 ? 'All completed! 🎉' : 'No blank found')}
+                            {getCurrentBlankWord() || (getProgressData().global.percentage >= 100 ? 'All completed! 🎉' : 'No blank found')}
                           </span>
                         </div>
                       )}
@@ -1471,7 +1499,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                     </button>
                     
                     {/* Proceed to Results button when 100% complete */}
-                    {getProgressiveCompletionData().percentage >= 100 && (
+                    {getProgressData().global.percentage >= 100 && (
                       <button
                         onClick={completeSession}
                         className="group relative px-8 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg mt-4"
@@ -1491,16 +1519,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">
-                      Progress: {getProgressiveCompletionData().completed} / {getProgressiveCompletionData().total} words
+                      Progress: {getProgressData().global.completed} / {getProgressData().global.total} words
                     </span>
                     <span className="text-emerald-600 font-bold">
-                      {getProgressiveCompletionData().percentage}% Complete
+                      {getProgressData().global.percentage}% Complete
                     </span>
                   </div>
                   <div className="w-full bg-emerald-200 rounded-full h-3 mt-2 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500 ease-out relative"
-                      style={{ width: `${getProgressiveCompletionData().percentage}%` }}
+                      style={{ width: `${getProgressData().global.percentage}%` }}
                     >
                       <div className="absolute inset-0 bg-white/30 rounded-full animate-pulse"></div>
                     </div>
@@ -1782,7 +1810,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 </div>
                 
                 <div className="bg-blue-50 rounded-xl p-6 text-center border border-blue-200">
-                  <div className="text-4xl font-bold text-blue-600 mb-2">{getProgressiveCompletionData().completed}</div>
+                  <div className="text-4xl font-bold text-blue-600 mb-2">{getProgressData().global.completed}</div>
                   <div className="text-blue-700 font-medium">Words Mastered</div>
                 </div>
                 
@@ -1840,12 +1868,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">{getProgressiveCompletionData().completed}/{getProgressiveCompletionData().total}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{getProgressData().global.completed}/{getProgressData().global.total}</div>
                 <div className="text-green-700">Mistakes Fixed</div>
               </div>
               
               <div className="bg-blue-50 rounded-xl p-6 text-center border border-blue-200">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{getProgressiveCompletionData().percentage}%</div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">{getProgressData().global.percentage}%</div>
                 <div className="text-blue-700">Improvement Score</div>
               </div>
             </div>
@@ -1869,8 +1897,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div>
                   <h4 className="font-semibold text-yellow-800 mb-2">Encouragement</h4>
                   <p className="text-yellow-700 text-sm">
-                    You mastered {getProgressiveCompletionData().completed} challenging words today—keep it up! 
-                    {getProgressiveCompletionData().percentage >= 80 && " You're becoming a Scripture master!"}
+                    You mastered {getProgressData().global.completed} challenging words today—keep it up! 
+                    {getProgressData().global.percentage >= 80 && " You're becoming a Scripture master!"}
                   </p>
                 </div>
               </div>
