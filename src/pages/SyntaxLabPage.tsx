@@ -661,7 +661,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       }
       
       // Update session with progressive fill-in-blank for left-to-right progression
-      // CONSOLIDATED: Single session update to avoid React batching issues
+      // Prepare session update data first, then determine if round advancement is needed
+      let sessionUpdateData: { wordsFixed: string[], fillInBlankResult: any } = {
+        wordsFixed: updatedWordsFixed,
+        fillInBlankResult: null
+      };
       
       if (comparisonResult) {
         // Regular session (from MemorizePage) - use SyntaxLabAPI
@@ -669,20 +673,15 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           SyntaxLabAPI.createSession(comparisonResult),
           updatedWordsFixed
         );
+        sessionUpdateData.fillInBlankResult = updatedSessionData.fillInBlankResult;
         
-        console.log('🔄 UPDATING SESSION (Regular):', {
+        console.log('🔄 PREPARING SESSION UPDATE (Regular):', {
           updatedWordsFixed,
           newFillInBlankResult: updatedSessionData.fillInBlankResult?.blanks.map(b => ({
             word: b.word,
             isBlank: b.isBlank
           })) || []
         });
-        
-        setCurrentSession(prevSession => ({
-          ...prevSession!,
-          wordsFixed: updatedWordsFixed,
-          fillInBlankResult: updatedSessionData.fillInBlankResult
-        }));
       } else {
         // Auto practice session - update fillInBlankResult for current round only
         const currentRoundWords = getWordsForCurrentRound();
@@ -691,8 +690,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           currentRoundWords, // Use ORIGINAL round words, not filtered ones
           updatedWordsFixed
         );
+        sessionUpdateData.fillInBlankResult = updatedFillInBlankResult;
         
-        console.log('🔄 UPDATING SESSION (Auto Practice):', {
+        console.log('🔄 PREPARING SESSION UPDATE (Auto Practice):', {
           currentRoundWords,
           updatedWordsFixed,
           newFillInBlankResult: updatedFillInBlankResult.blanks.map(b => ({
@@ -700,12 +700,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
             isBlank: b.isBlank
           }))
         });
-        
-        setCurrentSession(prevSession => ({
-          ...prevSession!,
-          wordsFixed: updatedWordsFixed,
-          fillInBlankResult: updatedFillInBlankResult
-        }));
       }
       
       // Use RoundProgressionAPI to handle round completion logic (only for correct answers)
@@ -756,10 +750,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           [] // No words fixed in new round yet
         );
         
-        setCurrentSession(prevSession => ({
-          ...prevSession!,
+        // FIXED: Update session data for next round instead of separate update
+        sessionUpdateData = {
+          wordsFixed: [], // Reset for new round
           fillInBlankResult: nextRoundFillInBlank
-        }));
+        };
         
         // Stay in practice mode for next round
         setPhase('practice');
@@ -767,6 +762,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         // All rounds complete - call original completion flow
         completeSession();
       }
+      
+      // CONSOLIDATED: Single session update with all correct data
+      setCurrentSession(prevSession => ({
+        ...prevSession!,
+        wordsFixed: sessionUpdateData.wordsFixed,
+        fillInBlankResult: sessionUpdateData.fillInBlankResult
+      }));
     } else {
       // Show floating incorrect emoji
       showFloatingEmoji('❌', false);
