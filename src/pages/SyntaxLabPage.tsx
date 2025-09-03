@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3, Bot, ChevronRight, BarChart, SkipForward } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -50,6 +50,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const [hasCompletedFirstVerse, setHasCompletedFirstVerse] = useState(false);
   const [showTypeAlongResults, setShowTypeAlongResults] = useState(false);
   const [verseStartTime, setVerseStartTime] = useState<Date | null>(null);
+  const submittingRef = useRef(false);
+
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -581,6 +583,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   };
 
   const handleWordSubmit = () => {
+    if (submittingRef.current) return; submittingRef.current = true; setTimeout(() => { submittingRef.current = false; }, 250);
     if (!currentSession || !userInput.trim()) {
       console.log('🚨 handleWordSubmit: Early exit - no session or input');
       return;
@@ -626,8 +629,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
     if (isCorrect) {
       // Store the cleaned version for consistency with progressive fill-in-blank system
-      const newWordsFixed = [...wordsFixed, cleanBlankWord];
-      const updatedWordsFixed = newWordsFixed; // Create consistent reference
+      const newWordsFixed = Array.from(new Set([...wordsFixed, cleanBlankWord]));
+      const updatedWordsFixed = newWordsFixed; // deduped
       
       console.log('🔍 BEFORE UPDATE:', { 
         currentWordsFixed: wordsFixed, 
@@ -710,7 +713,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       const progressionState: RoundProgressionState = {
         currentRound,
         maxRounds: currentSession.maxRounds || 3,
-        wordsFixed: updatedWordsFixed, // Use the updated array
+        wordsFixed: updatedWordsFixed, // FIXED: Use current state instead of stale state
         currentRoundWords: getWordsForCurrentRound(),
         totalWords: allWrongWords
       };
@@ -1348,7 +1351,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                 <div 
                   className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentWordIndex + 1) / currentSession.wrongWords.length) * 100}%` }}
+                  style={{ width: `${getProgressData().global.percentage}%` }}
                 ></div>
               </div>
             </div>
@@ -1477,7 +1480,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                         type="text"
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleWordSubmit()}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleWordSubmit(); } }}
                         placeholder="Type the missing word..."
                         className="w-full p-4 text-xl text-center border-3 border-emerald-300 rounded-2xl focus:ring-4 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-gradient-to-r from-emerald-50 to-teal-50 font-medium shadow-lg"
                         autoFocus
@@ -1485,8 +1488,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                     </div>
 
                     {/* Enhanced submit button */}
-                    <button
-                      onClick={handleWordSubmit}
+                    <button type="button" onClick={handleWordSubmit}
                       disabled={!userInput.trim()}
                       className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
                     >

@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+---
+## 🔹 Standard Commit Flow
+
+Every time a feature or file is added/updated: {IMPORTANT RIGHT AFTER ADDING COMMIT, DO NOT PUSH, UNTIL I VERIFY THAT IT IS WORKING, I WILL 
+LET YOU KNOW IF IT DOES NOT WORK, AND IF IT DOES NOT WORK THEN ILL LET YOU KNOW BY TELLING YOU
+TO PUT IN THE UPDATED COMMIT WITH THE TITLE/DESCRIPTION: DOES NOT WORK. THEN FEEL FREE TO ALWAYS PUSH IT AFTERWARDS}
+
+```bash
+# 1. Sync with remote first
+git checkout main
+git pull origin main
+
+# 2. Stage all changes
+git add .
+
+# 3. Commit with a descriptive message
+git commit -m "BMx.x <FEATURE SUMMARY>"
+
+# 4. Push to remote main
+git push origin main
+
+---
+description:
+globs:
+alwaysApply: true
+---

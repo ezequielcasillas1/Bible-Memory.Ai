@@ -1,82 +1,162 @@
-{ 🧠 What's Likely Happening
-The error newWordsFixed is not defined is crashing the handleWordSubmit() function. Because of that:
+{ 
+🐞 Bug Report – Syntax Lab (BibleMemory.ai)
+Summary
 
-The app fails to validate the current word.
+The Syntax Lab practice mode has three user-visible bugs and one state-sync issue:
 
-It doesn’t increment the word index.
+Word counter skips values, 2) Round counter advances at the wrong time (too early), 3) Fill-in-the-blank repeats the same word input multiple times, 4) Settings/progress UI can fall out of sync.
 
-So it keeps showing the same blank, even though you typed something new.
+Tech stack: React 18 + TypeScript + Vite + Tailwind.
 
-🛠️ Debugging Checklist
-1. Fix the Missing Variable
-In handleWordSubmit() (line 722), define newWordsFixed before using it:
+1) Word Count Skipping
 
-tsx
-const newWordsFixed = sanitizeInput(currentWord); // or however you're processing input
-2. Check Word Progression Logic
-Make sure you're updating the word index after a correct submission:
+Expected: Word count increments strictly by 1: 1/5 → 2/5 → 3/5 → 4/5 → 5/5.
 
-tsx
-if (newWordsFixed === correctWord) {
-  setCurrentWordIndex(prev => prev + 1); // ✅ move to next blank
+Actual: Sometimes it jumps (e.g., 1/5 → 3/5), skipping 2/5.
+
+Impact: Users don’t trust progress; breaks pacing.
+
+Likely causes (for dev):
+
+Double event firing (Enter key + implicit form submit).
+
+Multiple state updates based on stale state (non-functional setState).
+
+Counting the same word twice within one tick.
+
+2) Round Counter Not Syncing (including early shift case)
+
+Expected: Round only advances when word count reaches the max (e.g., at 5/5, go 1/3 → 2/3).
+
+Actual:
+
+Sometimes round does not advance at 5/5.
+
+New note: Round sometimes advances early (e.g., at 3/5 it jumps from 1/3 → 2/3), before reaching 5/5.
+
+Impact: Breaks the core loop; users are moved to the next round prematurely or not at all.
+
+Likely causes (for dev):
+
+Round update logic keyed to >= instead of === the max words.
+
+Using updated state twice in the same render (race) or deriving round from a transient progress bar percentage.
+
+3) Fill-in-the-Blank Repeats Same Word
+
+Expected: Each blank is typed once, then the next blank appears.
+
+Actual: The same blank can reappear or require multiple entries.
+
+Impact: Frustrating; feels like a loop.
+
+Likely causes (for dev):
+
+Cursor/index into blanks not advanced atomically with a correct submission.
+
+Re-render revalidates same token due to stale closure or duplicated validation calls.
+
+4) Settings / State Depiction Out of Sync
+
+Expected: Settings (e.g., total words per round, total rounds) and UI counters/percentages reflect the true session state at all times.
+
+Actual: Visual counters or progress bar can show skipped increments or round mismatches.
+
+Likely causes:
+
+Multiple sources of truth for progress (local vs derived).
+
+Progress bar using time-based animation rather than computed percentage from canonical state.
+
+Reproduction Steps (Example)
+
+Open Syntax Lab with a round configured for 5 blanks and 3 rounds (shows 0/5, 1/3 initially).
+
+Correctly enter the first blank.
+
+Expected: 1/5, still 1/3.
+
+Actual: Sometimes jumps to 2/5 or 3/5.
+
+Continue until 3/5.
+
+Expected: 3/5, still 1/3.
+
+Actual (bug): Round flips to 2/3 early (before 5/5).
+
+Finish all 5.
+
+Expected: On reaching 5/5, round becomes 2/3.
+
+Actual: Sometimes doesn’t advance, or advanced already (early).
+
+Also observe that after correctly entering a blank, the same blank may be prompted again.
+
+Acceptance Criteria (Definition of Done)
+
+Word counter increases exactly by 1 per correct submission. No skips, no double increments.
+
+Round counter:
+
+Advances only when wordCount === maxWordsInRound.
+
+Never advances at 1/5, 2/5, 3/5, or 4/5.
+
+Correctly resets word count and advances round (1/3 → 2/3 → 3/3).
+
+Fill-in-the-blank:
+
+Each blank is required once. After a correct input, move to the next blank automatically.
+
+The same blank must not reappear unless the user was wrong and the product spec says to retry (not the current spec).
+
+Settings depiction/state:
+
+UI counters and progress bars derive from a single source of truth (e.g., wordsFixed, totalWords, roundIndex, totalRounds).
+
+No visual desyncs: the numbers and the bar match computed state 100% of the time.
+
+No UX regressions in styling, theme, animations, or accessibility.
+
+No secret keys added/changed; keep environment variables intact.
+
+Implementation Hints (for the developer)
+
+Use functional state updates in React:
+
+setProgress(prev => ({ ...prev, wordsFixed: prev.wordsFixed + 1 }));
+
+
+Guard against double submissions:
+
+Use onKeyDown for Enter, preventDefault().
+
+Ensure action button is type="button" to avoid implicit form submit.
+
+Use a submittingRef to ignore rapid repeat triggers during one tick.
+
+Single source of truth: derive UI from canonical progress:
+
+const percent = (progress.wordsFixed / progress.totalWords) * 100;
+
+
+Advance round only on exact match:
+
+if (progress.wordsFixed + 1 === progress.totalWords) {
+  // advance round, reset wordsFixed to 0
 }
-3. Verify State Updates
-Ensure your state (e.g. currentWordIndex, userInput, wordList) is updating correctly and triggering a re-render:
 
-tsx
-useEffect(() => {
-  setUserInput(""); // clear input for next word
-}, [currentWordIndex]);
-4. Check onKeyPress Handler
-At line 1462, onKeyPress should call handleWordSubmit() only when Enter is pressed:
 
-tsx
-if (e.key === "Enter") {
-  handleWordSubmit();
+Ensure the blank index increments atomically with a successful check. Never validate the same token twice in one cycle.
+
+Deliverables
+
+Fixed components/hooks (minimal, surgical diffs).
+
+Short CHANGES.md explaining root cause & fixes.
+
+Local verification: npm run dev, then npm run build && npm run preview passes.    
 }
-✅ What Success Looks Like
-Once fixed:
-
-You type a word.
-
-The app checks it.
-
-If correct, it moves to the next blank.
-
-Input resets and progress updates (e.g., “Word 4/5” becomes “Word 5/5”).
-
-BASED ON THIS BUG INFORMATION: SyntaxLabPage.tsx:722  Uncaught ReferenceError: newWordsFixed is not defined
-    at handleWordSubmit (SyntaxLabPage.tsx:722:28)
-    at onKeyPress (SyntaxLabPage.tsx:1462:65)
-    at HTMLUnknownElement.callCallback2 (react-dom_client.js?v=aa816bea:3674:22)
-    at Object.invokeGuardedCallbackDev (react-dom_client.js?v=aa816bea:3699:24)
-    at invokeGuardedCallback (react-dom_client.js?v=aa816bea:3733:39)
-    at invokeGuardedCallbackAndCatchFirstError (react-dom_client.js?v=aa816bea:3736:33)
-    at executeDispatch (react-dom_client.js?v=aa816bea:7014:11)
-    at processDispatchQueueItemsInOrder (react-dom_client.js?v=aa816bea:7034:15)
-    at processDispatchQueue (react-dom_client.js?v=aa816bea:7043:13)
-    at dispatchEventsForPlugins (react-dom_client.js?v=aa816bea:7051:11)
-handleWordSubmit @ SyntaxLabPage.tsx:722
-onKeyPress @ SyntaxLabPage.tsx:1462
-callCallback2 @ react-dom_client.js?v=aa816bea:3674
-invokeGuardedCallbackDev @ react-dom_client.js?v=aa816bea:3699
-invokeGuardedCallback @ react-dom_client.js?v=aa816bea:3733
-invokeGuardedCallbackAndCatchFirstError @ react-dom_client.js?v=aa816bea:3736
-executeDispatch @ react-dom_client.js?v=aa816bea:7014
-processDispatchQueueItemsInOrder @ react-dom_client.js?v=aa816bea:7034
-processDispatchQueue @ react-dom_client.js?v=aa816bea:7043
-dispatchEventsForPlugins @ react-dom_client.js?v=aa816bea:7051
-(anonymous) @ react-dom_client.js?v=aa816bea:7174
-batchedUpdates$1 @ react-dom_client.js?v=aa816bea:18913
-batchedUpdates @ react-dom_client.js?v=aa816bea:3579
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=aa816bea:7173
-dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom_client.js?v=aa816bea:5478
-dispatchEvent @ react-dom_client.js?v=aa816bea:5472
-dispatchDiscreteEvent @ react-dom_client.js?v=aa816bea:5449
-react-dom_client.js?v=aa816bea:3750  Uncaught ReferenceError: newWordsFixed is not defined
-    at handleWordSubmit (SyntaxLabPage.tsx:722:28)
-    at onKeyPress (SyntaxLabPage.tsx:1462:65)
-}}
 
 ---
 

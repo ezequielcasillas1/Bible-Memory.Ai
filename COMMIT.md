@@ -3,6 +3,10 @@
 This document defines **best practices** for Cursor (or any AI agent) when working in this repo.  
 The goal is to ensure **every code change is properly staged, committed, and pushed to `main`**.
 
+{IMPORTANT RIGHT AFTER ADDING COMMIT, DO NOT PUSH, UNTIL I VERIFY THAT IT IS WORKING, I WILL 
+LET YOU KNOW IF IT DOES NOT WORK, AND IF IT DOES NOT WORK THEN ILL LET YOU KNOW BY TELLING YOU
+TO PUT IN THE UPDATED COMMIT WITH THE TITLE/DESCRIPTION: DOES NOT WORK. THEN FEEL FREE TO ALWAYS PUSH IT AFTERWARDS}
+
 ---
 
 ## 🔹 Golden Rules
@@ -51,3 +55,4 @@ git commit -m "BMx.x <FEATURE SUMMARY>"
 
 # 4. Push to remote main
 git push origin main
+
