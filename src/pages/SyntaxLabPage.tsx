@@ -529,6 +529,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       setCurrentVerseIndex(prev => prev + 1);
       setUserInput('');
       setVerseStartTime(new Date());
+      
+      // CRITICAL FIX: Create new session for the next verse
+      const nextVerseIndex = currentVerseIndex + 1;
+      const nextVerse = typeAlongVerses[nextVerseIndex];
+      if (nextVerse) {
+        createTypeAlongSession(nextVerse);
+      }
     }
   };
 
