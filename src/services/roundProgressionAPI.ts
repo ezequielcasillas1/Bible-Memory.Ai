@@ -23,6 +23,7 @@ export interface RoundProgressionResult {
       completed: number;
       total: number;
       percentage: number;
+      currentWordInRound: number; // NEW: Current word position within the round (1-based)
     };
     globalProgress: {
       completed: number;
@@ -134,6 +135,9 @@ export class RoundProgressionAPI {
       };
     }
 
+    // Calculate current word position within the current round (1-based)
+    const currentWordInRound = Math.min(roundCompleted + 1, roundTotal);
+
     return {
       shouldAdvanceRound,
       shouldCompleteSession,
@@ -144,7 +148,8 @@ export class RoundProgressionAPI {
         roundProgress: {
           completed: roundCompleted,
           total: roundTotal,
-          percentage: roundPercentage
+          percentage: roundPercentage,
+          currentWordInRound: currentWordInRound // NEW: Cycling word position (1-based)
         },
         globalProgress: {
           completed: globalCompleted,
@@ -197,5 +202,6 @@ export class RoundProgressionAPI {
     };
   }
 }
+
 
 

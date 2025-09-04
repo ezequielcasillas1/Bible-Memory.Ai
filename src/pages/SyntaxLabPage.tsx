@@ -567,7 +567,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       global: {
         completed: dummyResult.progressData.globalProgress.completed,
         total: dummyResult.progressData.globalProgress.total,
-        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total),
+        currentWord: dummyResult.progressData.roundProgress.currentWordInRound, // NEW: Use cycling word position
         percentage: dummyResult.progressData.globalProgress.percentage
       },
       round: {
@@ -1279,7 +1279,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
-                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().global.total}
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().round.total}
                 </div>
                 {/* Enhanced Test Button for Word Submission Debug */}
                 <button
