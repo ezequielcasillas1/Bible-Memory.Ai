@@ -407,6 +407,76 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     setHasCompletedFirstVerse(false);
     setShowTypeAlongResults(false);
     setVerseStartTime(new Date());
+
+    // CRITICAL FIX: Create currentSession for type-along mode
+    // Use the first verse (John 3:16) to initialize the session
+    const firstVerse = typeAlongVersesList[0];
+    createTypeAlongSession(firstVerse);
+  };
+
+  // NEW: Create a proper session for type-along mode
+  const createTypeAlongSession = (verse: Verse) => {
+    // Convert all verse words to WordComparison format for type-along
+    const verseWords = verse.text.split(' ');
+    const wrongWords: WordComparison[] = verseWords.map((word, index) => ({
+      userWord: '', // User hasn't typed anything yet
+      originalWord: word,
+      status: 'incorrect' as const, // All words start as incorrect in type-along mode
+      position: index,
+      suggestion: word // The word they should type
+    }));
+
+    // Create mock comparison result for type-along
+    const mockComparison: ComparisonResult = {
+      accuracy: 0, // Start at 0% for type-along
+      totalWords: verseWords.length,
+      correctWords: 0,
+      incorrectWords: verseWords.length, // All words are "incorrect" initially
+      missingWords: 0,
+      extraWords: 0,
+      userComparison: wrongWords,
+      originalComparison: wrongWords,
+      detailedFeedback: `Type-along practice for ${verse.reference}`
+    };
+
+    // Create the session using existing logic but adapted for type-along
+    const session: SyntaxLabSession = {
+      id: `type-along-${Date.now()}`,
+      verseId: verse.id,
+      verse: verse,
+      originalComparison: mockComparison,
+      wrongWords: wrongWords, // All words are practice targets
+      practiceMode: 'type-along',
+      currentRound: 1,
+      maxRounds: 3, // Default to 3 rounds
+      wordsFixed: [],
+      startTime: new Date(),
+      finalAccuracy: 0,
+      improvementScore: 0
+    };
+
+    // Initialize fill-in-blank for type-along (progressive mode)
+    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+      verse.text,
+      wrongWords.map(ww => ww.originalWord),
+      [] // No words completed yet
+    );
+
+    const finalSession = {
+      ...session,
+      fillInBlankResult: fillInBlankResult
+    };
+
+    // Reset state for fresh session
+    setCurrentRound(1);
+    setWordsFixed([]);
+    setCurrentWordIndex(0);
+    setUserInput('');
+    setShowHint(false);
+    setShowAnswer(false);
+    
+    setCurrentSession(finalSession);
+    setPhase('practice');
   };
 
   const getCurrentTypeAlongVerse = (): Verse | null => {
@@ -567,7 +637,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       global: {
         completed: dummyResult.progressData.globalProgress.completed,
         total: dummyResult.progressData.globalProgress.total,
-        currentWord: dummyResult.progressData.roundProgress.currentWordInRound, // NEW: Use cycling word position
+        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total), // FIXED: Use global word position (1-26), capped at total
         percentage: dummyResult.progressData.globalProgress.percentage
       },
       round: {
@@ -1279,7 +1349,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
-                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().round.total}
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().global.total}
                 </div>
                 {/* Enhanced Test Button for Word Submission Debug */}
                 <button

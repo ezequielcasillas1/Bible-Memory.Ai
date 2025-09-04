@@ -1,4 +1,4 @@
-{IMPLEMENT FEATURE IN SETTINGS THAT ALLOWS THE USER TO SET HOW MANY WORDS THEY WANT TO PRACTICE IN AUTO GENERATION FEATURE, MAKE PROPER STATE MANAGMENT ACCESS, AND RANGE CAN BE FROM SHORT OR LONG (SHORT BEING THAT DEPENDING ON THE VERSE, IT WILL EITHER GENERATE LESS' OR MORE' FILL IN THE BLANK FORMS'____')}
+{in type along mode make an api that calculates the word count to the verse count, meaning however long a verse is needs to match the word count, For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life. so the word count should match the total max words for that. reflecting properly in the UI.}
 
 ---
 
