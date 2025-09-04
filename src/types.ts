@@ -111,6 +111,8 @@ export interface MemorizationHistory {
   totalTime: number;
   lastPracticed: Date;
   status: 'learning' | 'reviewing' | 'mastered';
+  userInput?: string; // The actual text the user typed
+  comparisonResult?: ComparisonResult; // Detailed word-by-word comparison
 }
 
 export interface ImprovementPlan {

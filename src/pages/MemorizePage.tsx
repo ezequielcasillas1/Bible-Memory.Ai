@@ -158,9 +158,14 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         };
         setSession(updatedSessionWithAccuracy);
         
-        // Save to Supabase history
-        HistoryService.saveMemorizationResult(updatedSessionWithAccuracy, comparison.accuracy, practiceTime)
-          .catch(error => console.error('Failed to save to history:', error));
+        // Save to Supabase history with user input and comparison result
+        HistoryService.saveMemorizationResult(
+          updatedSessionWithAccuracy, 
+          comparison.accuracy, 
+          practiceTime,
+          userInput.trim(), // User's actual typed text
+          comparison // Detailed comparison result
+        ).catch(error => console.error('Failed to save to history:', error));
         
         // Award points based on actual accuracy
         const points = Math.round(comparison.accuracy * 1.5);
@@ -196,8 +201,13 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
           accuracy,
           completed: accuracy >= 70
         };
-        HistoryService.saveMemorizationResult(fallbackSession, accuracy, practiceTime)
-          .catch(error => console.error('Failed to save fallback to history:', error));
+        HistoryService.saveMemorizationResult(
+          fallbackSession, 
+          accuracy, 
+          practiceTime,
+          userInput.trim(), // User's actual typed text even in fallback
+          null // No detailed comparison in fallback
+        ).catch(error => console.error('Failed to save fallback to history:', error));
         
         setResult({ 
           accuracy, 

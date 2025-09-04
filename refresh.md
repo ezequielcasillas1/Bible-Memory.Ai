@@ -1,5 +1,5 @@
 { 
-  look at the reference image, at the top right do you see where it says word count 1/2? it doesnt match the verse which should be 25 words, fix that and make the WORD COUNT 1/5 TO 5/5 = NEXT ROUND TO 2/3 AFTER WORD COUNT AND VICE VERSA be state management efficient
+
 }
 
 ---

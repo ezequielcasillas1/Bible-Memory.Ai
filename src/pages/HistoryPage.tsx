@@ -16,6 +16,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
   const [improvementPlans, setImprovementPlans] = useState<ImprovementPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<MemorizationHistory | null>(null);
   const [newPlan, setNewPlan] = useState({
     title: '',
     description: '',
@@ -398,31 +399,44 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
         {history.length > 0 ? (
           <div className="space-y-3">
             {history.slice(0, 10).map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                    {item.status}
-                  </span>
-                  <div>
-                    <p className="font-medium text-gray-800">{item.verse.reference}</p>
-                    <p className="text-sm text-gray-600">
-                      {item.attempts} attempt{item.attempts !== 1 ? 's' : ''} • Best: {item.bestAccuracy}% • Avg: {Math.round(item.averageAccuracy)}%
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Practice time: {Math.floor(item.totalTime / 60)}m {item.totalTime % 60}s
-                    </p>
+              <div key={item.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-purple-200">
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setSelectedHistoryItem(item)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                      {item.status}
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-800">{item.verse.reference}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.attempts} attempt{item.attempts !== 1 ? 's' : ''} • Best: {item.bestAccuracy}% • Avg: {Math.round(item.averageAccuracy)}%
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Practice time: {Math.floor(item.totalTime / 60)}m {item.totalTime % 60}s
+                      </p>
+                      {item.userInput && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          📝 Click to view your memorization attempt
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    {new Date(item.lastPracticed).toLocaleDateString()}
-                  </p>
-                  <button
-                    onClick={() => onMemorizeVerse(item.verse)}
-                    className="text-xs text-purple-600 hover:text-purple-800 mt-1 block"
-                  >
-                    Practice Again
-                  </button>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">
+                      {new Date(item.lastPracticed).toLocaleDateString()}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMemorizeVerse(item.verse);
+                      }}
+                      className="text-xs text-purple-600 hover:text-purple-800 mt-1 block"
+                    >
+                      Practice Again
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -536,6 +550,131 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
               >
                 Create Plan
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed History View Modal */}
+      {selectedHistoryItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Memorization Result</h3>
+                  <p className="text-gray-600 mt-1">{selectedHistoryItem.verse.reference}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedHistoryItem(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Stats Overview */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600">{selectedHistoryItem.bestAccuracy}%</div>
+                  <div className="text-sm text-purple-700">Best Accuracy</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{selectedHistoryItem.attempts}</div>
+                  <div className="text-sm text-blue-700">Attempts</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{Math.round(selectedHistoryItem.averageAccuracy)}%</div>
+                  <div className="text-sm text-green-700">Average</div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">{Math.floor(selectedHistoryItem.totalTime / 60)}m</div>
+                  <div className="text-sm text-orange-700">Total Time</div>
+                </div>
+              </div>
+
+              {/* Original Verse */}
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-2">📖 Original Verse</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-700 leading-relaxed italic">
+                    "{selectedHistoryItem.verse.text}"
+                  </p>
+                </div>
+              </div>
+
+              {/* User's Input */}
+              {selectedHistoryItem.userInput && (
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-2">✍️ Your Input</h4>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-gray-700 leading-relaxed">
+                      "{selectedHistoryItem.userInput}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Comparison */}
+              {selectedHistoryItem.comparisonResult && (
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-2">🔍 Detailed Analysis</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-green-600">
+                          {selectedHistoryItem.comparisonResult.correctWords || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Correct Words</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-red-600">
+                          {selectedHistoryItem.comparisonResult.incorrectWords || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Incorrect Words</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-yellow-600">
+                          {selectedHistoryItem.comparisonResult.missingWords || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Missing Words</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-blue-600">
+                          {selectedHistoryItem.comparisonResult.extraWords || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Extra Words</div>
+                      </div>
+                    </div>
+                    
+                    {selectedHistoryItem.comparisonResult.detailedFeedback && (
+                      <div className="mt-4 p-3 bg-white rounded border-l-4 border-purple-500">
+                        <p className="text-sm text-gray-700">
+                          {selectedHistoryItem.comparisonResult.detailedFeedback}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-between pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  Last practiced: {new Date(selectedHistoryItem.lastPracticed).toLocaleDateString()} at {new Date(selectedHistoryItem.lastPracticed).toLocaleTimeString()}
+                </div>
+                <button
+                  onClick={() => {
+                    onMemorizeVerse(selectedHistoryItem.verse);
+                    setSelectedHistoryItem(null);
+                  }}
+                  className="button-primary"
+                >
+                  Practice This Verse Again
+                </button>
+              </div>
             </div>
           </div>
         </div>
