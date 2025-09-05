@@ -1,5 +1,5 @@
 { 
-UI translation language needs to take effect on all parts of the ui, on the memorization results it does not show, it just shows english, the syntax lab menu also shows english, it also is taking effect everywhere else in the web app, make sure every page shows the transalation
+There is a blank screen I am looking at via the local host, its a white blank screen
 }
 
 ---

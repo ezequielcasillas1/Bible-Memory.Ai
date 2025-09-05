@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Verse } from '../types';
 import { TranslationService, TranslationResult } from '../services/translationService';
 
-interface TranslatedVerse extends Verse {
+export interface TranslatedVerse extends Verse {
   translatedText?: string;
   isTranslated?: boolean;
   translationLanguage?: string;

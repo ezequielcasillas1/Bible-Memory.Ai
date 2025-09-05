@@ -8,6 +8,7 @@ import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
 import VerseCard from '../components/VerseCard';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface GeneratorPageProps {
   onMemorizeVerse: (verse: Verse) => void;
@@ -16,6 +17,7 @@ interface GeneratorPageProps {
 }
 
 const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings, availableBibleVersions }) => {
+  const { t } = useLanguage();
   const [verseType, setVerseType] = useState<VerseType>('commission');
   const [showTranslationModal, setShowTranslationModal] = useState(false);
   const [selectedVerseForTranslation, setSelectedVerseForTranslation] = useState<Verse | null>(null);

@@ -6,6 +6,7 @@ import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
 import { TranslationService, SUPPORTED_LANGUAGES, TranslationResult } from '../services/translationService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SearchPageProps {
   settings: AppSettings;
@@ -15,6 +16,7 @@ interface SearchPageProps {
 }
 
 const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions, onSettingsChange }) => {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   // Auto-translate search results
