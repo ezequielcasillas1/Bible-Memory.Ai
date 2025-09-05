@@ -47,24 +47,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
     
     setIsSearching(true);
     try {
-      console.log('🔍 SEARCH DEBUG - Starting search:', {
-        query: searchQuery,
-        version: settings.preferredVersion,
-        availableVersions: availableBibleVersions.map(v => ({ id: v.id, name: v.name, available: v.available }))
-      });
-      
       const results = await BibleSearchService.searchVerses(searchQuery, settings.preferredVersion, availableBibleVersions);
-      
-      console.log('🔍 SEARCH DEBUG - Raw API results:', {
-        resultCount: results.length,
-        results: results.map(r => ({
-          id: r.id,
-          reference: r.reference,
-          textLength: r.text?.length || 0,
-          textPreview: r.text?.substring(0, 100) + '...',
-          version: r.version
-        }))
-      });
       
       setSearchResults(results);
     } catch (error) {
@@ -423,35 +406,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       <span>
                         {isTranslating ? 'Translating...' : translation ? 'Clear' : 'Translate'}
                       </span>
-                    </button>
-                    
-                    {/* Debug Button - Remove after investigation */}
-                    <button
-                      onClick={() => {
-                        console.log('🐛 VERSE DEBUG INFO:', {
-                          verseId: verse.id,
-                          reference: verse.reference,
-                          textLength: verse.text?.length || 0,
-                          fullText: verse.text,
-                          textPreview: verse.text?.substring(0, 100) + '...',
-                          version: verse.version,
-                          testament: verse.testament,
-                          rawVerseObject: verse
-                        });
-                        
-                        // Also show in alert for immediate visibility
-                        alert(`🐛 DEBUG INFO for ${verse.reference}:\n\n` +
-                              `Text Length: ${verse.text?.length || 0} characters\n` +
-                              `Version: ${verse.version}\n` +
-                              `Testament: ${verse.testament}\n\n` +
-                              `First 200 chars:\n"${verse.text?.substring(0, 200)}..."\n\n` +
-                              `Check console for full details.`);
-                      }}
-                      className="flex items-center space-x-2 px-3 py-2 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors border border-red-300"
-                      title="Debug verse data - shows text length and content"
-                    >
-                      <span>🐛</span>
-                      <span>Debug</span>
                     </button>
                     
                     <button
