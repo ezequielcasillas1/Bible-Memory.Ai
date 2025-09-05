@@ -1,5 +1,5 @@
 { 
-✅ RESOLVED: psalms 23 now displays the complete verse in the search page
+the bible langauge translations are not taking effect look at the images, you will see what I am talking about, they are still english.
 }
 
 ---

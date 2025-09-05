@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3, Bot, ChevronRight, BarChart, SkipForward } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
+import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
@@ -21,6 +22,9 @@ type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'score
 
 const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selectedVerse, onBack, onStartNewSession, settings }) => {
   const { t } = useLanguage();
+  // Use auto-translated verse for display
+  const displayVerse = useAutoTranslatedVerse(selectedVerse);
+  
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
   const [currentSession, setCurrentSession] = useState<SyntaxLabSession | null>(null);
@@ -1449,7 +1453,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
                     <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                      {currentSession.verse.text.split(' ').map((word, index) => {
+                      {(() => {
+                        const sessionVerse = currentSession.verse;
+                        const translatedVerse = useAutoTranslatedVerse(sessionVerse);
+                        const displayText = translatedVerse?.text || sessionVerse.text;
+                        return displayText.split(' ').map((word, index) => {
                         // Use progressive fill-in-blank logic if available
                         const fillInBlankResult = currentSession.fillInBlankResult;
                         const blankWord = fillInBlankResult?.blanks?.[index];
@@ -1490,7 +1498,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                             {word}
                           </span>
                         );
-                      })}
+                        });
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1737,10 +1746,23 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                             <p className="text-sm text-gray-600">Type the complete verse below. Watch the real-time feedback!</p>
                           </div>
                           
-                          <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-xl p-6 border border-gray-200 mb-6">
-                            <p className="text-lg leading-relaxed text-center font-medium text-gray-700">
-                              {getCurrentTypeAlongVerse()!.text}
+                          <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-xl p-6 border border-gray-200 mb-6 overflow-visible">
+                            <p className="text-lg leading-relaxed text-center font-medium text-gray-700 whitespace-normal break-words min-h-fit">
+                              {(() => {
+                                const currentVerse = getCurrentTypeAlongVerse();
+                                const translatedVerse = useAutoTranslatedVerse(currentVerse);
+                                return translatedVerse?.text || currentVerse?.text;
+                              })()}
                             </p>
+                            {(() => {
+                              const currentVerse = getCurrentTypeAlongVerse();
+                              const translatedVerse = useAutoTranslatedVerse(currentVerse);
+                              return translatedVerse?.isTranslated && (
+                                <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-2 text-center">
+                                  🌍 Auto-translated to {translatedVerse.translationLanguage?.toUpperCase()}
+                                </div>
+                              );
+                            })()}
                           </div>
                           
                           {/* Full Verse Input */}

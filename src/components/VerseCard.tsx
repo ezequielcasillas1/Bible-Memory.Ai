@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 import { Verse } from '../types';
+import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 
 interface VerseCardProps {
   verse: Verse;
@@ -9,6 +10,9 @@ interface VerseCardProps {
 }
 
 const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize, onTranslate }) => {
+  // Use auto-translated verse if available, otherwise use original verse
+  const displayVerse = useAutoTranslatedVerse(verse) || verse;
+  
   return (
     <div className="verse-card bg-white rounded-2xl p-4 sm:p-6 shadow-xl border border-purple-200">
       <div className="flex items-center justify-between mb-4">
@@ -26,8 +30,13 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize, onTranslate })
       
       <div className="mb-6">
         <p className="text-base sm:text-lg leading-relaxed text-gray-700 mb-4 italic">
-          "{verse.text}"
+          "{displayVerse.text}"
         </p>
+        {displayVerse.isTranslated && (
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">
+            🌍 Auto-translated to {displayVerse.translationLanguage?.toUpperCase()}
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-purple-600 font-medium text-sm sm:text-base">
             {verse.reference}
@@ -38,24 +47,24 @@ const VerseCard: React.FC<VerseCardProps> = ({ verse, onMemorize, onTranslate })
             </span>
           )}
         </div>
-        {verse.reason && (
+        {displayVerse.reason && (
           <p className="text-xs sm:text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-lg">
-            💡 {verse.reason}
+            💡 {displayVerse.reason}
           </p>
         )}
-        {verse.context && (
+        {displayVerse.context && (
           <p className="text-xs sm:text-sm text-gray-600 mt-3 p-3 bg-blue-50 rounded-lg">
-            📚 <strong>Context:</strong> {verse.context}
+            📚 <strong>Context:</strong> {displayVerse.context}
           </p>
         )}
-        {verse.application && (
+        {displayVerse.application && (
           <p className="text-xs sm:text-sm text-gray-600 mt-3 p-3 bg-green-50 rounded-lg">
-            🌱 <strong>Application:</strong> {verse.application}
+            🌱 <strong>Application:</strong> {displayVerse.application}
           </p>
         )}
-        {verse.memoryTips && (
+        {displayVerse.memoryTips && (
           <p className="text-xs sm:text-sm text-gray-600 mt-3 p-3 bg-purple-50 rounded-lg">
-            🧠 <strong>Memory Tips:</strong> {verse.memoryTips}
+            🧠 <strong>Memory Tips:</strong> {displayVerse.memoryTips}
           </p>
         )}
       </div>

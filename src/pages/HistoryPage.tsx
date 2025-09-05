@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { History, TrendingUp, Target, Clock, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
 import { MemorizationHistory, ImprovementPlan, AppSettings, UserStats } from '../types';
+import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { HistoryService } from '../services/historyService';
 import { BibleVersion } from '../services/BibleAPI';
 

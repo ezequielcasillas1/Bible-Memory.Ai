@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, BookOpen, Trash2, Tag, Calendar, Filter } from 'lucide-react';
 import { FavoriteVerse, SearchResult, AppSettings } from '../types';
+import { useAutoTranslatedVerses } from '../hooks/useAutoTranslatedVerse';
 import { BibleVersion } from '../services/BibleAPI';
 
 interface FavoritesPageProps {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain, Target } from 'lucide-react';
 import { Verse, MemorizationSession, Tab } from '../types';
+import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { AIService } from '../services/aiService';
 import { HistoryService } from '../services/historyService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
@@ -31,6 +32,9 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
   onComparisonComplete,
   setActiveTab
 }) => {
+  // Use auto-translated verse for display
+  const displayVerse = useAutoTranslatedVerse(selectedVerse);
+  
   const [phase, setPhase] = useState<MemorizationPhase>('study');
   const [timeLeft, setTimeLeft] = useState(studyTime);
   const [isActive, setIsActive] = useState(false);
@@ -321,10 +325,15 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
             {/* Verse Display */}
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 sm:p-6 mb-6">
               <p className="text-base sm:text-lg leading-relaxed text-gray-700 mb-4 italic text-center">
-                "{selectedVerse.text}"
+                "{displayVerse?.text || selectedVerse?.text}"
               </p>
+              {displayVerse?.isTranslated && (
+                <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mb-2 text-center">
+                  🌍 Auto-translated to {displayVerse.translationLanguage?.toUpperCase()}
+                </div>
+              )}
               <p className="text-sm sm:text-base text-purple-600 font-medium text-center">
-                {selectedVerse.reference}
+                {selectedVerse?.reference}
               </p>
             </div>
 

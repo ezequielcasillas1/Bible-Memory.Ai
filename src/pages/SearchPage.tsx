@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, BookOpen, Plus, Edit3, Tag, Clock, Heart, Globe, Loader2, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { SearchResult, VerseNote, AppSettings } from '../types';
+import { useAutoTranslatedVerses } from '../hooks/useAutoTranslatedVerse';
 import { BibleSearchService } from '../services/bibleSearchService';
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
@@ -16,6 +17,8 @@ interface SearchPageProps {
 const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions, onSettingsChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  // Auto-translate search results
+  const autoTranslatedResults = useAutoTranslatedVerses(searchResults);
   const [isSearching, setIsSearching] = useState(false);
   const [notes, setNotes] = useState<VerseNote[]>([]);
   const [selectedVerse, setSelectedVerse] = useState<SearchResult | null>(null);
@@ -279,11 +282,12 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
           <h3 className="text-xl font-bold text-gray-800">Search Results ({searchResults.length})</h3>
           
           <div className="grid gap-4">
-            {searchResults.map((verse) => {
-              const note = getVerseNote(verse.id);
-             const translationKey = `${verse.id}-${settings.preferredTranslationLanguage}`;
+            {autoTranslatedResults.map((verse, index) => {
+              const originalVerse = searchResults[index];
+              const note = getVerseNote(originalVerse.id);
+              const translationKey = `${originalVerse.id}-${settings.preferredTranslationLanguage}`;
               const translation = translations[translationKey];
-              const isTranslating = translatingVerses.has(verse.id);
+              const isTranslating = translatingVerses.has(originalVerse.id);
               
               return (
                 <div key={verse.id} className="bg-white rounded-xl p-6 shadow-lg border border-purple-200 hover:shadow-xl transition-shadow">
@@ -303,6 +307,11 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
                       <p className="text-gray-700 leading-relaxed italic mb-3">
                         "{verse.text}"
                       </p>
+                      {verse.isTranslated && (
+                        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">
+                          🌍 Auto-translated to {verse.translationLanguage?.toUpperCase()}
+                        </div>
+                      )}
                       
                       {note && (
                         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">

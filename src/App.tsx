@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { AutoTranslationProvider } from './contexts/AutoTranslationContext';
 import { Tab, Verse, UserStats, AppSettings } from './types';
 import { getBibleVersions, BibleVersion } from './services/BibleAPI';
 import Header from './components/Header';
@@ -196,7 +197,11 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-bottom">
+    <AutoTranslationProvider
+      preferredTranslationLanguage={settings.preferredTranslationLanguage}
+      preferredVersion={settings.preferredVersion}
+    >
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-bottom">
       <Header 
         totalPoints={userStats.totalPoints} 
         onSettingsClick={() => setShowSettings(true)}
@@ -303,7 +308,8 @@ const AppContent: React.FC = () => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
-    </div>
+      </div>
+    </AutoTranslationProvider>
   );
 };
 
