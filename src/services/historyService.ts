@@ -65,7 +65,9 @@ export class HistoryService {
             average_accuracy: newAverageAccuracy,
             total_time: existing.total_time + practiceTime,
             last_practiced: new Date().toISOString(),
-            status: newStatus
+            status: newStatus,
+            user_input: userInput,
+            comparison_result: comparisonResult
           })
           .eq('id', existing.id);
 

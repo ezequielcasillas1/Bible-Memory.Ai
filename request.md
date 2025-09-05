@@ -1,4 +1,4 @@
-{User should see the result in history clickable/seeable; that should have the the results that was pulled from the memorization field to be seen in the history lists }
+{do the request  }
 
 ---
 
