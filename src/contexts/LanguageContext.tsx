@@ -355,14 +355,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     // Load saved language from localStorage
     const savedLanguage = localStorage.getItem('uiLanguage');
-    if (savedLanguage && translations[savedLanguage]) {
+    if (savedLanguage && UI_LANGUAGES.find(lang => lang.code === savedLanguage)) {
       setCurrentLanguage(savedLanguage);
     } else {
       // Also check settings localStorage for backward compatibility
       const savedSettings = localStorage.getItem('bibleMemorySettings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.uiLanguage && translations[parsedSettings.uiLanguage]) {
+        if (parsedSettings.uiLanguage && UI_LANGUAGES.find(lang => lang.code === parsedSettings.uiLanguage)) {
           setCurrentLanguage(parsedSettings.uiLanguage);
         }
       }
@@ -415,7 +415,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentLanguage]);
 
   const setLanguage = (languageCode: string) => {
-    if (translations[languageCode] || UI_LANGUAGES.find(lang => lang.code === languageCode)) {
+    if (UI_LANGUAGES.find(lang => lang.code === languageCode)) {
       setCurrentLanguage(languageCode);
       localStorage.setItem('uiLanguage', languageCode);
       

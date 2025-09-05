@@ -1,5 +1,5 @@
 { 
-There is a blank screen I am looking at via the local host, its a white blank screen
+LOTS OF Bugs, first off look at the images, the UI screens should be translated to the selected UI Language which is spanish at this current moment and vice versa; every other supported language should show. and in search mode the bible verse should universally show it in the verse via the search meaning that; and its not its showing plain english.
 }
 
 ---
