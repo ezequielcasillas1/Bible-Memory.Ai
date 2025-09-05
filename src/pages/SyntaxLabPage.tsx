@@ -324,10 +324,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
     const round1Words = selectedWords.slice(0, round1WordCount);
     
-    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+    // For round-based cycling, use regular fill-in-blanks with round 1 words only
+    const fillInBlankResult = FillInBlankService.calculateFillInBlanks(
       randomVerse.text,
-      round1Words,
-      [] // No words fixed yet
+      round1Words // Use round 1 words for initial display
     );
     
     // Update session with proper fill-in-blank data
@@ -763,10 +763,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       } else {
         // Auto practice session - update fillInBlankResult for current round only
         const currentRoundWords = getWordsForCurrentRound();
-        const updatedFillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+        const updatedFillInBlankResult = FillInBlankService.calculateFillInBlanks(
           currentSession?.verse.text || '', 
-          currentRoundWords, // Use ORIGINAL round words, not filtered ones
-          updatedWordsFixed
+          currentRoundWords // Use current round words for blanks
         );
         sessionUpdateData.fillInBlankResult = updatedFillInBlankResult;
         
@@ -822,10 +821,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         setShowAnswer(false);
         
         // Generate fill-in-blank for next round using API-provided words
-        const nextRoundFillInBlank = FillInBlankService.calculateProgressiveFillInBlanks(
+        const nextRoundFillInBlank = FillInBlankService.calculateFillInBlanks(
           currentSession.verse.text,
-          progressionResult.nextRoundState.currentRoundWords,
-          [] // No words fixed in new round yet
+          progressionResult.nextRoundState.currentRoundWords
         );
         
         // FIXED: Update session data for next round instead of separate update
