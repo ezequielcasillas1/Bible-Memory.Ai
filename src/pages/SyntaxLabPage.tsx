@@ -56,6 +56,15 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   const [verseStartTime, setVerseStartTime] = useState<Date | null>(null);
   const submittingRef = useRef(false);
 
+  // Auto-translate session verse
+  const sessionVerse = currentSession?.verse || null;
+  const translatedSessionVerse = useAutoTranslatedVerse(sessionVerse);
+
+  // Auto-translate current type-along verse
+  const currentTypeAlongVerse = typeAlongVerses.length > 0 && currentVerseIndex < typeAlongVerses.length 
+    ? typeAlongVerses[currentVerseIndex] 
+    : null;
+  const translatedTypeAlongVerse = useAutoTranslatedVerse(currentTypeAlongVerse);
 
   // Load stats and weak words from localStorage
   useEffect(() => {
@@ -1454,9 +1463,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">
                     <div className="text-xl leading-relaxed text-center font-medium break-words overflow-wrap-anywhere max-w-full hyphens-auto" style={{ hyphens: 'auto', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                       {(() => {
-                        const sessionVerse = currentSession.verse;
-                        const translatedVerse = useAutoTranslatedVerse(sessionVerse);
-                        const displayText = translatedVerse?.text || sessionVerse.text;
+                        const displayText = translatedSessionVerse?.text || sessionVerse?.text || '';
                         return displayText.split(' ').map((word, index) => {
                         // Use progressive fill-in-blank logic if available
                         const fillInBlankResult = currentSession.fillInBlankResult;
@@ -1501,6 +1508,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                         });
                       })()}
                     </div>
+                    {translatedSessionVerse?.isTranslated && (
+                      <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-2 text-center">
+                        🌍 Auto-translated to {translatedSessionVerse.translationLanguage?.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1748,21 +1760,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                           
                           <div className="bg-gradient-to-br from-gray-50 to-indigo-50 rounded-xl p-6 border border-gray-200 mb-6 overflow-visible">
                             <p className="text-lg leading-relaxed text-center font-medium text-gray-700 whitespace-normal break-words min-h-fit">
-                              {(() => {
-                                const currentVerse = getCurrentTypeAlongVerse();
-                                const translatedVerse = useAutoTranslatedVerse(currentVerse);
-                                return translatedVerse?.text || currentVerse?.text;
-                              })()}
+                              {translatedTypeAlongVerse?.text || currentTypeAlongVerse?.text}
                             </p>
-                            {(() => {
-                              const currentVerse = getCurrentTypeAlongVerse();
-                              const translatedVerse = useAutoTranslatedVerse(currentVerse);
-                              return translatedVerse?.isTranslated && (
-                                <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-2 text-center">
-                                  🌍 Auto-translated to {translatedVerse.translationLanguage?.toUpperCase()}
-                                </div>
-                              );
-                            })()}
+                            {translatedTypeAlongVerse?.isTranslated && (
+                              <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-2 text-center">
+                                🌍 Auto-translated to {translatedTypeAlongVerse.translationLanguage?.toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           
                           {/* Full Verse Input */}
