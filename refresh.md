@@ -1,5 +1,5 @@
 { 
-THE HISTORY SECTION IS NOT RESPONDING WITH THE RESULTS THAT ARE GENERATING FROM THE MEMORIZATION FEED FEATURE
+psalms 23 gets cut off and does not spit the entire verse in the search page
 }
 
 ---

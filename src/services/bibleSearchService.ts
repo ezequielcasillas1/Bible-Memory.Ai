@@ -16,16 +16,51 @@ export class BibleSearchService {
 
       const apiResults = await searchVerses(query, versionId);
       
-      return apiResults.map((passage: any) => ({
-        id: `search-${Date.now()}-${Math.random()}`,
-        text: this.cleanVerseText(passage.text || ''),
-        reference: passage.reference || query,
-        testament: this.determineTestament(passage.reference || query),
-        book: this.extractBook(passage.reference || query),
-        chapter: this.extractChapter(passage.reference || query),
-        verse: this.extractVerse(passage.reference || query),
-        version: version.abbreviation
-      }));
+      console.log('🔍 BibleSearchService DEBUG - Raw API results:', {
+        query,
+        versionId,
+        resultCount: apiResults.length,
+        rawResults: apiResults.map(p => ({
+          reference: p.reference,
+          originalTextLength: p.text?.length || 0,
+          originalTextPreview: p.text?.substring(0, 100) + '...'
+        }))
+      });
+      
+      const processedResults = apiResults.map((passage: any) => {
+        const cleanedText = this.cleanVerseText(passage.text || '');
+        
+        console.log('🧹 CleanVerseText DEBUG:', {
+          reference: passage.reference,
+          originalLength: passage.text?.length || 0,
+          cleanedLength: cleanedText.length,
+          originalText: passage.text,
+          cleanedText: cleanedText,
+          textWasTruncated: (passage.text?.length || 0) > cleanedText.length
+        });
+        
+        return {
+          id: `search-${Date.now()}-${Math.random()}`,
+          text: cleanedText,
+          reference: passage.reference || query,
+          testament: this.determineTestament(passage.reference || query),
+          book: this.extractBook(passage.reference || query),
+          chapter: this.extractChapter(passage.reference || query),
+          verse: this.extractVerse(passage.reference || query),
+          version: version.abbreviation
+        };
+      });
+      
+      console.log('🔍 BibleSearchService DEBUG - Final processed results:', {
+        processedCount: processedResults.length,
+        finalResults: processedResults.map(r => ({
+          reference: r.reference,
+          finalTextLength: r.text.length,
+          finalTextPreview: r.text.substring(0, 100) + '...'
+        }))
+      });
+      
+      return processedResults;
     } catch (error) {
       console.error('Bible search failed:', error);
       return this.fallbackSearch(query, versionId, availableVersions);
