@@ -17,6 +17,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
   const [isLoading, setIsLoading] = useState(true);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<MemorizationHistory | null>(null);
+  const [showResultsModal, setShowResultsModal] = useState<MemorizationHistory | null>(null);
   const [newPlan, setNewPlan] = useState({
     title: '',
     description: '',
@@ -240,6 +241,47 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     }
   };
 
+  // Interactive comparison renderer for results modal
+  const renderInteractiveComparison = (words: any[], type: 'user' | 'original') => {
+    return words.map((wordData, index) => {
+      const { userWord, originalWord, status, suggestion } = wordData;
+      const displayWord = type === 'user' ? userWord : originalWord;
+      
+      if (!displayWord) return null;
+      
+      let className = 'px-2 py-1 rounded cursor-pointer transition-all hover:scale-105 mr-1 mb-1 inline-block ';
+      
+      switch (status) {
+        case 'correct':
+          className += 'bg-green-200 text-green-800 hover:bg-green-300';
+          break;
+        case 'incorrect':
+          className += 'bg-red-200 text-red-800 hover:bg-red-300';
+          break;
+        case 'missing':
+          className += 'bg-red-200 text-red-800 hover:bg-red-300';
+          break;
+        case 'extra':
+          className += 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300';
+          break;
+        default:
+          className += 'bg-gray-200 text-gray-800';
+      }
+      
+      return (
+        <span
+          key={index}
+          className={className}
+          title={suggestion || 'Click for details'}
+        >
+          {displayWord}
+          {status === 'extra' && type === 'user' && ' (+)'}
+          {status === 'missing' && type === 'original' && ' (missing)'}
+        </span>
+      );
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -427,15 +469,28 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                     <p className="text-sm text-gray-500">
                       {new Date(item.lastPracticed).toLocaleDateString()}
                     </p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMemorizeVerse(item.verse);
-                      }}
-                      className="text-xs text-purple-600 hover:text-purple-800 mt-1 block"
-                    >
-                      Practice Again
-                    </button>
+                    <div className="flex flex-col gap-1 mt-1">
+                      {item.comparisonResult && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowResultsModal(item);
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          📊 View Results
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMemorizeVerse(item.verse);
+                        }}
+                        className="text-xs text-purple-600 hover:text-purple-800"
+                      >
+                        Practice Again
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -674,6 +729,171 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
                 >
                   Practice This Verse Again
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results Modal - Full Results Page Display */}
+      {showResultsModal && showResultsModal.comparisonResult && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Your Results</h2>
+                  <p className="text-gray-600 mt-1">Here's how you did with your memorization</p>
+                  <p className="text-purple-600 font-medium text-sm mt-1">{showResultsModal.verse.reference}</p>
+                </div>
+                <button
+                  onClick={() => setShowResultsModal(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Accuracy Circle */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-red-100 to-red-200 mb-4">
+                  <span className="text-4xl font-bold text-red-600">
+                    {Math.round(showResultsModal.comparisonResult.accuracy || showResultsModal.bestAccuracy)}%
+                  </span>
+                </div>
+                <p className="text-lg text-red-600 font-medium">
+                  Great effort on your memorization! Keep practicing to improve your accuracy.
+                </p>
+              </div>
+
+              {/* Interactive Verse Comparison */}
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 mb-6">
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                    📝 Interactive Verse Comparison
+                    <span className="ml-auto text-sm font-medium text-gray-600">King James Version</span>
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                  {/* User's Version */}
+                  <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-200">
+                    <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                      Your Version ({showResultsModal.comparisonResult.correctWords}/{showResultsModal.comparisonResult.totalWords} correct)
+                    </h4>
+                    <div className="text-sm leading-relaxed">
+                      {renderInteractiveComparison(showResultsModal.comparisonResult.userComparison, 'user')}
+                    </div>
+                  </div>
+                  
+                  {/* Original Version */}
+                  <div className="p-6">
+                    <h4 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
+                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                      Original Verse
+                    </h4>
+                    <div className="text-sm leading-relaxed">
+                      {renderInteractiveComparison(showResultsModal.comparisonResult.originalComparison, 'original')}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Statistics */}
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                  <div className="grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {showResultsModal.comparisonResult.correctWords || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Correct</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-red-600">
+                        {showResultsModal.comparisonResult.incorrectWords || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Incorrect</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-red-600">
+                        {showResultsModal.comparisonResult.missingWords || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Missing</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {showResultsModal.comparisonResult.extraWords || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Extra</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-center mt-4 space-x-6 text-xs">
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 bg-green-200 rounded mr-1"></span>
+                      <span>Correct</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 bg-red-200 rounded mr-1"></span>
+                      <span>Incorrect/Missing</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 bg-yellow-200 rounded mr-1"></span>
+                      <span>Extra Words</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 bg-purple-200 rounded mr-1"></span>
+                      <span>Click any word for details</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-xl font-bold text-blue-600">{showResultsModal.attempts}</div>
+                  <div className="text-sm text-blue-700">Total Attempts</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-xl font-bold text-green-600">{Math.round(showResultsModal.averageAccuracy)}%</div>
+                  <div className="text-sm text-green-700">Average Accuracy</div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center">
+                  <div className="text-xl font-bold text-orange-600">{Math.floor(showResultsModal.totalTime / 60)}m</div>
+                  <div className="text-sm text-orange-700">Total Practice Time</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-xl font-bold text-purple-600">{showResultsModal.bestAccuracy}%</div>
+                  <div className="text-sm text-purple-700">Best Score</div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  Last practiced: {new Date(showResultsModal.lastPracticed).toLocaleDateString()} at {new Date(showResultsModal.lastPracticed).toLocaleTimeString()}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowResultsModal(null)}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      onMemorizeVerse(showResultsModal.verse);
+                      setShowResultsModal(null);
+                    }}
+                    className="button-primary"
+                  >
+                    Practice This Verse Again
+                  </button>
+                </div>
               </div>
             </div>
           </div>
