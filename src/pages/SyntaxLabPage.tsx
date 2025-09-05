@@ -1273,9 +1273,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           <button
             onClick={() => {
               if (phase === 'practice' || phase === 'flashcards' || phase === 'challenge' || phase === 'completion') {
-                setPhase('summary'); // Go back to training menu instead of memorization
+                setPhase('summary'); // Go back to summary from other phases
+              } else if (phase === 'summary' && currentSession) {
+                // From summary with active session, go back to welcome menu
+                setCurrentSession(null);
+                setPhase('summary');
               } else {
-                onBack(); // Only go back to memorization from summary
+                onBack(); // Only go back to memorization when no session (welcome menu)
               }
             }}
             className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors"
