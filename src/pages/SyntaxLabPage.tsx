@@ -456,11 +456,20 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     };
 
     // Initialize fill-in-blank for type-along (progressive mode)
+    const wrongWordsList = wrongWords.map(ww => ww.originalWord);
+    console.log('🔧 createTypeAlongSession DEBUG:', {
+      verseText: verse.text,
+      wrongWordsList: wrongWordsList,
+      completedWords: []
+    });
+
     const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
       verse.text,
-      wrongWords.map(ww => ww.originalWord),
+      wrongWordsList,
       [] // No words completed yet
     );
+
+    console.log('🔧 fillInBlankResult:', fillInBlankResult);
 
     const finalSession = {
       ...session,
@@ -563,18 +572,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Find the first blank that is currently active (isBlank = true)
     const currentBlank = currentSession.fillInBlankResult.blanks.find(blank => blank.isBlank);
     
-    console.log('🔍 getCurrentBlankWord:', {
-      totalBlanks: currentSession.fillInBlankResult.blanks.length,
-      allBlanks: currentSession.fillInBlankResult.blanks.map(b => ({
+    console.log('🔍 getCurrentBlankWord DEBUG:', {
+      hasSession: !!currentSession,
+      hasFillInBlankResult: !!currentSession?.fillInBlankResult,
+      totalBlanks: currentSession?.fillInBlankResult?.blanks?.length || 0,
+      wordsFixed: wordsFixed,
+      allBlanks: currentSession?.fillInBlankResult?.blanks?.map(b => ({
         word: b.word,
         isBlank: b.isBlank,
-        position: b.position
-      })),
+        position: b.position,
+        underscores: b.underscores
+      })) || [],
       currentBlank: currentBlank ? {
         word: currentBlank.word,
         isBlank: currentBlank.isBlank,
         position: currentBlank.position
-      } : null
+      } : 'NO CURRENT BLANK FOUND'
     });
     
     return currentBlank ? currentBlank.word : null;
@@ -1393,6 +1406,24 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   title="Enhanced Debug: Complete word submission analysis"
                 >
                   🔬 Debug
+                </button>
+                
+                {/* Fill-in-Blank Debug Button */}
+                <button
+                  onClick={() => {
+                    console.log('🐛 FILL-IN-BLANK DEBUG:', {
+                      currentSession: currentSession,
+                      fillInBlankResult: currentSession?.fillInBlankResult,
+                      wrongWords: currentSession?.wrongWords,
+                      wordsFixed: wordsFixed,
+                      currentRound: currentRound,
+                      verse: currentSession?.verse,
+                      getCurrentBlankWord: getCurrentBlankWord()
+                    });
+                  }}
+                  className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded transition-colors duration-200"
+                >
+                  🐛 Debug Blanks
                 </button>
                 
                 {/* Specific Test for Shepherd Bug */}
