@@ -65,6 +65,8 @@ export interface Translations {
   'memorize.startStudy': string;
   'memorize.pause': string;
   'memorize.resume': string;
+  'memorize.studyInstructions': string;
+  'memorize.reciteInstructions': string;
 
   // Search Page
   'search.title': string;
@@ -85,6 +87,13 @@ export interface Translations {
   'settings.translationLanguage': string;
   'settings.save': string;
   'settings.cancel': string;
+
+  // SyntaxLab Page
+  'syntaxlab.fillInBlankMode': string;
+  'syntaxlab.typeAlongMode': string;
+  'syntaxlab.fillInBlankPractice': string;
+  'syntaxlab.fillInBlanksDescription': string;
+  'syntaxlab.typeAlongPractice': string;
 
   // Common
   'common.loading': string;
@@ -133,6 +142,8 @@ const translations: Record<string, Translations> = {
     'memorize.startStudy': 'Start Study Session',
     'memorize.pause': 'Pause',
     'memorize.resume': 'Resume',
+    'memorize.studyInstructions': 'Memorize this verse before the timer runs out',
+    'memorize.reciteInstructions': 'Type the verse as accurately as you can remember',
 
     // Search Page
     'search.title': 'Bible Search',
@@ -153,6 +164,13 @@ const translations: Record<string, Translations> = {
     'settings.translationLanguage': 'Bible Translation Language',
     'settings.save': 'Save',
     'settings.cancel': 'Cancel',
+
+    // SyntaxLab Page
+    'syntaxlab.fillInBlankMode': 'Fill in the Blank Mode',
+    'syntaxlab.typeAlongMode': 'Type-Along Mode',
+    'syntaxlab.fillInBlankPractice': 'Fill in the Blank Practice',
+    'syntaxlab.fillInBlanksDescription': 'Fill in the highlighted blanks. Watch your progress!',
+    'syntaxlab.typeAlongPractice': 'Type-Along Practice',
 
     // Common
     'common.loading': 'Loading...',
@@ -265,6 +283,8 @@ const translations: Record<string, Translations> = {
     'memorize.startStudy': 'Commencer la Session d\'Étude',
     'memorize.pause': 'Pause',
     'memorize.resume': 'Reprendre',
+    'memorize.studyInstructions': 'Mémorisez ce verset avant que le temps ne s\'écouler',
+    'memorize.reciteInstructions': 'Tapez le verset aussi précisément que vous vous en souvenez',
 
     // Search Page
     'search.title': 'Recherche Biblique',
@@ -285,6 +305,13 @@ const translations: Record<string, Translations> = {
     'settings.translationLanguage': 'Langue de Traduction Biblique',
     'settings.save': 'Sauvegarder',
     'settings.cancel': 'Annuler',
+
+    // SyntaxLab Page
+    'syntaxlab.fillInBlankMode': 'Mode Remplir les Blancs',
+    'syntaxlab.typeAlongMode': 'Mode Saisie Accompagnée',
+    'syntaxlab.fillInBlankPractice': 'Pratique Remplir les Blancs',
+    'syntaxlab.fillInBlanksDescription': 'Remplissez les blancs surlignés. Suivez vos progrès!',
+    'syntaxlab.typeAlongPractice': 'Pratique Saisie Accompagnée',
 
     // Common
     'common.loading': 'Chargement...',

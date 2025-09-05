@@ -1339,7 +1339,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                   <Target className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🎯 Fill in the Blank Mode</span>
+                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🎯 {t('syntaxlab.fillInBlankMode')}</span>
                 </button>
                 <button
                   onClick={() => startPractice('type-along')}
@@ -1359,7 +1359,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                {practiceMode === 'blank' ? 'Fill in the Blank Mode' : 'Type-Along Mode'}
+                {practiceMode === 'blank' ? t('syntaxlab.fillInBlankMode') : t('syntaxlab.typeAlongMode')}
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
@@ -1447,8 +1447,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 {/* Enhanced Fill-in-the-Blank Display */}
                 <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl p-8 border-2 border-emerald-200 shadow-lg">
                   <div className="text-center mb-6">
-                    <h3 className="text-lg font-semibold text-emerald-800 mb-2">🎯 Fill in the Blank Practice</h3>
-                    <p className="text-sm text-emerald-600">Fill in the highlighted blanks. Watch your progress!</p>
+                    <h3 className="text-lg font-semibold text-emerald-800 mb-2">🎯 {t('syntaxlab.fillInBlankPractice')}</h3>
+                    <p className="text-sm text-emerald-600">{t('syntaxlab.fillInBlanksDescription')}</p>
                   </div>
                   
                   <div className="bg-white rounded-xl p-6 shadow-inner border border-emerald-100 overflow-hidden">

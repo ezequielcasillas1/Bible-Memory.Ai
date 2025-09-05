@@ -194,7 +194,7 @@ const GeneratorPage: React.FC<GeneratorPageProps> = ({ onMemorizeVerse, settings
           className="button-primary flex items-center space-x-2 disabled:opacity-50 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
         >
           <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Generate New Verses</span>
+          <span>{t('generator.generateNew')}</span>
         </button>
       </div>
 

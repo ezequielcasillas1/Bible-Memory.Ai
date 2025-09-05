@@ -192,8 +192,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
             <Search className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">🔍 Bible Search</h2>
-            <p className="text-gray-600">Search Scripture, take notes, and prepare for memorization</p>
+            <h2 className="text-2xl font-bold text-gray-800">🔍 {t('search.title')}</h2>
+            <p className="text-gray-600">{t('search.subtitle')}</p>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ settings, onMemorizeVerse, avai
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Search for verses, topics, or references (e.g., 'love', 'John 3:16', 'faith')"
+              placeholder={t('search.placeholder')}
               className="w-full p-4 pr-12 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
             />
             <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />

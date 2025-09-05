@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Lightbulb, Brain, Target } from 'lucide-react';
 import { Verse, MemorizationSession, Tab } from '../types';
 import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
+import { useLanguage } from '../contexts/LanguageContext';
 import { AIService } from '../services/aiService';
 import { HistoryService } from '../services/historyService';
 import { VerseComparisonService, ComparisonResult } from '../services/verseComparisonService';
@@ -34,6 +35,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
 }) => {
   // Use auto-translated verse for display
   const displayVerse = useAutoTranslatedVerse(selectedVerse);
+  const { t } = useLanguage();
   
   const [phase, setPhase] = useState<MemorizationPhase>('study');
   const [timeLeft, setTimeLeft] = useState(studyTime);
@@ -312,8 +314,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         {phase === 'study' && (
           <>
             <div className="text-center mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Study Your Verse</h2>
-              <p className="text-sm sm:text-base text-gray-600">Memorize this verse before the timer runs out</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{t('memorize.studyVerse')}</h2>
+              <p className="text-sm sm:text-base text-gray-600">{t('memorize.studyInstructions')}</p>
             </div>
 
             <CountdownTimer 
@@ -340,7 +342,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
             <div className="text-center space-x-2 sm:space-x-4">
               {!isActive && timeLeft === studyTime ? (
                 <button onClick={startStudy} className="button-primary text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3">
-                  Start Study Session
+                  {t('memorize.startStudy')}
                 </button>
               ) : (
                 <button
@@ -348,7 +350,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                   className="button-secondary flex items-center space-x-1 sm:space-x-2 mx-auto text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
                 >
                   {isActive ? <Pause className="w-3 h-3 sm:w-4 sm:h-4" /> : <Play className="w-3 h-3 sm:w-4 sm:h-4" />}
-                  <span>{isActive ? 'Pause' : 'Resume'}</span>
+                  <span>{isActive ? t('memorize.pause') : t('memorize.resume')}</span>
                 </button>
               )}
             </div>
@@ -359,8 +361,8 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         {phase === 'input' && (
           <>
             <div className="text-center mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Recite from Memory</h2>
-              <p className="text-sm sm:text-base text-gray-600">Type the verse as accurately as you can remember</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{t('memorize.reciteFromMemory')}</h2>
+              <p className="text-sm sm:text-base text-gray-600">{t('memorize.reciteInstructions')}</p>
               <p className="text-sm sm:text-base text-purple-600 font-medium mt-2">{selectedVerse.reference}</p>
             </div>
 
@@ -389,7 +391,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                   disabled={!userInput.trim()}
                   className="button-primary disabled:opacity-50 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
                 >
-                  Check My Answer
+                  {t('memorize.checkAnswer')}
                 </button>
               </div>
             </div>
@@ -672,14 +674,14 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                   className="button-secondary flex items-center space-x-2 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto"
                 >
                   <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Try Again</span>
+                  <span>{t('memorize.tryAgain')}</span>
                 </button>
                 
                 <button
                   onClick={onBackToGenerator}
                   className="button-primary text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto"
                 >
-                  New Verse
+                  {t('memorize.newVerse')}
                 </button>
               </div>
             </div>

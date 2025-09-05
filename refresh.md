@@ -1,5 +1,5 @@
 { 
-the bible langauge translations are not taking effect look at the images, you will see what I am talking about, they are still english.
+UI translation language needs to take effect on all parts of the ui, on the memorization results it does not show, it just shows english, the syntax lab menu also shows english, it also is taking effect everywhere else in the web app, make sure every page shows the transalation
 }
 
 ---
