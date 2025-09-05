@@ -132,7 +132,8 @@ const detectXSS = (input: string): boolean => {
   return xssPatterns.some(pattern => pattern.test(input))
 }
 
-const sanitizeInput = (input: string): string => {
+// Sanitize Bible references (with length limit for security)
+const sanitizeReference = (input: string): string => {
   if (!input || typeof input !== 'string') return ''
   
   return input
@@ -142,7 +143,21 @@ const sanitizeInput = (input: string): string => {
     .replace(/on\w+=/gi, '') // Remove event handlers
     .replace(/['"`;]/g, '') // Remove quotes and semicolons
     .trim()
-    .substring(0, MAX_REFERENCE_LENGTH)
+    .substring(0, MAX_REFERENCE_LENGTH) // Apply length limit for references
+}
+
+// Sanitize verse text content (no length limit, preserve full text)
+const sanitizeVerseText = (input: string): string => {
+  if (!input || typeof input !== 'string') return ''
+  
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript protocol
+    .replace(/data:/gi, '') // Remove data protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/['"`;]/g, '') // Remove quotes and semicolons
+    .trim()
+    // NO .substring() - preserve full verse text
 }
 
 const validateRequest = (data: any): { valid: boolean; error?: string } => {
@@ -305,9 +320,9 @@ serve(async (req) => {
     }
 
     // Sanitize inputs
-    const sanitizedReference = sanitizeInput(reference)
-    const sanitizedVersion = sanitizeInput(version)
-    const sanitizedAction = sanitizeInput(action)
+    const sanitizedReference = sanitizeReference(reference)
+    const sanitizedVersion = sanitizeReference(version)
+    const sanitizedAction = sanitizeReference(action)
 
     // Additional validation after sanitization
     if (!sanitizedReference || !sanitizedVersion || !sanitizedAction) {
@@ -373,8 +388,8 @@ serve(async (req) => {
             const verseData = await verseResponse.json()
             // Sanitize response data
             if (verseData && verseData.text) {
-              verseData.text = sanitizeInput(verseData.text)
-              verseData.reference = sanitizeInput(verseData.reference || verse)
+              verseData.text = sanitizeVerseText(verseData.text)
+              verseData.reference = sanitizeReference(verseData.reference || verse)
               results.push(verseData)
             }
           }
@@ -405,10 +420,10 @@ serve(async (req) => {
     
     // Sanitize response data
     if (data && data.text) {
-      data.text = sanitizeInput(data.text)
+      data.text = sanitizeVerseText(data.text)
     }
     if (data && data.reference) {
-      data.reference = sanitizeInput(data.reference)
+      data.reference = sanitizeReference(data.reference)
     }
 
     return new Response(
