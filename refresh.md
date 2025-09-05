@@ -1,5 +1,16 @@
 { 
-THE HISTORY SECTION IS NOT RESPONDING WITH THE RESULTS THAT ARE GENERATING FROM THE MEMORIZATION FEED FEATURE
+FIX BUG ROUND COUNT AND WORD COUNT NOT REFLECTING VERSE MAX WORDS. AUTO PRACTICE SHOULD HAVE AT LEAST 5/5 WORD COUNT; DEPENDING ALSO ON SETTINGS, AND SHOULD HAVE THIS LOGIC:OPTION 1: Word Count Cycles Per Round ✅ (What you want)
+Example: 15 total wrong words, 3 rounds, 5 words per round
+Round 1:
+Word 1/5 → Word 2/5 → Word 3/5 → Word 4/5 → Word 5/5
+When you fix the 5th word → Round advances to 2/3
+Round 2:
+Word 1/5 → Word 2/5 → Word 3/5 → Word 4/5 → Word 5/5
+When you fix the 5th word → Round advances to 3/3
+Round 3:
+Word 1/5 → Word 2/5 → Word 3/5 → Word 4/5 → Word 5/5
+When you fix the 5th word → Session complete!
+ REVIEW THE RIGHT CODE BASE ROUNDPROGRESSIONAPI.TS AND MORE FILES IF NEEDED TO MAKE THE CHANGE TO THE CORRECT
 }
 
 ---
@@ -14,7 +25,8 @@ Your approach must be systematic, evidence-based, and relentlessly focused on id
 
 ## **Phase 0: Reconnaissance & State Baseline (Read-Only)**
 
--   **Directive:** Adhering to the **Operational Doctrine**, perform a non-destructive scan of the repository, runtime environment, configurations, and recent logs. Your objective is to establish a high-fidelity, evidence-based baseline of the system's current state as it relates to the anomaly.
+-   **Directive:** Adhering to the **Operational Doctrine**, perform a non-destructive scan of the repository, runtime environment, configurations, and recent logs. Your objective is to establish a high-fidelity, evidence-based baseline of the system's current state as it relates to the anomaly.Wildones99x!
+
 -   **Output:** Produce a concise digest (≤ 200 lines) of your findings.
 -   **Constraint:** **No mutations are permitted during this phase.**
 

@@ -456,20 +456,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     };
 
     // Initialize fill-in-blank for type-along (progressive mode)
-    const wrongWordsList = wrongWords.map(ww => ww.originalWord);
-    console.log('🔧 createTypeAlongSession DEBUG:', {
-      verseText: verse.text,
-      wrongWordsList: wrongWordsList,
-      completedWords: []
-    });
-
     const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
       verse.text,
-      wrongWordsList,
+      wrongWords.map(ww => ww.originalWord),
       [] // No words completed yet
     );
-
-    console.log('🔧 fillInBlankResult:', fillInBlankResult);
 
     const finalSession = {
       ...session,
@@ -572,22 +563,18 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Find the first blank that is currently active (isBlank = true)
     const currentBlank = currentSession.fillInBlankResult.blanks.find(blank => blank.isBlank);
     
-    console.log('🔍 getCurrentBlankWord DEBUG:', {
-      hasSession: !!currentSession,
-      hasFillInBlankResult: !!currentSession?.fillInBlankResult,
-      totalBlanks: currentSession?.fillInBlankResult?.blanks?.length || 0,
-      wordsFixed: wordsFixed,
-      allBlanks: currentSession?.fillInBlankResult?.blanks?.map(b => ({
+    console.log('🔍 getCurrentBlankWord:', {
+      totalBlanks: currentSession.fillInBlankResult.blanks.length,
+      allBlanks: currentSession.fillInBlankResult.blanks.map(b => ({
         word: b.word,
         isBlank: b.isBlank,
-        position: b.position,
-        underscores: b.underscores
-      })) || [],
+        position: b.position
+      })),
       currentBlank: currentBlank ? {
         word: currentBlank.word,
         isBlank: currentBlank.isBlank,
         position: currentBlank.position
-      } : 'NO CURRENT BLANK FOUND'
+      } : null
     });
     
     return currentBlank ? currentBlank.word : null;
@@ -657,12 +644,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       global: {
         completed: dummyResult.progressData.globalProgress.completed,
         total: dummyResult.progressData.globalProgress.total,
-        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total), // FIXED: Use global word position (1-26), capped at total
+        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total), // Global word position (1-26)
         percentage: dummyResult.progressData.globalProgress.percentage
       },
       round: {
         completed: dummyResult.progressData.roundProgress.completed,
         total: dummyResult.progressData.roundProgress.total,
+        currentWord: dummyResult.progressData.roundProgress.currentWordInRound, // FIXED: Round word position (1-9, 1-9, 1-8)
         percentage: dummyResult.progressData.roundProgress.percentage
       }
     };
@@ -1369,7 +1357,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
-                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().global.total}
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().round.currentWord}/{getProgressData().round.total}
                 </div>
                 {/* Enhanced Test Button for Word Submission Debug */}
                 <button
@@ -1406,24 +1394,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   title="Enhanced Debug: Complete word submission analysis"
                 >
                   🔬 Debug
-                </button>
-                
-                {/* Fill-in-Blank Debug Button */}
-                <button
-                  onClick={() => {
-                    console.log('🐛 FILL-IN-BLANK DEBUG:', {
-                      currentSession: currentSession,
-                      fillInBlankResult: currentSession?.fillInBlankResult,
-                      wrongWords: currentSession?.wrongWords,
-                      wordsFixed: wordsFixed,
-                      currentRound: currentRound,
-                      verse: currentSession?.verse,
-                      getCurrentBlankWord: getCurrentBlankWord()
-                    });
-                  }}
-                  className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded transition-colors duration-200"
-                >
-                  🐛 Debug Blanks
                 </button>
                 
                 {/* Specific Test for Shepherd Bug */}
