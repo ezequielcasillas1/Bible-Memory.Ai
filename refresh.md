@@ -1,5 +1,5 @@
 { 
-psalms 23 gets cut off and does not spit the entire verse in the search page
+✅ RESOLVED: psalms 23 now displays the complete verse in the search page
 }
 
 ---

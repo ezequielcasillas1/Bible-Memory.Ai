@@ -324,10 +324,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
     const round1Words = selectedWords.slice(0, round1WordCount);
     
-    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+    // For round-based cycling, use regular fill-in-blanks with round 1 words only
+    const fillInBlankResult = FillInBlankService.calculateFillInBlanks(
       randomVerse.text,
-      round1Words,
-      [] // No words fixed yet
+      round1Words // Use round 1 words for initial display
     );
     
     // Update session with proper fill-in-blank data
@@ -644,12 +644,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       global: {
         completed: dummyResult.progressData.globalProgress.completed,
         total: dummyResult.progressData.globalProgress.total,
-        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total), // FIXED: Use global word position (1-26), capped at total
+        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total), // Global word position (1-26)
         percentage: dummyResult.progressData.globalProgress.percentage
       },
       round: {
         completed: dummyResult.progressData.roundProgress.completed,
         total: dummyResult.progressData.roundProgress.total,
+        currentWord: dummyResult.progressData.roundProgress.currentWordInRound, // FIXED: Round word position (1-9, 1-9, 1-8)
         percentage: dummyResult.progressData.roundProgress.percentage
       }
     };
@@ -762,10 +763,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       } else {
         // Auto practice session - update fillInBlankResult for current round only
         const currentRoundWords = getWordsForCurrentRound();
-        const updatedFillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
+        const updatedFillInBlankResult = FillInBlankService.calculateFillInBlanks(
           currentSession?.verse.text || '', 
-          currentRoundWords, // Use ORIGINAL round words, not filtered ones
-          updatedWordsFixed
+          currentRoundWords // Use current round words for blanks
         );
         sessionUpdateData.fillInBlankResult = updatedFillInBlankResult;
         
@@ -821,10 +821,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         setShowAnswer(false);
         
         // Generate fill-in-blank for next round using API-provided words
-        const nextRoundFillInBlank = FillInBlankService.calculateProgressiveFillInBlanks(
+        const nextRoundFillInBlank = FillInBlankService.calculateFillInBlanks(
           currentSession.verse.text,
-          progressionResult.nextRoundState.currentRoundWords,
-          [] // No words fixed in new round yet
+          progressionResult.nextRoundState.currentRoundWords
         );
         
         // FIXED: Update session data for next round instead of separate update
@@ -1360,7 +1359,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
               </h2>
               <div className="flex items-center space-x-3">
                 <div className="text-sm text-gray-600">
-                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().global.currentWord}/{getProgressData().global.total}
+                  Round {currentRound}/{currentSession.maxRounds} • Word {getProgressData().round.currentWord}/{getProgressData().round.total}
                 </div>
                 {/* Enhanced Test Button for Word Submission Debug */}
                 <button

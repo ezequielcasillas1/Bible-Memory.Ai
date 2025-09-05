@@ -90,31 +90,26 @@ export class RoundProgressionAPI {
       ? [...state.wordsFixed, submittedWord]
       : state.wordsFixed;
 
-    // Calculate current round progress
-    const currentRoundWords = this.getWordsForRound(
-      state.totalWords, 
-      state.currentRound, 
-      state.maxRounds
-    );
+    // Calculate current round progress - use passed currentRoundWords directly
+    const currentRoundWords = state.currentRoundWords;
     
-    const roundCompleted = updatedWordsFixed.length;
-    const roundTotal = currentRoundWords.length;
-    const roundPercentage = roundTotal > 0 ? Math.round((roundCompleted / roundTotal) * 100) : 0;
+    // FIXED: Calculate how many words from CURRENT ROUND are fixed (not global count)
+    const roundCompleted = updatedWordsFixed.length;  // Words fixed in current round
 
-    // Calculate global progress
+    // Calculate global progress: previous rounds + current round
     const distribution = this.calculateWordsPerRound(state.totalWords.length, state.maxRounds);
     let wordsInPreviousRounds = 0;
     for (let round = 1; round < state.currentRound; round++) {
       wordsInPreviousRounds += distribution[round - 1];
     }
-    
+
     const globalCompleted = wordsInPreviousRounds + roundCompleted;
     const globalTotal = state.totalWords.length;
     const globalPercentage = Math.round((globalCompleted / globalTotal) * 100);
 
     // Determine if round should advance
-    const shouldAdvanceRound = roundPercentage >= 100 && state.currentRound < state.maxRounds;
-    const shouldCompleteSession = roundPercentage >= 100 && state.currentRound >= state.maxRounds;
+    const shouldAdvanceRound = roundCompleted >= currentRoundWords.length && state.currentRound < state.maxRounds;
+    const shouldCompleteSession = roundCompleted >= currentRoundWords.length && state.currentRound >= state.maxRounds;
 
     // Create next round state if advancing
     let nextRoundState: RoundProgressionState | undefined;
@@ -135,8 +130,8 @@ export class RoundProgressionAPI {
       };
     }
 
-    // Calculate current word position within the current round (1-based)
-    const currentWordInRound = Math.min(roundCompleted + 1, roundTotal);
+    // FIXED: Calculate current word position within the current round (1-based)
+    const currentWordInRound = Math.min(roundCompleted + 1, currentRoundWords.length);
 
     return {
       shouldAdvanceRound,
@@ -147,8 +142,8 @@ export class RoundProgressionAPI {
         maxRounds: state.maxRounds,
         roundProgress: {
           completed: roundCompleted,
-          total: roundTotal,
-          percentage: roundPercentage,
+          total: currentRoundWords.length,
+          percentage: Math.round((roundCompleted / currentRoundWords.length) * 100),
           currentWordInRound: currentWordInRound // NEW: Cycling word position (1-based)
         },
         globalProgress: {

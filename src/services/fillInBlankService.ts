@@ -197,13 +197,13 @@ export class FillInBlankService {
     // Calculate target word count based on range
     let targetCount: number;
     if (range === 'short') {
-      // SHORT: 20-40% of verse words (minimum 2, maximum 5)
-      const percentage = 0.2 + Math.random() * 0.2; // Random between 20-40%
-      targetCount = Math.max(2, Math.min(5, Math.round(words.length * percentage)));
+      // SHORT: For proper cycling, ensure minimum 6 words (2 per round × 3 rounds)
+      const percentage = 0.6 + Math.random() * 0.2; // Random between 60-80%
+      targetCount = Math.max(6, Math.min(words.length, Math.round(words.length * percentage)));
     } else {
-      // LONG: 50-80% of verse words (minimum 4, maximum 12)
-      const percentage = 0.5 + Math.random() * 0.3; // Random between 50-80%
-      targetCount = Math.max(4, Math.min(12, Math.round(words.length * percentage)));
+      // LONG: For more challenge, use most available words
+      const percentage = 0.8 + Math.random() * 0.1; // Random between 80-90%
+      targetCount = Math.max(Math.min(12, words.length), Math.round(words.length * percentage));
     }
 
     // Select a mix of important and random words
