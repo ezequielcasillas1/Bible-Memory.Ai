@@ -23,6 +23,15 @@ export interface SupportedLanguage {
 
 // Strategic language pairings for optimal translation accuracy
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
+  // Original English - no translation needed
+  {
+    code: 'en',
+    name: 'English (Original)',
+    strategy: 'romance_germanic',
+    recommended: ['kjv', 'asv', 'darby', 'bbe', 'oeb-us', 'webbe'],
+    description: 'Keep verses in their original English translation'
+  },
+  
   // Romance & Germanic languages - best with formal translations
   {
     code: 'es',
@@ -169,6 +178,22 @@ export class TranslationService {
       
       if (!fullText) {
         throw new Error('No text provided for translation')
+      }
+      
+      // If target language is English, return original text without translation
+      if (targetLanguage === 'en') {
+        return {
+          translatedText: fullText,
+          originalText: fullText,
+          reference,
+          sourceVersion,
+          targetLanguage: 'en',
+          targetLanguageCode: 'en',
+          strategy: 'original',
+          isRecommendedPairing: true,
+          recommendation: 'Original English text',
+          strategyNote: 'No translation needed for English'
+        };
       }
       
       const response = await fetch(`${SUPABASE_URL}/functions/v1/bible-translate`, {

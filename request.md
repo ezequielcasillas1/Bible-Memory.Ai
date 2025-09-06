@@ -1,4 +1,4 @@
-{ ADD a new feature that when the user selects their chosen bible translation language via settings; it also reflects back the langauge via home generator; the verses displayed there should have the language translated, the verses in the memorization timing window should have the verses translated, the verses in syntax lab should be translated, verses in search should be translated, every where in the web app. just remember that the button "translate" should still be there in case the user wants to see the language another language. }
+{ In bible translation language in settings; make sure that the user can pick the original english langauage because there is no option for it. }
 
 ---
 
