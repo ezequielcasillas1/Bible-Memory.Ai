@@ -688,6 +688,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return input.toLowerCase().trim() === targetWord.toLowerCase().trim();
   };
 
+  // Get the current translated blank word for display/comparison
+  const getCurrentTranslatedBlankWord = (): string | null => {
+    const englishWord = getCurrentBlankWord();
+    if (!englishWord) return null;
+    
+    const currentBlank = currentSession?.fillInBlankResult?.blanks.find(blank => blank.isBlank);
+    const blankPosition = currentBlank?.position || 0;
+    return getTranslatedBlankWord(englishWord, blankPosition);
+  };
+
   // Get the translated word for comparison if translation is available
   const getTranslatedBlankWord = (englishWord: string, position: number): string => {
     const translatedSessionVerse = displayVerse;
@@ -698,20 +708,52 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       const englishWords = sessionVerse.text.split(' ');
       const translatedWords = translatedSessionVerse.text.split(' ');
       
-      // Find the position of the English word
-      const wordPosition = englishWords.findIndex((word, idx) => {
-        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-        const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
-        return cleanWord === cleanEnglishWord && idx === position;
+      console.log('🌍 Translation mapping debug:', {
+        englishWord,
+        position,
+        englishWords,
+        translatedWords,
+        isTranslated: translatedSessionVerse.isTranslated,
+        translationLanguage: translatedSessionVerse.translationLanguage
       });
       
-      // If found and translated word exists at that position, return it
-      if (wordPosition !== -1 && translatedWords[wordPosition]) {
-        return translatedWords[wordPosition];
+      // Method 1: Try exact position mapping first (works for most cases)
+      if (position < translatedWords.length) {
+        const candidateWord = translatedWords[position];
+        console.log('🎯 Position mapping candidate:', candidateWord);
+        
+        // For common translations, this should work
+        if (candidateWord) {
+          return candidateWord;
+        }
+      }
+      
+      // Method 2: Fallback - try to find by relative position for different sentence structures
+      const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+      const englishWordIndex = englishWords.findIndex((word, idx) => {
+        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+        return cleanWord === cleanEnglishWord;
+      });
+      
+      if (englishWordIndex !== -1 && englishWordIndex < translatedWords.length) {
+        const translatedCandidate = translatedWords[englishWordIndex];
+        console.log('🔄 Fallback mapping candidate:', translatedCandidate);
+        return translatedCandidate || englishWord;
+      }
+      
+      // Method 3: For very different sentence structures, use proportional mapping
+      if (englishWords.length > 0 && translatedWords.length > 0) {
+        const proportionalIndex = Math.floor((position / englishWords.length) * translatedWords.length);
+        const proportionalWord = translatedWords[proportionalIndex];
+        console.log('📊 Proportional mapping candidate:', proportionalWord);
+        if (proportionalWord) {
+          return proportionalWord;
+        }
       }
     }
     
     // Fallback to English word
+    console.log('🔙 Falling back to English word:', englishWord);
     return englishWord;
   };
 
@@ -1590,13 +1632,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                               setIsLoadingHint(true);
                               setShowHint(true);
                               try {
-                                const currentBlankWord = getCurrentBlankWord();
-                                const hint = await generateHint(currentBlankWord || '');
+                                const wordForHint = getCurrentTranslatedBlankWord();
+                                const hint = await generateHint(wordForHint || '');
                                 setCurrentHint(hint);
                               } catch (error) {
                                 console.error('Hint generation failed:', error);
-                                const currentBlankWord = getCurrentBlankWord();
-                                setCurrentHint(getFallbackHint(currentBlankWord || ''));
+                                const wordForHint = getCurrentTranslatedBlankWord();
+                                setCurrentHint(getFallbackHint(wordForHint || ''));
                               } finally {
                                 setIsLoadingHint(false);
                               }
@@ -1625,7 +1667,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                       {showAnswer && (
                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700">
                           <strong>Answer:</strong> <span className="font-bold text-orange-800">
-                            {getCurrentBlankWord() || (getProgressData().global.percentage >= 100 ? 'All completed! 🎉' : 'No blank found')}
+                            {getCurrentTranslatedBlankWord() || (getProgressData().global.percentage >= 100 ? 'All completed! 🎉' : 'No blank found')}
                           </span>
                         </div>
                       )}
