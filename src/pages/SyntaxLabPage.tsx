@@ -153,11 +153,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         wrongWords: wrongWords
       });
       
-      const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
-        verseTextForSession, // Use translated text instead of English
-        round1Words,
-        [] // No words fixed yet
-      );
+      // TRANSLATION-AWARE FILL-IN-BLANK CREATION
+      const fillInBlankResult = translatedVerseText 
+        ? FillInBlankService.calculateProgressiveFillInBlanks(
+            verseTextForSession, // Spanish text
+            round1Words, // Not used when translation mapping provided
+            [], // No words fixed yet
+            {
+              englishText: sessionData.verseText, // English text
+              englishWrongWords: round1Words // English wrong words
+            }
+          )
+        : FillInBlankService.calculateProgressiveFillInBlanks(
+            verseTextForSession, // English text
+            round1Words,
+            [] // No words fixed yet
+          );
       
       // Update session with proper fill-in-blank data
       const finalSession = {
@@ -890,10 +901,29 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       } else {
         // Auto practice session - update fillInBlankResult for current round only
         const currentRoundWords = getWordsForCurrentRound();
-        const updatedFillInBlankResult = FillInBlankService.calculateFillInBlanks(
-          currentSession?.verse.text || '', 
-          currentRoundWords // Use current round words for blanks
-        );
+        
+        // TRANSLATION-AWARE SESSION UPDATE
+        const sessionVerse = currentSession?.verse;
+        const translatedVerse = displayVerse;
+        const isTranslated = translatedVerse?.isTranslated && sessionVerse;
+        
+        const updatedFillInBlankResult = isTranslated
+          ? FillInBlankService.calculateProgressiveFillInBlanks(
+              sessionVerse.text, // Spanish text
+              currentRoundWords, // Not used when translation mapping provided
+              updatedWordsFixed,
+              {
+                englishText: currentSession?.originalComparison?.originalComparison?.[0]?.originalWord ? 
+                  currentSession.originalComparison.originalComparison.map((w: any) => w.originalWord).join(' ') : 
+                  sessionVerse.text, // Fallback to session text
+                englishWrongWords: currentRoundWords // English wrong words
+              }
+            )
+          : FillInBlankService.calculateProgressiveFillInBlanks(
+              sessionVerse?.text || '', 
+              currentRoundWords,
+              updatedWordsFixed
+            );
         sessionUpdateData.fillInBlankResult = updatedFillInBlankResult;
         
         console.log('🔄 PREPARING SESSION UPDATE (Auto Practice):', {
@@ -1523,6 +1553,50 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   title="Enhanced Debug: Complete word submission analysis"
                 >
                   🔬 Debug
+                </button>
+                
+                {/* Word Completion Debug */}
+                <button
+                  onClick={() => {
+                    console.log('🔧 WORD COMPLETION DEBUG');
+                    
+                    const fillInBlankResult = currentSession?.fillInBlankResult;
+                    const sessionVerse = currentSession?.verse;
+                    const translatedVerse = displayVerse;
+                    
+                    console.log('📊 Completion Analysis:', {
+                      wordsFixed: wordsFixed,
+                      sessionVerseText: sessionVerse?.text,
+                      translatedVerseText: translatedVerse?.text,
+                      isTranslated: translatedVerse?.isTranslated,
+                      fillInBlankResult: fillInBlankResult
+                    });
+                    
+                    // Test completion matching
+                    if (fillInBlankResult && sessionVerse) {
+                      const words = sessionVerse.text.split(' ');
+                      console.log('🔍 Word-by-word completion check:');
+                      
+                      words.forEach((word, index) => {
+                        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                        const isCompleted = wordsFixed.some(cw => 
+                          cw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+                        );
+                        
+                        console.log(`Position ${index}: "${word}" (clean: "${cleanWord}") - ${isCompleted ? '✅ COMPLETED' : '⚪ NOT COMPLETED'}`);
+                        
+                        // Check what wordsFixed contains
+                        wordsFixed.forEach(fixedWord => {
+                          const cleanFixed = fixedWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+                          console.log(`  Comparing "${cleanFixed}" === "${cleanWord}": ${cleanFixed === cleanWord}`);
+                        });
+                      });
+                    }
+                  }}
+                  className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded-md transition-colors"
+                  title="Debug word completion matching"
+                >
+                  🔧 Debug Completion
                 </button>
                 
                 {/* Fill-in-Blank Progression Debug */}

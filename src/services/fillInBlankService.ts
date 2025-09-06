@@ -52,31 +52,70 @@ export class FillInBlankService {
   /**
    * NEW: Progressive fill-in-blank - only blanks the leftmost remaining wrong word
    * This ensures left-to-right progression as requested in refresh.md
+   * TRANSLATION-AWARE: Supports mapping English wrong words to translated text positions
    */
-  static calculateProgressiveFillInBlanks(originalText: string, wrongWords: string[], completedWords: string[] = []): FillInBlankResult {
+  static calculateProgressiveFillInBlanks(
+    originalText: string, 
+    wrongWords: string[], 
+    completedWords: string[] = [],
+    translationMapping?: {englishText: string, englishWrongWords: string[]}
+  ): FillInBlankResult {
     const words = originalText.split(' ');
     const blanks: BlankWord[] = [];
     
     // Find positions of all wrong words in the sentence
     const wrongWordPositions: Array<{word: string, position: number, completed: boolean}> = [];
     
-    words.forEach((word, index) => {
-      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-      const wrongWord = wrongWords.find(ww => 
-        ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-      );
+    // TRANSLATION-AWARE LOGIC: Handle English wrong words in translated text
+    if (translationMapping) {
+      // Map English wrong word positions to translated text positions
+      const englishWords = translationMapping.englishText.split(' ');
+      const englishWrongWords = translationMapping.englishWrongWords;
       
-      if (wrongWord) {
-        const isCompleted = completedWords.some(cw => 
-          cw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+      englishWrongWords.forEach(englishWrongWord => {
+        // Find position in English text
+        const englishPosition = englishWords.findIndex(word => 
+          word.toLowerCase().replace(/[.,!?;:"']/g, '') === 
+          englishWrongWord.toLowerCase().replace(/[.,!?;:"']/g, '')
         );
-        wrongWordPositions.push({
-          word: wrongWord,
-          position: index,
-          completed: isCompleted
-        });
-      }
-    });
+        
+        if (englishPosition !== -1 && englishPosition < words.length) {
+          // Map to corresponding position in translated text
+          const translatedWord = words[englishPosition];
+          const cleanTranslatedWord = translatedWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+          
+          // Check if this translated word is completed
+          const isCompleted = completedWords.some(cw => 
+            cw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanTranslatedWord
+          );
+          
+          wrongWordPositions.push({
+            word: translatedWord, // Use translated word
+            position: englishPosition,
+            completed: isCompleted
+          });
+        }
+      });
+    } else {
+      // ORIGINAL LOGIC: Direct word matching (for non-translated text)
+      words.forEach((word, index) => {
+        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+        const wrongWord = wrongWords.find(ww => 
+          ww.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+        );
+        
+        if (wrongWord) {
+          const isCompleted = completedWords.some(cw => 
+            cw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+          );
+          wrongWordPositions.push({
+            word: wrongWord,
+            position: index,
+            completed: isCompleted
+          });
+        }
+      });
+    }
     
     // Sort by position to ensure left-to-right order
     wrongWordPositions.sort((a, b) => a.position - b.position);
