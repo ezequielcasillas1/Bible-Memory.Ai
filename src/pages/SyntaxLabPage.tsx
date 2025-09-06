@@ -22,12 +22,14 @@ type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'score
 
 const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selectedVerse, onBack, onStartNewSession, settings }) => {
   const { t } = useLanguage();
-  // Use auto-translated verse for display
-  const displayVerse = useAutoTranslatedVerse(selectedVerse);
   
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
   const [currentSession, setCurrentSession] = useState<SyntaxLabSession | null>(null);
+  
+  // Use auto-translated verse for display - use session verse if available
+  const verseToTranslate = currentSession?.verse || selectedVerse;
+  const displayVerse = useAutoTranslatedVerse(verseToTranslate);
   const [currentRound, setCurrentRound] = useState(1);
   const [wordsFixed, setWordsFixed] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -1522,8 +1524,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                       currentBlank,
                       displayVerse: displayVerse,
                       sessionVerse: currentSession?.verse,
+                      selectedVerse: selectedVerse,
+                      verseToTranslate: verseToTranslate,
                       isTranslated: displayVerse?.isTranslated,
-                      translationLanguage: displayVerse?.translationLanguage
+                      translationLanguage: displayVerse?.translationLanguage,
+                      hasCurrentSession: !!currentSession,
+                      hasSelectedVerse: !!selectedVerse
                     });
                     
                     // Test Spanish inputs
