@@ -1507,6 +1507,53 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   🔬 Debug
                 </button>
                 
+                {/* Translation Debug Test */}
+                <button
+                  onClick={() => {
+                    console.log('🌍 TRANSLATION DEBUG: Testing Spanish word mapping');
+                    
+                    const englishWord = getCurrentBlankWord();
+                    const translatedWord = getCurrentTranslatedBlankWord();
+                    const currentBlank = currentSession?.fillInBlankResult?.blanks.find(blank => blank.isBlank);
+                    
+                    console.log('🔍 Translation Debug Results:', {
+                      englishWord,
+                      translatedWord,
+                      currentBlank,
+                      displayVerse: displayVerse,
+                      sessionVerse: currentSession?.verse,
+                      isTranslated: displayVerse?.isTranslated,
+                      translationLanguage: displayVerse?.translationLanguage
+                    });
+                    
+                    // Test Spanish inputs
+                    const spanishTestInputs = ['SEÑOR', 'señor', 'Señor', 'LORD', 'lord'];
+                    
+                    spanishTestInputs.forEach(input => {
+                      const cleanTranslated = translatedWord?.toLowerCase().replace(/[.,!?;:"']/g, '') || '';
+                      const cleanEnglish = englishWord?.toLowerCase().replace(/[.,!?;:"']/g, '') || '';
+                      const cleanInput = input.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+                      
+                      const matchesTranslated = cleanInput === cleanTranslated;
+                      const matchesEnglish = cleanInput === cleanEnglish;
+                      
+                      console.log(`Testing "${input}":`, {
+                        input,
+                        cleanInput,
+                        cleanTranslated,
+                        cleanEnglish,
+                        matchesTranslated: matchesTranslated ? '✅' : '❌',
+                        matchesEnglish: matchesEnglish ? '✅' : '❌',
+                        shouldAccept: matchesTranslated ? 'YES' : 'NO'
+                      });
+                    });
+                  }}
+                  className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md transition-colors"
+                  title="Debug Spanish translation mapping"
+                >
+                  🌍 Debug Translation
+                </button>
+                
                 {/* Specific Test for Shepherd Bug */}
                 <button
                   onClick={() => {
