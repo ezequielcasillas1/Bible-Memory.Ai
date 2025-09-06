@@ -2020,7 +2020,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 shadow-lg font-medium flex items-center space-x-2 mx-auto"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>🔄 Restart Auto Practice</span>
+                <span>
+                  🔄 {currentSession?.id?.startsWith('auto-session-') ? 'Restart Auto Practice' : 'Restart Practice'}
+                </span>
               </button>
               
               <button

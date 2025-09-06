@@ -1,5 +1,5 @@
 { 
-There is a bug in the results page when right after done memorizing , the bug initiates what seems to be that if the verse is translated into spanish, and the user types in spanish, the results fail to match the verse by stating that it is part of the english verse. look at the image for more details.
+Fix UI text "Restart from autopractice", after the syntaxlab results to say restart practice for all but the auto practice mode
 }
 
 ---
