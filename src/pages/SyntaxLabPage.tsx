@@ -1509,6 +1509,48 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                   🔬 Debug
                 </button>
                 
+                {/* Fill-in-Blank Progression Debug */}
+                <button
+                  onClick={() => {
+                    console.log('📝 FILL-IN-BLANK PROGRESSION DEBUG');
+                    
+                    const fillInBlankResult = currentSession?.fillInBlankResult;
+                    const allBlanks = fillInBlankResult?.blanks || [];
+                    const currentBlank = allBlanks.find(blank => blank.isBlank);
+                    
+                    console.log('🔍 Blank Progression Analysis:', {
+                      totalBlanks: allBlanks.length,
+                      currentBlankIndex: currentBlank?.position || 'none',
+                      wordsFixed: wordsFixed,
+                      wordsFixedCount: wordsFixed.length,
+                      fillInBlankResult: fillInBlankResult
+                    });
+                    
+                    console.log('📊 All Blanks Status:');
+                    allBlanks.forEach((blank, index) => {
+                      console.log(`Position ${blank.position}: "${blank.word}" - ${blank.isBlank ? '🟢 ACTIVE' : '⚪ COMPLETED'}`);
+                    });
+                    
+                    console.log('🎯 Expected Behavior: Should show LEFTMOST active blank first');
+                    
+                    // Find what should be the current blank (leftmost active)
+                    const leftmostBlank = allBlanks.find(blank => blank.isBlank);
+                    const shouldBeCurrentWord = leftmostBlank?.word;
+                    const actualCurrentWord = getCurrentBlankWord();
+                    
+                    console.log('🔄 Progression Check:', {
+                      shouldBeCurrentWord,
+                      actualCurrentWord,
+                      match: shouldBeCurrentWord === actualCurrentWord ? '✅' : '❌',
+                      leftmostBlankPosition: leftmostBlank?.position
+                    });
+                  }}
+                  className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded-md transition-colors"
+                  title="Debug fill-in-blank progression from left to right"
+                >
+                  📝 Debug Progression
+                </button>
+                
                 {/* Translation Debug Test */}
                 <button
                   onClick={() => {
