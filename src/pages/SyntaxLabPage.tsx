@@ -85,6 +85,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   // Initialize session when comparison result is available
   useEffect(() => {
     if (comparisonResult && !currentSession) {
+      // CRITICAL FIX: Use translated verse text if available for fill-in-blank creation
+      const translatedVerseText = displayVerse?.isTranslated ? displayVerse.text : null;
+      
       // Create session using SyntaxLabAPI to ensure fillInBlankResult is properly initialized
       const sessionData = SyntaxLabAPI.createSession(comparisonResult);
       
@@ -102,13 +105,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         testament: "NT" as const
       };
 
+      // CRITICAL FIX: Use translated text for the session verse if available
+      const verseTextForSession = translatedVerseText || sessionData.verseText;
+      
       const session: SyntaxLabSession = {
         id: sessionData.id,
         startTime: sessionData.createdAt,
         verseId: verseData.id,
         verse: {
           id: verseData.id,
-          text: sessionData.verseText, // Use the clean verse text from sessionData
+          text: verseTextForSession, // Use translated text if available
           reference: verseData.reference,
           testament: verseData.testament
         },
@@ -137,8 +143,18 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
       const round1Words = allWrongWords.slice(0, round1WordCount);
       
+      // CRITICAL FIX: Use translated verse text for fill-in-blank creation if available
+      console.log('🔧 FILL-IN-BLANK CREATION DEBUG:', {
+        isTranslated: !!translatedVerseText,
+        englishText: sessionData.verseText,
+        translatedText: translatedVerseText,
+        verseTextForSession: verseTextForSession,
+        round1Words: round1Words,
+        wrongWords: wrongWords
+      });
+      
       const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
-        sessionData.verseText,
+        verseTextForSession, // Use translated text instead of English
         round1Words,
         [] // No words fixed yet
       );
