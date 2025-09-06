@@ -150,8 +150,11 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
     const bibleVersion = getVersionById(userStats.preferredVersion, availableBibleVersions);
     const versionName = bibleVersion?.name || 'King James Version';
     
+    // CRITICAL FIX: Use translated verse text for comparison if available
+    const verseTextForComparison = displayVerse?.text || session.verse.text;
+    
     // First get verse comparison
-    VerseComparisonService.compareVerses(userInput, session.verse.text, versionName)
+    VerseComparisonService.compareVerses(userInput, verseTextForComparison, versionName)
       .then((comparison) => {
         setComparisonResult(comparison);
         
@@ -178,7 +181,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
         onComplete(points);
         
         // Then get AI feedback with the accurate comparison data
-        return AIService.getPersonalizedFeedback(userInput, session.verse.text, comparison.accuracy, userStats)
+        return AIService.getPersonalizedFeedback(userInput, verseTextForComparison, comparison.accuracy, userStats)
           .then((aiResponse) => ({ aiResponse, accuracy: comparison.accuracy }));
       })
       .then(({ aiResponse, accuracy }) => {
