@@ -242,6 +242,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     setShowHistoryLog(false);
   };
 
+  // Restart regular practice session with fill-in-blank mode
+  const restartRegularPractice = () => {
+    if (currentSession) {
+      // Reset session state for fresh practice
+      setCurrentRound(1);
+      setWordsFixed([]);
+      setCurrentWordIndex(0);
+      setUserInput('');
+      setShowHint(false);
+      setShowAnswer(false);
+      setPracticeMode('blank');
+      setPhase('practice');
+    }
+  };
+
   // Create an auto-generated practice session with random verses
   const startAutoPractice = () => {
     // Predefined sample verses for auto practice
@@ -673,6 +688,33 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     return input.toLowerCase().trim() === targetWord.toLowerCase().trim();
   };
 
+  // Get the translated word for comparison if translation is available
+  const getTranslatedBlankWord = (englishWord: string, position: number): string => {
+    const translatedSessionVerse = displayVerse;
+    const sessionVerse = currentSession?.verse;
+    
+    if (translatedSessionVerse?.isTranslated && translatedSessionVerse.text && sessionVerse?.text) {
+      // Split both verses into words
+      const englishWords = sessionVerse.text.split(' ');
+      const translatedWords = translatedSessionVerse.text.split(' ');
+      
+      // Find the position of the English word
+      const wordPosition = englishWords.findIndex((word, idx) => {
+        const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+        const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+        return cleanWord === cleanEnglishWord && idx === position;
+      });
+      
+      // If found and translated word exists at that position, return it
+      if (wordPosition !== -1 && translatedWords[wordPosition]) {
+        return translatedWords[wordPosition];
+      }
+    }
+    
+    // Fallback to English word
+    return englishWord;
+  };
+
   const handleWordSubmit = () => {
     if (submittingRef.current) return; submittingRef.current = true; setTimeout(() => { submittingRef.current = false; }, 250);
     if (!currentSession || !userInput.trim()) {
@@ -691,9 +733,21 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       return;
     }
     
+    // CRITICAL FIX: Get the translated word for comparison if translation is available
+    const currentBlank = currentSession.fillInBlankResult?.blanks.find(blank => blank.isBlank);
+    const blankPosition = currentBlank?.position || 0;
+    const wordForComparison = getTranslatedBlankWord(currentBlankWord, blankPosition);
+    
     // Clean the blank word for comparison (remove punctuation)
-    const cleanBlankWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+    const cleanBlankWord = wordForComparison.toLowerCase().replace(/[.,!?;:"']/g, '');
     const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    
+    console.log('🌍 Translation comparison:', {
+      originalEnglish: currentBlankWord,
+      translatedWord: wordForComparison,
+      userInput: userInput,
+      isTranslated: displayVerse?.isTranslated
+    });
     
     // DUPLICATE PREVENTION: Check if this word is already fixed to prevent multiple submissions for same blank
     const isAlreadyFixed = wordsFixed.some(word => 
@@ -2016,13 +2070,24 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             <div className="text-center space-y-4">
               <button
-                onClick={startAutoPractice}
+                onClick={currentSession?.id?.startsWith('auto-session-') ? startAutoPractice : restartRegularPractice}
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 shadow-lg font-medium flex items-center space-x-2 mx-auto"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>
                   🔄 {currentSession?.id?.startsWith('auto-session-') ? 'Restart Auto Practice' : 'Restart Practice'}
                 </span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setCurrentSession(null);
+                  setPhase('summary');
+                }}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-indigo-600 transition-all duration-300 transform hover:scale-105 shadow-lg font-medium flex items-center space-x-2 mx-auto"
+              >
+                <Target className="w-4 h-4" />
+                <span>🎯 Back to Menu</span>
               </button>
               
               <button

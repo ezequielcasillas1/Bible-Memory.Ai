@@ -1,5 +1,5 @@
 { 
-Fix UI text "Restart from autopractice", after the syntaxlab results to say restart practice for all but the auto practice mode
+add after the syntax lab results "Back to Menu" which takes the user back to the syntax lab menu, also fix the fact that when the user selects restart practice, it should show the user to the fill in the blank again instead of the other flow screen, also the fill in the blank is having syntax issue where the user if seeing the spanish translation the system wants the word in english instead of spanish fix that to. 
 }
 
 ---
