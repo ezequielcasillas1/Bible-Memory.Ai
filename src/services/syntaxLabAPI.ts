@@ -1,5 +1,4 @@
 import { ComparisonResult } from '../types';
-import { FillInBlankService, type FillInBlankResult } from './fillInBlankService';
 import { GrammarValidationAPI } from './grammarValidationAPI';
 import { OriginalVerseService } from './originalVerseService';
 
@@ -8,7 +7,6 @@ export interface SyntaxLabSessionData {
   verseText: string;
   verseReference: string;
   wrongWords: string[];
-  fillInBlankResult?: FillInBlankResult;
   originalVerseText: string;
   createdAt: Date;
 }
@@ -19,39 +17,30 @@ export class SyntaxLabAPI {
     const cleanOriginalText = OriginalVerseService.getCleanOriginalVerse(comparisonResult);
     const wordsToFix = OriginalVerseService.getWordsToFix(comparisonResult);
     
-    // Generate fill-in-blank data using progressive method for left-to-right blanking
-    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(cleanOriginalText, wordsToFix, []);
-    
     return {
       id: `syntax-lab-${Date.now()}`,
       verseText: cleanOriginalText,
       verseReference: `${comparisonResult.originalComparison[0]?.verse || 'Unknown'}`,
       wrongWords: wordsToFix,
-      fillInBlankResult,
       originalVerseText: cleanOriginalText,
       createdAt: new Date()
     };
   }
 
   /**
-   * NEW: Update session with progressive fill-in-blanks as words are completed
+   * Update session with completed words
    */
   static updateSessionProgress(sessionData: SyntaxLabSessionData, completedWords: string[]): SyntaxLabSessionData {
-    const fillInBlankResult = FillInBlankService.calculateProgressiveFillInBlanks(
-      sessionData.verseText, 
-      sessionData.wrongWords, 
-      completedWords
-    );
-    
     return {
-      ...sessionData,
-      fillInBlankResult
+      ...sessionData
     };
   }
 
   static async validateAnswer(userInput: string, targetWord: string, context: string = '') {
     // Use both simple checking and grammar validation
-    const simpleCheck = FillInBlankService.checkBlankAnswer(userInput, targetWord);
+    const cleanUser = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    const cleanTarget = targetWord.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    const simpleCheck = cleanUser === cleanTarget;
     const grammarValidation = GrammarValidationAPI.validateGrammar(userInput, targetWord, context);
     
     return {
