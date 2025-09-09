@@ -1,4 +1,52 @@
-{ In bible translation language in settings; make sure that the user can pick the original english langauage because there is no option for it. }
+{ Delete the current broken fill-in-the-blank functionality and replace it with a new working API.
+
+API Purpose
+
+Create a Fill in the Blank API that uses prior information from syntax memoized verses (manually captured).
+
+Based on memorized results, generate SyntaxLabs study flows.
+
+Core Logic
+
+Study modes: start with Fill in the Blank only.
+
+Pull results from verse memorization:
+
+If the user failed a word, capture it.
+
+Those failed words become the blanks in Fill in the Blank practice.
+
+Progress should follow top-to-bottom, left-to-right order of the verse.
+
+Connect this API to the round/word count API so counts update correctly.
+
+Bug Fixes
+
+Ensure blanks never get stuck (must always advance).
+
+If the same word appears multiple times, filling one blank should only complete that blank, not the others.
+
+UI & API Sync
+
+Underline blanks: must appear when API marks a word as blank.
+
+Green highlights: must apply immediately when the API confirms a correct word capture.
+
+Purple gradient highlights: must show when the API signals an active blank being filled.
+
+All UI updates should be triggered by API state changes so the display always stays in sync with the data flow.
+
+Deliverable
+
+Replace old fill-in-the-blank code with this new API.
+
+Confirm working integration with:
+
+Round/word count API
+
+SyntaxLabs study flow
+
+UI effects (underline, green highlight, purple gradient) updating correctly with API state. }
 
 ---
 

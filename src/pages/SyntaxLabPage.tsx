@@ -5,8 +5,8 @@ import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
-import { SyntaxLabAPI } from '../services/syntaxLabAPI';
-import { FillInBlankService } from '../services/fillInBlankService';
+import { SyntaxLabAPI, type SyntaxLabSessionData } from '../services/syntaxLabAPI';
+import { FillInBlankService, FillInBlankAPI } from '../services/fillInBlankService';
 import { RoundProgressionAPI, RoundProgressionState } from '../services/roundProgressionAPI';
 
 interface SyntaxLabPageProps {
@@ -344,7 +344,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       settings?.fillInBlankRange || 'short'
     );
     
-    const practiceWords: WordComparison[] = selectedWords.map((word, i) => ({
+    const practiceWords: WordComparison[] = selectedWords.map((word: string, i: number) => ({
       userWord: '', // User hasn't typed anything yet
       originalWord: word.replace(/[.,!?;:"']/g, ''), // Clean punctuation
       status: 'incorrect' as const,
@@ -613,28 +613,61 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     moveToNextVerse();
   };
 
-  // Helper function to get the current blank word in progressive fill-in-blank mode
-  const getCurrentBlankWord = (): string | null => {
-    if (!currentSession?.fillInBlankResult) return null;
-    
-    // Find the first blank that is currently active (isBlank = true)
-    const currentBlank = currentSession.fillInBlankResult.blanks.find(blank => blank.isBlank);
-    
-    console.log('🔍 getCurrentBlankWord:', {
-      totalBlanks: currentSession.fillInBlankResult.blanks.length,
-      allBlanks: currentSession.fillInBlankResult.blanks.map(b => ({
-        word: b.word,
-        isBlank: b.isBlank,
-        position: b.position
+  // Helper function to convert SyntaxLabSession to SyntaxLabSessionData
+  const convertToSessionData = (session: SyntaxLabSession): SyntaxLabSessionData => {
+    // Create mock ComparisonResult from session data for API compatibility
+    const mockComparison: ComparisonResult = {
+      accuracy: session.finalAccuracy || 0,
+      totalWords: session.wrongWords.length,
+      correctWords: 0,
+      incorrectWords: session.wrongWords.length,
+      missingWords: 0,
+      extraWords: 0,
+      userComparison: session.wrongWords.map(w => ({
+        userWord: '',
+        originalWord: w.originalWord,
+        status: 'incorrect' as const,
+        position: 0
       })),
-      currentBlank: currentBlank ? {
-        word: currentBlank.word,
-        isBlank: currentBlank.isBlank,
-        position: currentBlank.position
-      } : null
-    });
+      originalComparison: session.wrongWords.map(w => ({
+        userWord: '',
+        originalWord: w.originalWord,
+        status: 'incorrect' as const,
+        position: 0
+      })),
+      detailedFeedback: 'Converted from SyntaxLabSession'
+    };
     
-    return currentBlank ? currentBlank.word : null;
+    // Generate proper fillInBlankState using the new API
+    const fillInBlankState = FillInBlankAPI.createFillInBlankState(session.verse.text, mockComparison);
+    // Set completed words to match current session state
+    fillInBlankState.completedWords = session.wordsFixed || [];
+    
+    return {
+      id: session.id,
+      verseText: session.verse.text,
+      verseReference: session.verse.reference,
+      wrongWords: session.wrongWords.map(w => w.originalWord),
+      fillInBlankResult: session.fillInBlankResult,
+      fillInBlankState, // FIXED: Properly initialize state
+      originalVerseText: session.verse.text,
+      createdAt: session.startTime
+    };
+  };
+
+  // Helper function to convert SyntaxLabSessionData back to SyntaxLabSession
+  const convertFromSessionData = (sessionData: SyntaxLabSessionData, originalSession: SyntaxLabSession): SyntaxLabSession => {
+    return {
+      ...originalSession,
+      fillInBlankResult: sessionData.fillInBlankResult
+    };
+  };
+
+  // NEW API: Get current blank word using SyntaxLabAPI
+  const getCurrentBlankWord = (): string | null => {
+    if (!currentSession) return null;
+    const sessionData = convertToSessionData(currentSession);
+    return SyntaxLabAPI.getCurrentBlankWord(sessionData);
   };
 
   // Helper function to get round-specific word distribution
@@ -787,255 +820,135 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
   };
 
   const handleWordSubmit = () => {
-    if (submittingRef.current) return; submittingRef.current = true; setTimeout(() => { submittingRef.current = false; }, 250);
+    if (submittingRef.current) return; 
+    submittingRef.current = true; 
+    setTimeout(() => { submittingRef.current = false; }, 250);
+    
     if (!currentSession || !userInput.trim()) {
       console.log('🚨 handleWordSubmit: Early exit - no session or input');
       return;
     }
 
-    // For fill-in-blank mode, use the current blank word instead of currentWordIndex
-    const currentBlankWord = getCurrentBlankWord();
-    console.log('🔍 handleWordSubmit: currentBlankWord =', currentBlankWord);
-    console.log('🔍 handleWordSubmit: userInput =', userInput);
-    console.log('🔍 handleWordSubmit: fillInBlankResult =', currentSession?.fillInBlankResult);
-    
-    if (!currentBlankWord) {
-      console.log('🚨 handleWordSubmit: Early exit - no currentBlankWord');
-      return;
-    }
-    
-    // CRITICAL FIX: Get the translated word for comparison if translation is available
-    const currentBlank = currentSession.fillInBlankResult?.blanks.find(blank => blank.isBlank);
-    const blankPosition = currentBlank?.position || 0;
-    const wordForComparison = getTranslatedBlankWord(currentBlankWord, blankPosition);
-    
-    // Clean the blank word for comparison (remove punctuation)
-    const cleanBlankWord = wordForComparison.toLowerCase().replace(/[.,!?;:"']/g, '');
-    const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
-    
-    console.log('🌍 Translation comparison:', {
-      originalEnglish: currentBlankWord,
-      translatedWord: wordForComparison,
-      userInput: userInput,
-      isTranslated: displayVerse?.isTranslated
-    });
-    
-    // DUPLICATE PREVENTION: Check if this word is already fixed to prevent multiple submissions for same blank
-    const isAlreadyFixed = wordsFixed.some(word => 
-      word.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanBlankWord
-    );
-    
-    if (isAlreadyFixed) {
-      console.log('🚫 DUPLICATE PREVENTION: Word already fixed, skipping submission:', cleanBlankWord);
-      setUserInput(''); // Clear input but don't process
-      return;
-    }
-    
-    const isCorrect = cleanUserInput === cleanBlankWord;
-    
-    console.log('🔍 Word comparison:', {
-      currentBlankWord,
-      cleanBlankWord,
-      userInput,
-      cleanUserInput,
-      isCorrect,
-      isAlreadyFixed,
-      comparison: `"${cleanUserInput}" === "${cleanBlankWord}"`
-    });
-
-    if (isCorrect) {
-      // Store the cleaned version for consistency with progressive fill-in-blank system
-      const newWordsFixed = Array.from(new Set([...wordsFixed, cleanBlankWord]));
-      const updatedWordsFixed = newWordsFixed; // deduped
+    // NEW API: Process word submission using SyntaxLabAPI
+    try {
+      const sessionData = convertToSessionData(currentSession);
+      const result = SyntaxLabAPI.processWordSubmission(sessionData, userInput);
       
-      console.log('🔍 BEFORE UPDATE:', { 
-        currentWordsFixed: wordsFixed, 
-        newWord: cleanBlankWord, 
-        updatedWordsFixed 
+      console.log('🔍 NEW API Word submission result:', {
+        isCorrect: result.isCorrect,
+        shouldAdvance: result.shouldAdvance,
+        currentWord: result.currentWord,
+        userInput: userInput
       });
       
-      setWordsFixed(newWordsFixed);
-      setShowHint(false); // Reset hint for next word
-      setCurrentHint(''); // Clear previous hint
-      setShowAnswer(false); // Reset answer for next word
-      
-      // Show floating correct emoji
-      showFloatingEmoji('✅', true);
-      
-      // Track weak word improvement
-      const existingWeakWord = weakWords.find(w => w.word === cleanBlankWord);
-      if (existingWeakWord) {
-        existingWeakWord.timesCorrect += 1;
-        if (existingWeakWord.timesCorrect >= 3) {
-          existingWeakWord.mastered = true;
-        }
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === cleanBlankWord ? existingWeakWord : w
-        );
-        setWeakWords(updatedWeakWords);
-        localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
+      if (!result.currentWord) {
+        console.log('🚨 handleWordSubmit: No current word to process');
+        return;
       }
+    
+      // Update session using new API
+      const updatedSession = convertFromSessionData(result.updatedSession, currentSession);
+      setCurrentSession(updatedSession);
       
-      // Update session with progressive fill-in-blank for left-to-right progression
-      // Prepare session update data first, then determine if round advancement is needed
-      let sessionUpdateData: { wordsFixed: string[], fillInBlankResult: any } = {
-        wordsFixed: updatedWordsFixed,
-        fillInBlankResult: null
-      };
-      
-      if (comparisonResult) {
-        // Regular session (from MemorizePage) - use SyntaxLabAPI
-        const updatedSessionData = SyntaxLabAPI.updateSessionProgress(
-          SyntaxLabAPI.createSession(comparisonResult),
-          updatedWordsFixed
-        );
-        sessionUpdateData.fillInBlankResult = updatedSessionData.fillInBlankResult;
+      if (result.isCorrect) {
+        // Show success animation
+        showFloatingEmoji('✅', true);
         
-        console.log('🔄 PREPARING SESSION UPDATE (Regular):', {
-          updatedWordsFixed,
-          newFillInBlankResult: updatedSessionData.fillInBlankResult?.blanks.map(b => ({
-            word: b.word,
-            isBlank: b.isBlank
-          })) || []
-        });
-      } else {
-        // Auto practice session - update fillInBlankResult for current round only
-        const currentRoundWords = getWordsForCurrentRound();
+        // Update words fixed for round progression integration
+        const newWordsFixed = [...wordsFixed, result.currentWord];
+        setWordsFixed(newWordsFixed);
         
-        // TRANSLATION-AWARE SESSION UPDATE
-        const sessionVerse = currentSession?.verse;
-        const translatedVerse = displayVerse;
-        const isTranslated = translatedVerse?.isTranslated && sessionVerse;
-        
-        const updatedFillInBlankResult = isTranslated
-          ? FillInBlankService.calculateProgressiveFillInBlanks(
-              sessionVerse.text, // Spanish text
-              currentRoundWords, // Not used when translation mapping provided
-              updatedWordsFixed,
-              {
-                englishText: currentSession?.originalComparison?.originalComparison?.[0]?.originalWord ? 
-                  currentSession.originalComparison.originalComparison.map((w: any) => w.originalWord).join(' ') : 
-                  sessionVerse.text, // Fallback to session text
-                englishWrongWords: currentRoundWords // English wrong words
-              }
-            )
-          : FillInBlankService.calculateProgressiveFillInBlanks(
-              sessionVerse?.text || '', 
-              currentRoundWords,
-              updatedWordsFixed
-            );
-        sessionUpdateData.fillInBlankResult = updatedFillInBlankResult;
-        
-        console.log('🔄 PREPARING SESSION UPDATE (Auto Practice):', {
-          currentRoundWords,
-          updatedWordsFixed,
-          newFillInBlankResult: updatedFillInBlankResult.blanks.map(b => ({
-            word: b.word,
-            isBlank: b.isBlank
-          }))
-        });
-      }
-      
-      // Use RoundProgressionAPI to handle round completion logic (only for correct answers)
-      const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord);
-      const progressionState: RoundProgressionState = {
-        currentRound,
-        maxRounds: currentSession.maxRounds || 3,
-        wordsFixed: updatedWordsFixed, // FIXED: Use current state instead of stale state
-        currentRoundWords: getWordsForCurrentRound(),
-        totalWords: allWrongWords
-      };
-      
-      const progressionResult = RoundProgressionAPI.processWordSubmission(
-        progressionState,
-        cleanBlankWord,
-        true // Word was correct since we're in the isCorrect block
-      );
-      
-      console.log('🎯 Round completion check:', {
-        currentRound,
-        maxRounds: progressionResult.progressData.maxRounds,
-        roundProgress: progressionResult.progressData.roundProgress,
-        shouldAdvanceRound: progressionResult.shouldAdvanceRound,
-        shouldCompleteSession: progressionResult.shouldCompleteSession,
-        currentWordsFixedState: wordsFixed,
-        updatedWordsFixedUsed: updatedWordsFixed
-      });
-      
-      if (progressionResult.shouldAdvanceRound && progressionResult.nextRoundState) {
-        // Advance to next round using API state
-        console.log('🚀 ADVANCING ROUND:', {
-          from: `${currentRound}/${progressionResult.progressData.maxRounds}`,
-          to: `${progressionResult.nextRoundState.currentRound}/${progressionResult.progressData.maxRounds}`,
-          resettingWordsFixedTo: progressionResult.nextRoundState.wordsFixed
-        });
-        
-        setCurrentRound(progressionResult.nextRoundState.currentRound);
-        setWordsFixed(progressionResult.nextRoundState.wordsFixed); // Reset to empty array
-        setCurrentWordIndex(0);
-        setUserInput('');
+        // Reset UI state
         setShowHint(false);
+        setCurrentHint('');
         setShowAnswer(false);
         
-        // Generate fill-in-blank for next round using API-provided words
-        const nextRoundFillInBlank = FillInBlankService.calculateFillInBlanks(
-          currentSession.verse.text,
-          progressionResult.nextRoundState.currentRoundWords
+        // Track weak word improvement
+        const existingWeakWord = weakWords.find(w => w.word === result.currentWord);
+        if (existingWeakWord) {
+          existingWeakWord.timesCorrect += 1;
+          if (existingWeakWord.timesCorrect >= 3) {
+            existingWeakWord.mastered = true;
+          }
+          const updatedWeakWords = weakWords.map(w => 
+            w.word === result.currentWord ? existingWeakWord : w
+          );
+          setWeakWords(updatedWeakWords);
+          localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
+        }
+        
+        // Check if session is completed
+        if (SyntaxLabAPI.isSessionCompleted(result.updatedSession)) {
+          console.log('🎉 Fill-in-blank session completed!');
+          completeSession();
+          return;
+        }
+        
+        // Integrate with round progression API
+        const allWrongWords = result.updatedSession.wrongWords || [];
+        const progressionState: RoundProgressionState = {
+          currentRound,
+          maxRounds: currentSession.maxRounds || 3,
+          wordsFixed: newWordsFixed,
+          currentRoundWords: getWordsForCurrentRound(),
+          totalWords: allWrongWords
+        };
+        
+        const progressionResult = RoundProgressionAPI.processWordSubmission(
+          progressionState,
+          result.currentWord,
+          true
         );
         
-        // FIXED: Update session data for next round instead of separate update
-        sessionUpdateData = {
-          wordsFixed: [], // Reset for new round
-          fillInBlankResult: nextRoundFillInBlank
-        };
+        if (progressionResult.shouldAdvanceRound && progressionResult.nextRoundState) {
+          console.log('🚀 Advancing to next round');
+          setCurrentRound(progressionResult.nextRoundState.currentRound);
+          setWordsFixed([]);
+          setCurrentWordIndex(0);
+        } else if (progressionResult.shouldCompleteSession) {
+          console.log('🎉 All rounds completed!');
+          completeSession();
+          return;
+        }
         
-        // Stay in practice mode for next round
-        setPhase('practice');
-      } else if (progressionResult.shouldCompleteSession) {
-        // All rounds complete - call original completion flow
-        completeSession();
-      }
-      
-      // CONSOLIDATED: Single session update with all correct data
-      setCurrentSession(prevSession => ({
-        ...prevSession!,
-        wordsFixed: sessionUpdateData.wordsFixed,
-        fillInBlankResult: sessionUpdateData.fillInBlankResult
-      }));
-    } else {
-      // Show floating incorrect emoji
-      showFloatingEmoji('❌', false);
-      
-      // Add to weak words if not already there
-      const existingWeakWord = weakWords.find(w => w.word === cleanBlankWord);
-      if (!existingWeakWord) {
-        const newWeakWord: WeakWord = {
-          id: Date.now().toString(),
-          word: cleanBlankWord,
-          originalWord: currentBlankWord, // Keep original case for display
-          verse: comparisonResult?.originalComparison[0]?.verse || 'Unknown',
-          reference: 'Unknown Reference',
-          timesWrong: 1,
-          timesCorrect: 0,
-          lastMissed: new Date(),
-          mastered: false
-        };
-        const updatedWeakWords = [...weakWords, newWeakWord];
-        setWeakWords(updatedWeakWords);
-        localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       } else {
-        existingWeakWord.timesWrong += 1;
-        existingWeakWord.lastMissed = new Date();
-        existingWeakWord.mastered = false;
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === cleanBlankWord ? existingWeakWord : w
-        );
-        setWeakWords(updatedWeakWords);
-        localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
+        // Show error animation
+        showFloatingEmoji('❌', false);
+        
+        // Track mistake for weak words
+        const existingWeakWord = weakWords.find(w => w.word === result.currentWord);
+        if (!existingWeakWord) {
+          const newWeakWord: WeakWord = {
+            id: Date.now().toString(),
+            word: result.currentWord,
+            originalWord: result.currentWord,
+            verse: currentSession.verse.reference || 'Unknown',
+            reference: currentSession.verse.reference || 'Unknown',
+            timesWrong: 1,
+            timesCorrect: 0,
+            lastMissed: new Date(),
+            mastered: false
+          };
+          setWeakWords([...weakWords, newWeakWord]);
+          localStorage.setItem('syntaxLabWeakWords', JSON.stringify([...weakWords, newWeakWord]));
+        } else {
+          existingWeakWord.timesWrong += 1;
+          existingWeakWord.lastMissed = new Date();
+          existingWeakWord.mastered = false;
+          const updatedWeakWords = weakWords.map(w => 
+            w.word === result.currentWord ? existingWeakWord : w
+          );
+          setWeakWords(updatedWeakWords);
+          localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
+        }
       }
+      
+    } catch (error) {
+      console.error('🚨 Error processing word submission:', error);
+      showFloatingEmoji('❌', false);
     }
     
-    // Reset input for next word (moved to end of function)
+    // Clear input for next word
     setUserInput('');
   };
 

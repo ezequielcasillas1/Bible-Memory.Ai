@@ -1,13 +1,5 @@
 { 
-CRITICAL BUG: Fill-in-blank Spanish translation system has TWO major issues:
-
-1. WORD COMPLETION MISMATCH: When user types Spanish word "esto" for English "all", the system accepts it as correct (isCorrect: true) and adds "esto" to wordsFixed array, but the blank doesn't get marked as completed visually because the completion matching logic compares Spanish "esto" against English text containing "all" - they don't match so blank stays active.
-
-2. WRONG WORD ORDER: Fill-in-blank system creates blanks based on English word positions even when displaying Spanish translation. User sees Spanish "Y sabemos QUE en todas..." but system expects English word "know" at position 2, causing "que" to appear in wrong position in the sequence. VISUAL EVIDENCE: When user types "que", the UI shows it highlighted in purple/blue in the MIDDLE of the verse "Y sabemos _____ en todas _____ cosas _____ Dios trabaja para _____ bien de aquellos _____ lo aman, que han sido _____" instead of filling the FIRST blank after "sabemos". The system should follow left-to-right progression but "que" appears as the 6th word instead of the 1st blank.
-
-ROOT CAUSE: The fillInBlankResult is created using English verse text and English wrong words, but when translation is active, the system should create blanks based on Spanish verse text with Spanish word positions. The completion matching should compare Spanish completed words against Spanish verse text, not English.
-
-FIX NEEDED: Create translation-aware fill-in-blank system that uses translated verse text for both blank creation AND completion matching when translation is detected.
+The ui saying there are no blank found, in our new api can you fix it? 
 }
 
 ---
