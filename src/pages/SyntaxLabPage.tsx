@@ -643,6 +643,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     // Set completed words to match current session state
     fillInBlankState.completedWords = session.wordsFixed || [];
     
+    // CRITICAL: Add translation context for Spanish/other language support
+    const translatedSessionVerse = displayVerse;
+    if (translatedSessionVerse?.isTranslated && translatedSessionVerse.text) {
+      fillInBlankState.translationContext = {
+        isTranslated: true,
+        originalVerse: session.verse.text, // English verse
+        translatedVerse: translatedSessionVerse.text // Spanish verse
+      };
+    }
+    
     return {
       id: session.id,
       verseText: session.verse.text,

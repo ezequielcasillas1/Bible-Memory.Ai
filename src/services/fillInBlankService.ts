@@ -32,6 +32,11 @@ export interface FillInBlankState {
   failedWords: string[]; // Words that failed in memorization
   completedWords: string[]; // Words successfully filled in
   currentBlankIndex: number; // Current active blank position
+  translationContext?: {
+    isTranslated: boolean;
+    originalVerse: string; // English verse
+    translatedVerse: string; // Spanish/other language verse
+  };
 }
 
 export class FillInBlankAPI {
@@ -173,11 +178,23 @@ export class FillInBlankAPI {
     const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
     const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
     
-    const isCorrect = cleanUserInput === cleanCurrentWord;
+    // TRANSLATION-AWARE COMPARISON
+    let expectedWord = cleanCurrentWord;
+    if (state.translationContext?.isTranslated) {
+      // If we have translation context, get the translated word for comparison
+      expectedWord = this.getTranslatedWord(
+        currentWord, 
+        currentBlank.position, 
+        state.translationContext
+      ).toLowerCase().replace(/[.,!?;:"']/g, '');
+    }
+    
+    const isCorrect = cleanUserInput === expectedWord;
     
     if (isCorrect) {
-      // Add word to completed list
-      const newCompletedWords = [...state.completedWords, cleanCurrentWord];
+      // Add word to completed list - use the expected word (translated if available)
+      const wordToStore = state.translationContext?.isTranslated ? expectedWord : cleanCurrentWord;
+      const newCompletedWords = [...state.completedWords, wordToStore];
       
       // Check if this word already exists to prevent duplicates
       const uniqueCompletedWords = Array.from(new Set(newCompletedWords));
@@ -192,7 +209,7 @@ export class FillInBlankAPI {
         newState,
         isCorrect: true,
         shouldAdvance: true,
-        currentWord: cleanCurrentWord
+        currentWord: wordToStore
       };
     }
     
@@ -220,6 +237,51 @@ export class FillInBlankAPI {
     return currentBlank ? currentBlank.word : null;
   }
   
+  /**
+   * TRANSLATION-AWARE: Get translated word for comparison
+   * Based on the original getTranslatedBlankWord logic from SyntaxLabPage
+   */
+  static getTranslatedWord(
+    englishWord: string, 
+    position: number, 
+    translationContext: { originalVerse: string; translatedVerse: string }
+  ): string {
+    const englishWords = translationContext.originalVerse.split(' ');
+    const translatedWords = translationContext.translatedVerse.split(' ');
+    
+    // Method 1: Try exact position mapping first (works for most cases)
+    if (position < translatedWords.length) {
+      const candidateWord = translatedWords[position];
+      if (candidateWord) {
+        return candidateWord;
+      }
+    }
+    
+    // Method 2: Fallback - try to find by relative position for different sentence structures
+    const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+    const englishWordIndex = englishWords.findIndex((word, idx) => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      return cleanWord === cleanEnglishWord;
+    });
+    
+    if (englishWordIndex !== -1 && englishWordIndex < translatedWords.length) {
+      const translatedCandidate = translatedWords[englishWordIndex];
+      return translatedCandidate || englishWord;
+    }
+    
+    // Method 3: For very different sentence structures, use proportional mapping
+    if (englishWords.length > 0 && translatedWords.length > 0) {
+      const proportionalIndex = Math.floor((position / englishWords.length) * translatedWords.length);
+      const proportionalWord = translatedWords[proportionalIndex];
+      if (proportionalWord) {
+        return proportionalWord;
+      }
+    }
+    
+    // Fallback to English word
+    return englishWord;
+  }
+
   /**
    * Generate underscores for blank display
    */
