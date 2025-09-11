@@ -374,20 +374,17 @@ export class FillInBlankService extends FillInBlankAPI {
     return this.calculateProgressiveFillInBlanks(originalText, wrongWords, []);
   }
   
-  // Legacy method for word selection based on range
+  // NEW: Numerical difficulty method
+  static selectWordsForNumericalDifficulty(originalText: string, difficulty: number): string[] {
+    const { NumericalDifficultyAPI } = require('./numericalDifficultyAPI');
+    return NumericalDifficultyAPI.selectWordsForDifficulty(originalText, difficulty);
+  }
+
+  // Legacy method for word selection based on range (maintained for backward compatibility)
   static selectWordsForBlankRange(originalText: string, range: 'short' | 'long'): string[] {
-    const words = originalText.split(' ');
-    const meaningfulWords = words.filter(word => word.length > 3);
-    
-    let targetCount: number;
-    if (range === 'short') {
-      targetCount = Math.max(3, Math.floor(meaningfulWords.length * 0.3));
-    } else {
-      targetCount = Math.max(6, Math.floor(meaningfulWords.length * 0.6));
-    }
-    
-    // Simple selection - just take first N meaningful words
-    return meaningfulWords.slice(0, targetCount);
+    // Convert legacy range to numerical difficulty
+    const difficulty = range === 'short' ? 6 : 15;
+    return this.selectWordsForNumericalDifficulty(originalText, difficulty);
   }
   
   // Legacy method for checking blank answers

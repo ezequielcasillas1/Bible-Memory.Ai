@@ -25,6 +25,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { t, setLanguage, isTranslating, translationError } = useLanguage();
 
+  // Difficulty info popup state
+  const [showDifficultyInfo, setShowDifficultyInfo] = useState<number | null>(null);
+
   // Test API state
   const [isTestingAPI, setIsTestingAPI] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -34,6 +37,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   } | null>(null);
 
   if (!isOpen) return null;
+
+  // Helper functions for difficulty info
+  const getDifficultyName = (level: number): string => {
+    const names: Record<number, string> = {
+      2: 'Beginner', 4: 'Novice', 6: 'Elementary', 8: 'Intermediate', 
+      10: 'Advanced', 15: 'Expert', 20: 'Master', 30: 'Virtuoso', 45: 'Legendary'
+    };
+    return names[level] || 'Standard';
+  };
+
+  const getDifficultyDescription = (level: number): string => {
+    const descriptions: Record<number, string> = {
+      2: 'Perfect for starting your memorization journey with very short verses',
+      4: 'Building confidence with simple verses and basic truths',
+      6: 'Standard difficulty for common memory verses like John 3:16',
+      8: 'Moderate challenge for growing memorizers with longer promises',
+      10: 'Solid challenge for dedicated students with complex passages',
+      15: 'Significant challenge requiring dedication with extended passages',
+      20: 'High difficulty for serious memorizers with long psalms',
+      30: 'Extreme challenge for memory athletes with very long passages',
+      45: 'Ultimate challenge - longest verses in Scripture like Esther 8:9'
+    };
+    return descriptions[level] || 'Standard difficulty level';
+  };
 
   const handleSettingChange = (key: keyof AppSettings, value: any) => {
     // Handle UI language change
@@ -162,47 +189,73 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Fill-in-Blank Range Setting */}
+          {/* Fill-in-Blank Numerical Difficulty Setting */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              📝 Fill-in-Blank Difficulty
+              📝 Fill-in-Blank Difficulty Scale
             </label>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleSettingChange('fillInBlankRange', 'short')}
-                  className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-                    (settings.fillInBlankRange || 'short') === 'short'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-lg mb-1">🟡</div>
-                    <div>Short</div>
-                    <div className="text-xs opacity-75">Fewer blanks</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleSettingChange('fillInBlankRange', 'long')}
-                  className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-                    settings.fillInBlankRange === 'long'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-lg mb-1">🔴</div>
-                    <div>Long</div>
-                    <div className="text-xs opacity-75">More blanks</div>
-                  </div>
-                </button>
+            <div className="space-y-4">
+              {/* Difficulty Selector */}
+              <div className="grid grid-cols-3 gap-2">
+                {[2, 4, 6, 8, 10, 15, 20, 30, 45].map((difficulty) => {
+                  const isSelected = (settings.fillInBlankDifficulty || 6) === difficulty;
+                  const getDifficultyInfo = (level: number) => {
+                    switch (level) {
+                      case 2: return { emoji: '🌱', name: 'Beginner', color: 'green' };
+                      case 4: return { emoji: '🌿', name: 'Novice', color: 'green' };
+                      case 6: return { emoji: '🌳', name: 'Elementary', color: 'blue' };
+                      case 8: return { emoji: '🌲', name: 'Intermediate', color: 'blue' };
+                      case 10: return { emoji: '🏔️', name: 'Advanced', color: 'purple' };
+                      case 15: return { emoji: '⛰️', name: 'Expert', color: 'purple' };
+                      case 20: return { emoji: '🗻', name: 'Master', color: 'red' };
+                      case 30: return { emoji: '🏔️', name: 'Virtuoso', color: 'red' };
+                      case 45: return { emoji: '🌟', name: 'Legendary', color: 'yellow' };
+                      default: return { emoji: '🌳', name: 'Standard', color: 'blue' };
+                    }
+                  };
+                  const info = getDifficultyInfo(difficulty);
+                  
+                  return (
+                    <button
+                      key={difficulty}
+                      onClick={() => handleSettingChange('fillInBlankDifficulty', difficulty)}
+                      className={`relative p-2 rounded-lg border-2 transition-all text-xs font-medium ${
+                        isSelected
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-sm mb-1">{info.emoji}</div>
+                        <div className="font-bold">{difficulty}</div>
+                        <div className="text-xs opacity-75 truncate">{info.name}</div>
+                      </div>
+                      {/* Info Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDifficultyInfo(difficulty);
+                        }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-blue-600 transition-colors"
+                        title={`Learn about difficulty level ${difficulty}`}
+                      >
+                        ?
+                      </button>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-gray-500 text-center">
-                {(settings.fillInBlankRange || 'short') === 'short' 
-                  ? 'Easier practice with 20-40% of words blanked' 
-                  : 'Advanced practice with 50-80% of words blanked'}
-              </p>
+              
+              {/* Current Selection Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="text-sm font-medium text-blue-900 mb-1">
+                  Current: Level {settings.fillInBlankDifficulty || 6} - {getDifficultyName(settings.fillInBlankDifficulty || 6)}
+                </div>
+                <div className="text-xs text-blue-700">
+                  {getDifficultyDescription(settings.fillInBlankDifficulty || 6)}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -474,6 +527,80 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Difficulty Info Popup */}
+      {showDifficultyInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Difficulty Level {showDifficultyInfo}
+                </h3>
+                <button
+                  onClick={() => setShowDifficultyInfo(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {(() => {
+                const { NumericalDifficultyAPI } = require('../services/numericalDifficultyAPI');
+                const level = NumericalDifficultyAPI.getDifficultyLevel(showDifficultyInfo);
+                
+                if (!level) return <div>Invalid difficulty level</div>;
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <div className="text-4xl mb-2">{level.emoji}</div>
+                      <h4 className="text-xl font-bold text-gray-900">{level.name}</h4>
+                      <p className="text-gray-600">{level.description}</p>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-2">📊 Specifications</h5>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li><strong>Words to blank:</strong> {level.value}</li>
+                        <li><strong>Word count range:</strong> {level.wordCountRange}</li>
+                        <li><strong>Target audience:</strong> {level.targetAudience}</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h5 className="font-medium text-blue-900 mb-2">📖 Recommended Verses</h5>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        {level.recommendedVerses.map((verse: string, index: number) => (
+                          <li key={index}>• {verse}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <h5 className="font-medium text-green-900 mb-2">✨ Example Verses</h5>
+                      <ul className="text-sm text-green-800 space-y-1">
+                        {level.exampleVerses.map((example: string, index: number) => (
+                          <li key={index}>• {example}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowDifficultyInfo(null)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

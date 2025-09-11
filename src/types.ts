@@ -50,7 +50,7 @@ export interface AppSettings {
   uiLanguage: string;
   preferredTranslationLanguage: string; // Keep this for Bible verse translation
   maxRounds: number; // Number of rounds for fill-in-blank and type-along practice
-  fillInBlankRange: 'short' | 'long'; // Controls how many words to blank in auto-generation
+  fillInBlankDifficulty: number; // Numerical difficulty scale: 2,4,6,8,10,15,20,30,45
 }
 
 export interface WordComparison {

@@ -338,10 +338,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
       detailedFeedback: `Auto-generated practice session for ${randomVerse.reference}`
     };
 
-    // Use adaptive word selection based on user's fillInBlankRange setting
-    const selectedWords = FillInBlankService.selectWordsForBlankRange(
+    // Use numerical difficulty-based word selection
+    const selectedWords = FillInBlankService.selectWordsForNumericalDifficulty(
       randomVerse.text, 
-      settings?.fillInBlankRange || 'short'
+      settings?.fillInBlankDifficulty || 6
     );
     
     const practiceWords: WordComparison[] = selectedWords.map((word: string, i: number) => ({
