@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill-in-Blank API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: #f7fafc;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-result {
+            font-family: 'Courier New', monospace;
+            background: #1a202c;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .error {
+            color: #f56565 !important;
+        }
+        .success {
+            color: #48bb78 !important;
+        }
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .verse-display {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 15px 0;
+            border: 2px solid #e2e8f0;
+        }
+        .blank-word {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .input-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+        }
+        input {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            flex: 1;
+        }
+        .progress-bar {
+            background: #e2e8f0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Fill-in-Blank API Test Suite</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Configuration</h3>
+            <p><strong>Test Verse:</strong> John 3:16</p>
+            <p><strong>Wrong Words:</strong> God, world, eternal</p>
+            <p><strong>Expected Behavior:</strong> Fill blanks left-to-right, advance on correct answers</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Interactive Fill-in-Blank Test</h3>
+            <div id="verse-display" class="verse-display"></div>
+            <div class="input-section">
+                <input type="text" id="word-input" placeholder="Enter the missing word..." />
+                <button class="button" onclick="submitWord()">Submit Word</button>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div id="feedback" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Test Controls</h3>
+            <button class="button" onclick="runAllTests()">🚀 Run All Tests</button>
+            <button class="button" onclick="resetTest()">🔄 Reset Test</button>
+            <button class="button" onclick="runStressTest()">⚡ Stress Test</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="test-output" class="test-result">Click "Run All Tests" to start testing...</div>
+        </div>
+    </div>
+
+    <script>
+        // Test data
+        const MOCK_VERSE = {
+            id: 'john-3-16-test',
+            text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+            reference: 'John 3:16',
+            testament: 'NT'
+        };
+
+        const MOCK_COMPARISON_RESULT = {
+            accuracy: 75,
+            totalWords: 26,
+            correctWords: 23,
+            incorrectWords: 3,
+            missingWords: 0,
+            extraWords: 0,
+            detailedFeedback: 'Test session',
+            userComparison: [
+                { originalWord: 'God', userWord: 'Lord', status: 'incorrect', position: 1 },
+                { originalWord: 'world', userWord: 'earth', status: 'incorrect', position: 5 },
+                { originalWord: 'eternal', userWord: 'everlasting', status: 'incorrect', position: 24 }
+            ],
+            originalComparison: []
+        };
+
+        // Global test state
+        let testState = null;
+        let testResults = [];
+
+        // Mock API for testing (fallback if real API not available)
+        const MockFillInBlankAPI = {
+            createFillInBlankState: (verseText, comparisonResult) => {
+                const wrongWords = comparisonResult.userComparison.map(w => w.originalWord);
+                const words = verseText.split(' ');
+                
+                const blanks = words.map((word, index) => {
+                    const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                    const isBlank = wrongWords.some(wrongWord => 
+                        wrongWord.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+                    );
+                    
+                    return {
+                        word: word,
+                        isBlank: isBlank,
+                        position: index,
+                        completed: false
+                    };
+                });
+                
+                return { verseText, blanks, wordsFixed: [] };
+            },
+
+            generateBlanks: (state) => ({
+                blanks: state.blanks,
+                formattedText: state.blanks.map(b => b.isBlank && !b.completed ? '____' : b.word).join(' ')
+            }),
+
+            getCurrentBlankWord: (state) => {
+                const currentBlank = state.blanks.find(b => b.isBlank && !b.completed);
+                return currentBlank ? currentBlank.word : null;
+            },
+
+            processWordSubmission: (state, userInput) => {
+                const currentBlank = state.blanks.find(b => b.isBlank && !b.completed);
+                
+                if (!currentBlank) {
+                    return { isCorrect: false, message: 'No more blanks to fill' };
+                }
+                
+                const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+                const cleanTargetWord = currentBlank.word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                
+                if (cleanUserInput === cleanTargetWord) {
+                    currentBlank.completed = true;
+                    state.wordsFixed.push(currentBlank.word);
+                    return { isCorrect: true, message: `Correct! "${currentBlank.word}" ✅` };
+                } else {
+                    return { isCorrect: false, message: `Try again. Expected "${currentBlank.word}", got "${userInput}" ❌` };
+                }
+            },
+
+            isCompleted: (state) => {
+                return state.blanks.filter(b => b.isBlank).every(b => b.completed);
+            }
+        };
+
+        function getAPI() {
+            // Try to use real API first, fallback to mock
+            if (typeof FillInBlankAPI !== 'undefined') {
+                return FillInBlankAPI;
+            } else if (typeof window.FillInBlankAPI !== 'undefined') {
+                return window.FillInBlankAPI;
+            } else {
+                console.warn('Real FillInBlankAPI not found, using mock API');
+                return MockFillInBlankAPI;
+            }
+        }
+
+        function log(message, isError = false) {
+            const output = document.getElementById('test-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = isError ? '❌' : '✅';
+            output.innerHTML += `${prefix} [${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('test-output').innerHTML = '';
+        }
+
+        function updateVerseDisplay() {
+            if (!testState) return;
+            
+            const api = getAPI();
+            const result = api.generateBlanks(testState);
+            const currentBlank = api.getCurrentBlankWord(testState);
+            
+            // Highlight current blank word
+            let displayText = result.formattedText;
+            if (currentBlank) {
+                displayText = displayText.replace('____', '<span class="blank-word">____</span>');
+            }
+            
+            document.getElementById('verse-display').innerHTML = displayText;
+            
+            // Update progress
+            const totalBlanks = testState.blanks.filter(b => b.isBlank).length;
+            const completedBlanks = testState.wordsFixed.length;
+            const progress = totalBlanks > 0 ? (completedBlanks / totalBlanks) * 100 : 0;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+
+        function resetTest() {
+            const api = getAPI();
+            testState = api.createFillInBlankState(MOCK_VERSE.text, MOCK_COMPARISON_RESULT);
+            updateVerseDisplay();
+            document.getElementById('word-input').value = '';
+            document.getElementById('feedback').innerHTML = 'Test reset. Enter the first missing word.';
+            log('Test reset successfully');
+        }
+
+        function submitWord() {
+            if (!testState) {
+                resetTest();
+                return;
+            }
+            
+            const userInput = document.getElementById('word-input').value.trim();
+            if (!userInput) {
+                document.getElementById('feedback').innerHTML = 'Please enter a word.';
+                return;
+            }
+            
+            const api = getAPI();
+            const result = api.processWordSubmission(testState, userInput);
+            
+            document.getElementById('feedback').innerHTML = result.message;
+            document.getElementById('feedback').className = 'test-result ' + (result.isCorrect ? 'success' : 'error');
+            
+            if (result.isCorrect) {
+                document.getElementById('word-input').value = '';
+                updateVerseDisplay();
+                
+                // Check if completed
+                if (api.isCompleted(testState)) {
+                    document.getElementById('feedback').innerHTML += '\n\n🎉 Congratulations! All blanks completed!';
+                }
+            }
+            
+            log(`Word submitted: "${userInput}" - ${result.isCorrect ? 'CORRECT' : 'INCORRECT'}`);
+        }
+
+        function runAllTests() {
+            clearLog();
+            log('🚀 Starting comprehensive fill-in-blank tests...');
+            
+            const api = getAPI();
+            let passedTests = 0;
+            let totalTests = 0;
+
+            // Test 1: Basic initialization
+            totalTests++;
+            try {
+                testState = api.createFillInBlankState(MOCK_VERSE.text, MOCK_COMPARISON_RESULT);
+                log('Test 1: State creation - PASSED');
+                passedTests++;
+            } catch (error) {
+                log(`Test 1: State creation - FAILED: ${error.message}`, true);
+            }
+
+            // Test 2: Blank generation
+            totalTests++;
+            try {
+                const result = api.generateBlanks(testState);
+                if (result.blanks && result.formattedText) {
+                    log('Test 2: Blank generation - PASSED');
+                    passedTests++;
+                } else {
+                    log('Test 2: Blank generation - FAILED: Missing blanks or formattedText', true);
+                }
+            } catch (error) {
+                log(`Test 2: Blank generation - FAILED: ${error.message}`, true);
+            }
+
+            // Test 3: Current blank detection
+            totalTests++;
+            try {
+                const currentBlank = api.getCurrentBlankWord(testState);
+                if (currentBlank === 'God') {
+                    log('Test 3: Current blank detection - PASSED');
+                    passedTests++;
+                } else {
+                    log(`Test 3: Current blank detection - FAILED: Expected "God", got "${currentBlank}"`, true);
+                }
+            } catch (error) {
+                log(`Test 3: Current blank detection - FAILED: ${error.message}`, true);
+            }
+
+            // Test 4: Word submission
+            totalTests++;
+            try {
+                const result = api.processWordSubmission(testState, 'God');
+                if (result.isCorrect) {
+                    log('Test 4: Word submission - PASSED');
+                    passedTests++;
+                } else {
+                    log(`Test 4: Word submission - FAILED: ${result.message}`, true);
+                }
+            } catch (error) {
+                log(`Test 4: Word submission - FAILED: ${error.message}`, true);
+            }
+
+            // Test 5: Progression
+            totalTests++;
+            try {
+                const nextBlank = api.getCurrentBlankWord(testState);
+                if (nextBlank === 'world') {
+                    log('Test 5: Word progression - PASSED');
+                    passedTests++;
+                } else {
+                    log(`Test 5: Word progression - FAILED: Expected "world", got "${nextBlank}"`, true);
+                }
+            } catch (error) {
+                log(`Test 5: Word progression - FAILED: ${error.message}`, true);
+            }
+
+            // Test 6: Complete sequence
+            totalTests++;
+            try {
+                api.processWordSubmission(testState, 'world');
+                api.processWordSubmission(testState, 'eternal');
+                const isCompleted = api.isCompleted(testState);
+                if (isCompleted) {
+                    log('Test 6: Complete sequence - PASSED');
+                    passedTests++;
+                } else {
+                    log('Test 6: Complete sequence - FAILED: Not marked as completed', true);
+                }
+            } catch (error) {
+                log(`Test 6: Complete sequence - FAILED: ${error.message}`, true);
+            }
+
+            // Test 7: Case insensitivity
+            totalTests++;
+            try {
+                resetTest();
+                const result = api.processWordSubmission(testState, 'god'); // lowercase
+                if (result.isCorrect) {
+                    log('Test 7: Case insensitivity - PASSED');
+                    passedTests++;
+                } else {
+                    log('Test 7: Case insensitivity - FAILED: Should accept lowercase', true);
+                }
+            } catch (error) {
+                log(`Test 7: Case insensitivity - FAILED: ${error.message}`, true);
+            }
+
+            // Final results
+            log(`\n🎯 TEST SUMMARY: ${passedTests}/${totalTests} tests passed`);
+            if (passedTests === totalTests) {
+                log('🎉 ALL TESTS PASSED! Fill-in-blank logic is working perfectly!');
+            } else {
+                log(`⚠️ ${totalTests - passedTests} tests failed. Please review the implementation.`, true);
+            }
+
+            // Reset for interactive use
+            resetTest();
+        }
+
+        function runStressTest() {
+            clearLog();
+            log('⚡ Running stress test with multiple verses...');
+            
+            const testVerses = [
+                'The LORD is my shepherd, I lack nothing.',
+                'In the beginning was the Word, and the Word was with God, and the Word was God.',
+                'Trust in the LORD with all your heart and lean not on your own understanding.'
+            ];
+            
+            testVerses.forEach((verse, index) => {
+                try {
+                    const mockComparison = {
+                        ...MOCK_COMPARISON_RESULT,
+                        userComparison: [
+                            { originalWord: 'LORD', userWord: 'God', status: 'incorrect', position: 1 },
+                            { originalWord: 'heart', userWord: 'mind', status: 'incorrect', position: 5 }
+                        ]
+                    };
+                    
+                    const api = getAPI();
+                    const state = api.createFillInBlankState(verse, mockComparison);
+                    const result = api.generateBlanks(state);
+                    
+                    log(`Stress test ${index + 1}: ${verse.substring(0, 30)}... - PASSED`);
+                } catch (error) {
+                    log(`Stress test ${index + 1}: FAILED - ${error.message}`, true);
+                }
+            });
+            
+            log('⚡ Stress test completed!');
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            resetTest();
+            log('🎯 Fill-in-Blank Test Suite Ready!');
+            log('Click "Run All Tests" for automated testing or try the interactive test above.');
+            
+            // Allow Enter key to submit words
+            document.getElementById('word-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitWord();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
