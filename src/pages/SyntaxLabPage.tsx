@@ -3,6 +3,7 @@ import { ArrowLeft, BookOpen, History, Bot, Brain, X } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
 import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAutoTranslation } from '../contexts/AutoTranslationContext';
 import { HistoryService } from '../services/historyService';
 import { OriginalVerseService } from '../services/originalVerseService';
 import { SyntaxLabAPI, type SyntaxLabSessionData } from '../services/syntaxLabAPI';
@@ -26,6 +27,14 @@ interface SyntaxLabPageProps {
   settings: AppSettings;
 }
 
+// Helper function to get multi-language translations for fill-in-blank
+const getMultiLanguageTranslations = (verse: Verse): { [languageCode: string]: string } | undefined => {
+  // For now, return undefined to maintain backward compatibility
+  // This will be enhanced when translation cache access is fully integrated
+  // TODO: Integrate with AutoTranslationContext to fetch cached translations
+  return undefined;
+};
+
 const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ 
   comparisonResult, 
   selectedVerse, 
@@ -34,6 +43,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   settings 
 }) => {
   const { t } = useLanguage();
+  const { getTranslatedVerse } = useAutoTranslation();
   
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
@@ -345,7 +355,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         translationContext: displayVerse?.isTranslated ? {
           isTranslated: true,
           originalVerse: currentSession.verse.text,
-          translatedVerse: displayVerse.text
+          translatedVerse: displayVerse.text, // Primary translation (backward compatibility)
+          // NEW: Multi-language support - get translations for all supported languages
+          multiLanguageTranslations: getMultiLanguageTranslations(currentSession.verse)
         } : undefined
       };
 

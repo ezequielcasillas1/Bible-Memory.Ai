@@ -1,5 +1,5 @@
 { 
-"For" God so loved the world is part when typing in the correct word "For" it fails to say it is correct, and does not go to the next word"
+
 }
 
 ---

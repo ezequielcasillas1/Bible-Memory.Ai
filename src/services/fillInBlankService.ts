@@ -36,7 +36,11 @@ export interface FillInBlankState {
   translationContext?: {
     isTranslated: boolean;
     originalVerse: string; // English verse
-    translatedVerse: string; // Spanish/other language verse
+    translatedVerse: string; // Primary translated verse (backward compatibility)
+    // NEW: Multi-language support
+    multiLanguageTranslations?: {
+      [languageCode: string]: string; // e.g., { 'es': 'Porque...', 'fr': 'Car...', 'de': 'Denn...' }
+    };
   };
 }
 
@@ -187,32 +191,59 @@ export class FillInBlankAPI {
       const currentWord = blankWord.word;
       const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
       
-      // TRANSLATION-AWARE COMPARISON - Accept BOTH English and translated words
+      // MULTI-LANGUAGE TRANSLATION-AWARE COMPARISON
       let isMatch = false;
       let expectedWord = '';
+      let matchedLanguage = '';
       
       if (state.translationContext?.isTranslated) {
-        // Check both English (original) and translated word
+        // Always check English first
         const englishWord = cleanCurrentWord;
-        const translatedWord = this.getTranslatedWord(
-          currentWord, 
-          blankWord.position, 
-          state.translationContext
-        ).toLowerCase().replace(/[.,!?;:"']/g, '');
-        
-        // Accept either English or translated word
         if (cleanUserInput === englishWord) {
           isMatch = true;
           expectedWord = englishWord;
-        } else if (cleanUserInput === translatedWord) {
-          isMatch = true;
-          expectedWord = translatedWord;
+          matchedLanguage = 'en';
+        } else {
+          // Check multi-language translations if available
+          if (state.translationContext.multiLanguageTranslations) {
+            for (const [langCode, translatedVerse] of Object.entries(state.translationContext.multiLanguageTranslations)) {
+              const translatedWord = this.getTranslatedWordFromVerse(
+                currentWord,
+                blankWord.position,
+                state.translationContext.originalVerse,
+                translatedVerse
+              ).toLowerCase().replace(/[.,!?;:"']/g, '');
+              
+              if (cleanUserInput === translatedWord) {
+                isMatch = true;
+                expectedWord = translatedWord;
+                matchedLanguage = langCode;
+                break;
+              }
+            }
+          }
+          
+          // Fallback: Check primary translated verse (backward compatibility)
+          if (!isMatch && state.translationContext.translatedVerse) {
+            const translatedWord = this.getTranslatedWord(
+              currentWord, 
+              blankWord.position, 
+              state.translationContext
+            ).toLowerCase().replace(/[.,!?;:"']/g, '');
+            
+            if (cleanUserInput === translatedWord) {
+              isMatch = true;
+              expectedWord = translatedWord;
+              matchedLanguage = 'primary';
+            }
+          }
         }
       } else {
         // No translation context - only check English
         if (cleanUserInput === cleanCurrentWord) {
           isMatch = true;
           expectedWord = cleanCurrentWord;
+          matchedLanguage = 'en';
         }
       }
       
@@ -304,6 +335,52 @@ export class FillInBlankAPI {
     }
     
     // Method 3: For very different sentence structures, use proportional mapping
+    if (englishWords.length > 0 && translatedWords.length > 0) {
+      const proportionalIndex = Math.floor((position / englishWords.length) * translatedWords.length);
+      const proportionalWord = translatedWords[proportionalIndex];
+      if (proportionalWord) {
+        return proportionalWord;
+      }
+    }
+    
+    // Fallback to English word
+    return englishWord;
+  }
+  
+  /**
+   * NEW: Get translated word from specific verse (for multi-language support)
+   * This allows checking against any language translation, not just the primary one
+   */
+  static getTranslatedWordFromVerse(
+    englishWord: string,
+    position: number,
+    originalVerse: string,
+    translatedVerse: string
+  ): string {
+    const englishWords = originalVerse.split(' ');
+    const translatedWords = translatedVerse.split(' ');
+    
+    // Method 1: Try exact position mapping first
+    if (position < translatedWords.length) {
+      const candidateWord = translatedWords[position];
+      if (candidateWord) {
+        return candidateWord;
+      }
+    }
+    
+    // Method 2: Fallback - find by relative position
+    const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+    const englishWordIndex = englishWords.findIndex((word, idx) => {
+      const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      return cleanWord === cleanEnglishWord;
+    });
+    
+    if (englishWordIndex !== -1 && englishWordIndex < translatedWords.length) {
+      const translatedCandidate = translatedWords[englishWordIndex];
+      return translatedCandidate || englishWord;
+    }
+    
+    // Method 3: Proportional mapping for different sentence structures
     if (englishWords.length > 0 && translatedWords.length > 0) {
       const proportionalIndex = Math.floor((position / englishWords.length) * translatedWords.length);
       const proportionalWord = translatedWords[proportionalIndex];
