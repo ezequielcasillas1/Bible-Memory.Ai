@@ -202,11 +202,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         setShowAnswer(false);
         setUserInput('');
         
-        // Check if session is completed
+        // Check if round is completed (all words filled)
         const updatedState = { ...fillInBlankState, completedWords: newWordsFixed };
         if (FillInBlankAPI.isCompleted(updatedState)) {
-          setPhase('completion');
-          return;
+          // Round completed - check if we should advance to next round
+          if (currentRound < (currentSession.maxRounds || 3)) {
+            // Advance to next round
+            const nextRound = currentRound + 1;
+            setCurrentRound(nextRound);
+            setWordsFixed([]); // Reset words for new round
+            setUserInput('');
+            
+            console.log(`🎊 ROUND ${currentRound} COMPLETED! Advancing to Round ${nextRound}/${currentSession.maxRounds || 3}`);
+            
+            // Show round completion animation
+            setFloatingEmoji({
+              id: `round-complete-${Date.now()}`,
+              emoji: `🎊 Round ${currentRound} Complete!`,
+              x: window.innerWidth / 2,
+              y: window.innerHeight / 2
+            });
+            setTimeout(() => setFloatingEmoji(null), 3000);
+            
+            return; // Stay in practice phase for next round
+          } else {
+            // All rounds completed - go to completion
+            console.log(`🏆 ALL ROUNDS COMPLETED! Session finished after ${currentRound} rounds.`);
+            setPhase('completion');
+            return;
+          }
         }
       } else {
         // Show error animation

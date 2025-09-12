@@ -36,8 +36,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     if (currentSession.fillInBlankResult) {
       // Use factory-generated result with dynamic progression
       const failedWords = currentSession.wrongWords.map((w: any) => (w.originalWord || w.userWord) as string);
-      const uniqueFailedWords = Array.from(new Set(
-        failedWords.map(w => w.toLowerCase().replace(/[.,!?;:"']/g, ''))
+      const uniqueFailedWords: string[] = Array.from(new Set(
+        failedWords.map((w: string) => w.toLowerCase().replace(/[.,!?;:"']/g, ''))
       ));
 
       fillInBlankState = {

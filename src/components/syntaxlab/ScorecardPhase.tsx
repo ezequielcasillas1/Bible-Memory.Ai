@@ -11,7 +11,6 @@ interface ScorecardPhaseExtendedProps extends ScorecardPhaseProps {
 const ScorecardPhase: React.FC<ScorecardPhaseExtendedProps> = ({
   stats,
   currentSession,
-  setCurrentSession,
   setPhase,
   onStartNewSession,
   onBack,
