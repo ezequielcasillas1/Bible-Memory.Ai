@@ -1,52 +1,68 @@
-{ Delete the current broken fill-in-the-blank functionality and replace it with a new working API.
+{Make a unit test for this: Prompt for Cursor AI Agent — Fix Fill-in-the-Blank + Word/Round Count
 
-API Purpose
+Goal: Replace the broken Fill-in-the-Blank flow with a working API + UI that correctly advances blanks and ties into word/round counting.
 
-Create a Fill in the Blank API that uses prior information from syntax memoized verses (manually captured).
+Replace & Integrate
 
-Based on memorized results, generate SyntaxLabs study flows.
+Remove the current Fill-in-the-Blank logic.
 
-Core Logic
+Implement a new Fill-in-the-Blank API that:
 
-Study modes: start with Fill in the Blank only.
+Uses prior “syntax memoized verses” data (manually captured).
 
-Pull results from verse memorization:
+Generates blanks from missed words (or a fallback selection).
 
-If the user failed a word, capture it.
+Exposes events/state needed by the word count and round count displays.
 
-Those failed words become the blanks in Fill in the Blank practice.
+Word Count Logic (most important)
 
-Progress should follow top-to-bottom, left-to-right order of the verse.
+Display word count as current / total.
 
-Connect this API to the round/word count API so counts update correctly.
+total = the number of blanks in the current set (e.g., 7).
 
-Bug Fixes
+On each correct word, increment current by 1 (e.g., 1/7 → 2/7 → … → 7/7).
 
-Ensure blanks never get stuck (must always advance).
+When the user reaches 7/7, the set is complete. Emit a wordSetComplete signal and only then trigger round progression.
 
-If the same word appears multiple times, filling one blank should only complete that blank, not the others.
+Round Count Logic
 
-UI & API Sync
+Display round count as currentRound / totalRounds (e.g., 1/3).
 
-Underline blanks: must appear when API marks a word as blank.
+On wordSetComplete, advance the round: 1/3 → 2/3.
 
-Green highlights: must apply immediately when the API confirms a correct word capture.
+Never advance the round early; never skip word count steps.
 
-Purple gradient highlights: must show when the API signals an active blank being filled.
+Progression Bug Fix (critical)
 
-All UI updates should be triggered by API state changes so the display always stays in sync with the data flow.
+After a correct entry, immediately advance to the next blank.
+
+Do not stay stuck on the same blank; no extra clicks or refocus needed.
+
+If the plan/randomization selects multiple target blanks, move to the next planned blank in order.
+
+If the same word appears multiple times, filling one only completes that specific blank, not all duplicates.
+
+UI ←→ API Sync (must update in real time)
+
+Underline: show for all active blanks (driven by API state).
+
+Purple gradient: apply to the currently active blank while the user is typing.
+
+Green highlight: apply immediately when the API confirms a correct capture.
+
+All visual states must update synchronously from API state changes (no lag, flicker, or double-submit).
 
 Deliverable
 
-Replace old fill-in-the-blank code with this new API.
+A working Fill-in-the-Blank module replacing the old one, with:
 
-Confirm working integration with:
+Correct word count (x/y) behavior and completion at y/y.
 
-Round/word count API
+Correct round count progression only after y/y.
 
-SyntaxLabs study flow
+Guaranteed advance to next blank after a correct word.
 
-UI effects (underline, green highlight, purple gradient) updating correctly with API state. }
+UI effects (underline, purple active, green success) in sync with API state.}
 
 ---
 

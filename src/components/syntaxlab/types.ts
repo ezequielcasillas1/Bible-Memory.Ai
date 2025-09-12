@@ -54,6 +54,7 @@ export interface PracticePhaseProps extends SyntaxLabPhaseProps {
   renderWordWithMask: (word: string, round: number) => string;
   renderBlankWord: (word: string) => string;
   renderEnhancedTypingWord: (originalWord: string, userInput: string, round: number) => any;
+  getProgressData: () => { global: { completed: number; total: number; currentWord: number; percentage: number }; round: { completed: number; total: number; currentWord: number; percentage: number } };
 }
 
 export interface FlashcardsPhaseProps extends SyntaxLabPhaseProps {

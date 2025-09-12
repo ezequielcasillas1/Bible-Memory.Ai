@@ -190,13 +190,39 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
     if (!currentSession) {
       return {
         global: { completed: 0, total: 0, currentWord: 1, percentage: 0 },
-        round: { completed: 0, total: 0, percentage: 0 }
+        round: { completed: 0, total: 0, currentWord: 1, percentage: 0 }
       };
     }
-    // This would contain the actual implementation from the original file
+
+    const allWrongWords = currentSession.wrongWords.map(ww => ww.originalWord || ww.userWord);
+    const progressionState: RoundProgressionState = {
+      currentRound,
+      maxRounds: currentSession.maxRounds || 3,
+      wordsFixed: wordsFixed,
+      currentRoundWords: allWrongWords.slice(0, Math.ceil(allWrongWords.length / (currentSession.maxRounds || 3))),
+      totalWords: allWrongWords
+    };
+
+    // Use RoundProgressionAPI to get accurate progress data
+    const dummyResult = RoundProgressionAPI.processWordSubmission(
+      progressionState,
+      '', // Empty word for progress calculation only
+      false // Not processing actual submission
+    );
+
     return {
-      global: { completed: wordsFixed.length, total: currentSession.wrongWords.length, currentWord: 1, percentage: 50 },
-      round: { completed: 0, total: 0, percentage: 0 }
+      global: {
+        completed: dummyResult.progressData.globalProgress.completed,
+        total: dummyResult.progressData.globalProgress.total,
+        currentWord: Math.min(dummyResult.progressData.globalProgress.completed + 1, dummyResult.progressData.globalProgress.total),
+        percentage: dummyResult.progressData.globalProgress.percentage
+      },
+      round: {
+        completed: dummyResult.progressData.roundProgress.completed,
+        total: dummyResult.progressData.roundProgress.total,
+        currentWord: dummyResult.progressData.roundProgress.currentWordInRound || 1,
+        percentage: dummyResult.progressData.roundProgress.percentage
+      }
     };
   };
 
@@ -294,7 +320,86 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   };
 
   const handleWordSubmit = () => {
-    console.log('Handle Word Submit');
+    if (submittingRef.current) return; 
+    submittingRef.current = true; 
+    setTimeout(() => { submittingRef.current = false; }, 250);
+    
+    if (!currentSession || !userInput.trim()) {
+      console.log('🚨 handleWordSubmit: Early exit - no session or input');
+      return;
+    }
+
+    // Process word submission using FillInBlankAPI directly
+    try {
+      if (!currentSession.fillInBlankResult) {
+        console.log('🚨 handleWordSubmit: No fillInBlankResult in session');
+        return;
+      }
+
+      // Get current blank word for comparison
+      const fillInBlankState = {
+        verse: currentSession.verse.text,
+        failedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord),
+        completedWords: wordsFixed,
+        currentBlankIndex: 0,
+        translationContext: displayVerse?.isTranslated ? {
+          isTranslated: true,
+          originalVerse: currentSession.verse.text,
+          translatedVerse: displayVerse.text
+        } : undefined
+      };
+
+      const result = FillInBlankAPI.processWordSubmission(fillInBlankState, userInput);
+      
+      console.log('🔍 Word submission result:', {
+        isCorrect: result.isCorrect,
+        shouldAdvance: result.shouldAdvance,
+        currentWord: result.currentWord,
+        userInput: userInput
+      });
+      
+      if (result.isCorrect) {
+        // Show success animation
+        setFloatingEmoji({
+          id: `emoji-${Date.now()}`,
+          emoji: '✅',
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+        setTimeout(() => setFloatingEmoji(null), 2000);
+        
+        // Update words fixed for round progression integration
+        const newWordsFixed = [...wordsFixed, result.currentWord || ''];
+        setWordsFixed(newWordsFixed);
+        
+        // Reset UI state
+        setShowHint(false);
+        setCurrentHint('');
+        setShowAnswer(false);
+        setUserInput('');
+        
+        // Check if session is completed
+        const updatedState = { ...fillInBlankState, completedWords: newWordsFixed };
+        if (FillInBlankAPI.isCompleted(updatedState)) {
+          console.log('🎉 Fill-in-blank session completed!');
+          setPhase('completion');
+          return;
+        }
+        
+      } else {
+        // Show error animation
+        setFloatingEmoji({
+          id: `emoji-${Date.now()}`,
+          emoji: '❌',
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+        setTimeout(() => setFloatingEmoji(null), 2000);
+      }
+      
+    } catch (error) {
+      console.error('🚨 handleWordSubmit error:', error);
+    }
   };
 
   const handleVerseCompletion = (accuracy: number) => {
@@ -367,7 +472,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
     handleVerseCompletion,
     renderWordWithMask,
     renderBlankWord,
-    renderEnhancedTypingWord
+    renderEnhancedTypingWord,
+    getProgressData
   };
 
   const flashcardsProps = {
