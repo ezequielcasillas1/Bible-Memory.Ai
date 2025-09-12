@@ -245,21 +245,32 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       };
     }
 
-    const totalWords = currentSession.wrongWords.length;
-    const completedWords = wordsFixed.length;
-    const percentage = totalWords > 0 ? Math.round((completedWords / totalWords) * 100) : 0;
+    // FIXED: Calculate unique failed words to prevent duplicate counting
+    const uniqueFailedWords = new Set(
+      currentSession.wrongWords.map(w => 
+        (w.originalWord || w.userWord).toLowerCase().replace(/[.,!?;:"']/g, '')
+      )
+    );
+    
+    const uniqueCompletedWords = new Set(
+      wordsFixed.map(w => w.toLowerCase().replace(/[.,!?;:"']/g, ''))
+    );
+    
+    const totalUniqueWords = uniqueFailedWords.size;
+    const completedUniqueWords = uniqueCompletedWords.size;
+    const percentage = totalUniqueWords > 0 ? Math.round((completedUniqueWords / totalUniqueWords) * 100) : 0;
 
     return {
       global: {
-        completed: completedWords,
-        total: totalWords,
-        currentWord: Math.min(completedWords + 1, totalWords),
+        completed: completedUniqueWords,
+        total: totalUniqueWords,
+        currentWord: Math.min(completedUniqueWords + 1, totalUniqueWords),
         percentage
       },
       round: {
-        completed: completedWords,
-        total: totalWords,
-        currentWord: Math.min(completedWords + 1, totalWords),
+        completed: completedUniqueWords,
+        total: totalUniqueWords,
+        currentWord: Math.min(completedUniqueWords + 1, totalUniqueWords),
         percentage
       }
     };

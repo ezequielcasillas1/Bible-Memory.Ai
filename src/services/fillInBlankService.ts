@@ -88,39 +88,66 @@ export class FillInBlankAPI {
   }
   
   /**
-   * CORE: Generate blanks with left-to-right progression
-   * Only shows ONE blank at a time (leftmost uncompleted failed word)
+   * CORE: Generate blanks with randomized progression
+   * FIXED: Prevents duplicate blanks and adds randomization
    */
   static generateBlanks(state: FillInBlankState): FillInBlankResult {
     const words = state.verse.split(' ');
     const blanks: BlankWord[] = [];
     
-    // Find positions of all failed words in verse order
+    // FIXED: Use Set to track unique failed words and prevent duplicates
+    const uniqueFailedWords = new Set(state.failedWords.map(fw => 
+      fw.toLowerCase().replace(/[.,!?;:"']/g, '')
+    ));
+    
+    const uniqueCompletedWords = new Set(state.completedWords.map(cw => 
+      cw.toLowerCase().replace(/[.,!?;:"']/g, '')
+    ));
+    
+    // Find FIRST occurrence of each unique failed word
     const failedWordPositions: Array<{word: string, position: number, completed: boolean}> = [];
+    const processedWords = new Set<string>();
     
     words.forEach((word, index) => {
       const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-      const isFailedWord = state.failedWords.some(failedWord => 
-        failedWord.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-      );
       
-      if (isFailedWord) {
-        const isCompleted = state.completedWords.some(completedWord =>
-          completedWord.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-        );
+      // FIXED: Only process each unique word once (first occurrence)
+      if (uniqueFailedWords.has(cleanWord) && !processedWords.has(cleanWord)) {
+        const isCompleted = uniqueCompletedWords.has(cleanWord);
         
         failedWordPositions.push({
           word: cleanWord,
           position: index,
           completed: isCompleted
         });
+        
+        processedWords.add(cleanWord); // Mark as processed
       }
     });
     
-    // Sort by position to ensure left-to-right order
-    failedWordPositions.sort((a, b) => a.position - b.position);
+    // FIXED: Add randomization option while maintaining progression logic
+    const shouldRandomize = state.failedWords.length > 2; // Only randomize if more than 2 words
     
-    // FIXED: Show ALL uncompleted failed words as blanks simultaneously
+    if (shouldRandomize) {
+      // Randomize uncompleted words, keep completed ones in order
+      const completedPositions = failedWordPositions.filter(fp => fp.completed);
+      const uncompletedPositions = failedWordPositions.filter(fp => !fp.completed);
+      
+      // Shuffle uncompleted words
+      for (let i = uncompletedPositions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [uncompletedPositions[i], uncompletedPositions[j]] = [uncompletedPositions[j], uncompletedPositions[i]];
+      }
+      
+      // Combine: completed first (in order), then randomized uncompleted
+      const randomizedPositions = [...completedPositions, ...uncompletedPositions];
+      failedWordPositions.splice(0, failedWordPositions.length, ...randomizedPositions);
+    } else {
+      // For 2 or fewer words, maintain left-to-right order
+      failedWordPositions.sort((a, b) => a.position - b.position);
+    }
+    
+    // Get uncompleted blank indices for active blank highlighting
     const uncompletedBlankIndices = failedWordPositions
       .filter(fp => !fp.completed)
       .map(fp => fp.position);

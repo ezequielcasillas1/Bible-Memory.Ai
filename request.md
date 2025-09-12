@@ -1,4 +1,7 @@
-{}
+{
+can you make a minimal file for syntaxlabpage.tsx, it seems to be conflicting with the components, we need to study whether or not to keep or make the file adjusted/minimal to clear out exisiting bugs
+
+}
 
 ---
 

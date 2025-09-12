@@ -1,5 +1,5 @@
 { 
-)
+Research the codebase, make sure there isnt any conflicting files, we have recently made minimal files for the syntaxlabpage.tsx, fix any bug you can possibly find, because the syntax lab fill in the blank is still buggy with the ui/functionality returning a key word 3 times, in the image seen, and it is not randomized, the fill in the blanks need to be randomized with working progressions (next after next word applied effectively/next fill in the blank appearing which is not currently working.)
 }
 
 ---
