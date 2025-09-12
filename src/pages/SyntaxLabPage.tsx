@@ -182,7 +182,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
 
       const result = FillInBlankAPI.processWordSubmission(fillInBlankState, userInput);
       
-      if (result.isCorrect) {
+      console.log('🎯 WORD SUBMISSION RESULT:', {
+        userInput,
+        isCorrect: result.isCorrect,
+        currentWord: result.currentWord,
+        shouldAdvance: result.shouldAdvance,
+        fillInBlankState: fillInBlankState
+      });
+      
+      // EMERGENCY FIX: Direct word matching if API fails
+      const failedWords = currentSession.wrongWords.map(w => w.originalWord || w.userWord);
+      const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+      const matchingFailedWord = failedWords.find(fw => 
+        fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanUserInput
+      );
+      
+      const isDirectMatch = !!matchingFailedWord;
+      const finalIsCorrect = result.isCorrect || isDirectMatch;
+      
+      console.log('🔧 EMERGENCY WORD CHECK:', {
+        userInput,
+        cleanUserInput,
+        failedWords,
+        matchingFailedWord,
+        apiResult: result.isCorrect,
+        directMatch: isDirectMatch,
+        finalIsCorrect
+      });
+      
+      if (finalIsCorrect) {
         // Show success animation
         setFloatingEmoji({
           id: `emoji-${Date.now()}`,
@@ -193,7 +221,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         setTimeout(() => setFloatingEmoji(null), 2000);
         
         // CRITICAL: Update wordsFixed to trigger progression
-        const newWordsFixed = [...wordsFixed, result.currentWord || ''];
+        const wordToAdd = result.currentWord || matchingFailedWord || userInput;
+        const newWordsFixed = [...wordsFixed, wordToAdd];
+        console.log('🚀 PARENT STATE UPDATE:', {
+          oldWordsFixed: wordsFixed,
+          resultCurrentWord: result.currentWord,
+          matchingFailedWord,
+          wordToAdd,
+          newWordsFixed,
+          updateTimestamp: new Date().toISOString()
+        });
         setWordsFixed(newWordsFixed);
         
         // Reset UI state
@@ -234,6 +271,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         }
       } else {
         // Show error animation
+        console.log('❌ INCORRECT WORD:', {
+          userInput,
+          expectedWords: failedWords,
+          apiSaysCorrect: result.isCorrect,
+          directMatchFound: isDirectMatch
+        });
         setFloatingEmoji({
           id: `emoji-${Date.now()}`,
           emoji: '❌',
