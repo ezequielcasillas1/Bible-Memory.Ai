@@ -84,8 +84,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       currentBlank,
       wordsFixed: wordsFixed.length,
       totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length,
-      failedWordsCount: uniqueFailedWords.length,
-      uniqueFailedWords: uniqueFailedWords
+      failedWordsCount: fillInBlankState.failedWords.length,
+      failedWords: fillInBlankState.failedWords
     });
   }, [currentSession, wordsFixed, translatedSessionVerse, currentRound]);
 

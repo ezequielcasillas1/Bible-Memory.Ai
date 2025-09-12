@@ -77,7 +77,6 @@ const ScorecardPhase: React.FC<ScorecardPhaseExtendedProps> = ({
         
         <button
           onClick={() => {
-            setCurrentSession(null);
             setPhase('summary');
           }}
           className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-indigo-600 transition-all duration-300 transform hover:scale-105 shadow-lg font-medium flex items-center space-x-2 mx-auto"
