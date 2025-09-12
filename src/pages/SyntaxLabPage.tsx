@@ -153,35 +153,20 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         wrongWords: wrongWords
       });
       
-      // NUMERICAL DIFFICULTY-BASED FILL-IN-BLANK CREATION
-      // Use numerical difficulty system instead of memorization-based approach
-      const difficultyLevel = settings?.fillInBlankDifficulty || 6;
-      const difficultyWords = FillInBlankService.selectWordsForNumericalDifficulty(
-        verseTextForSession, 
-        difficultyLevel
-      );
-      
-      console.log('🎯 NUMERICAL DIFFICULTY DEBUG:', {
-        difficultyLevel,
-        verseText: verseTextForSession,
-        selectedWords: difficultyWords,
-        expectedBlanks: difficultyLevel
-      });
-      
-      // Create fill-in-blank result using numerical difficulty words
+      // TRANSLATION-AWARE FILL-IN-BLANK CREATION
       const fillInBlankResult = translatedVerseText 
         ? FillInBlankService.calculateProgressiveFillInBlanks(
             verseTextForSession, // Spanish text
-            difficultyWords, // Use numerical difficulty words instead of round1Words
+            round1Words, // Not used when translation mapping provided
             [], // No words fixed yet
             {
               englishText: sessionData.verseText, // English text
-              englishWrongWords: difficultyWords // English wrong words
+              englishWrongWords: round1Words // English wrong words
             }
           )
         : FillInBlankService.calculateProgressiveFillInBlanks(
             verseTextForSession, // English text
-            difficultyWords, // Use numerical difficulty words
+            round1Words,
             [] // No words fixed yet
           );
       
@@ -396,10 +381,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
     const round1WordCount = baseWordsPerRound + (1 <= extraWords ? 1 : 0);
     const round1Words = selectedWords.slice(0, round1WordCount);
     
-    // For round-based cycling, use regular fill-in-blanks with round 1 words only
+    // FIXED: Use numerical difficulty selected words for fill-in-blanks
     const fillInBlankResult = FillInBlankService.calculateFillInBlanks(
       randomVerse.text,
-      round1Words // Use round 1 words for initial display
+      selectedWords // Use numerical difficulty selected words instead of round distribution
     );
     
     // Update session with proper fill-in-blank data
@@ -1843,7 +1828,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">
-                      Progress: {wordsFixed.length} / {currentSession?.fillInBlankResult?.totalBlanks || getProgressData().global.total} words
+                      Progress: {getProgressData().global.completed} / {getProgressData().global.total} words
                     </span>
                     <span className="text-emerald-600 font-bold">
                       {getProgressData().global.percentage}% Complete
@@ -2197,7 +2182,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession?.fillInBlankResult?.totalBlanks || getProgressData().global.total}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{getProgressData().global.completed}/{getProgressData().global.total}</div>
                 <div className="text-green-700">Mistakes Fixed</div>
               </div>
               

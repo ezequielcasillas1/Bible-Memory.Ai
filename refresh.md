@@ -1,5 +1,51 @@
 { 
-The ui saying there are no blank found, in our new api can you fix it? 
+AutoTranslationContext.tsx:124  Warning: Cannot update a component (`AutoTranslationProvider`) while rendering a different component (`SyntaxLabPage`). To locate the bad setState() call inside `SyntaxLabPage`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at SyntaxLabPage (http://127.0.0.1:5173/src/pages/SyntaxLabPage.tsx?t=1757636035818:26:26)
+    at main
+    at div
+    at AutoTranslationProvider (http://127.0.0.1:5173/src/contexts/AutoTranslationContext.tsx:31:3)
+    at AppContent (http://127.0.0.1:5173/src/App.tsx?t=1757636035818:37:29)
+    at LanguageProvider (http://127.0.0.1:5173/src/contexts/LanguageContext.tsx:249:36)
+    at AuthProvider (http://127.0.0.1:5173/src/contexts/AuthContext.tsx:30:32)
+    at App
+printWarning @ react-dom.development.js:86
+error @ react-dom.development.js:60
+warnAboutRenderPhaseUpdatesInDEV @ react-dom.development.js:27531
+scheduleUpdateOnFiber @ react-dom.development.js:25537
+dispatchSetState @ react-dom.development.js:16708
+translateVerseAsync @ AutoTranslationContext.tsx:124
+autoTranslateVerse @ AutoTranslationContext.tsx:92
+(anonymous) @ useAutoTranslatedVerse.ts:14
+updateMemo @ react-dom.development.js:16427
+useMemo @ react-dom.development.js:17067
+useMemo @ react.development.js:1650
+useAutoTranslatedVerse @ useAutoTranslatedVerse.ts:12
+SyntaxLabPage @ SyntaxLabPage.tsx:32
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+(anonymous) @ react-dom.development.js:25690
+react-dom.development.js:86  Warning: validateDOMNesting(...): <button> cannot appear as a descendant of <button>.
+    at button
+    at button
+    at div
+    at div
+    at div
+    at div
+    at div
+    at div
+    at SettingsModal (http://127.0.0.1:5173/src/components/SettingsModal.tsx?t=1757634480369:25:3)
+    at div
+    at AutoTranslationProvider (http://127.0.0.1:5173/src/contexts/AutoTranslationContext.tsx:31:3)
+    at AppContent (http://127.0.0.1:5173/src/App.tsx?t=1757636035818:37:29)
+    at LanguageProvider (http://127.0.0.1:5173/src/contexts/LanguageContext.tsx:249:36)
+    at AuthProvider (
 }
 
 ---
