@@ -24,6 +24,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
 }) => {
   const [currentBlankWord, setCurrentBlankWord] = useState<string | null>(null);
   const [formattedText, setFormattedText] = useState<string>('');
+  const [forceRenderKey, setForceRenderKey] = useState<number>(0); // FORCE RENDER MECHANISM
+  const [localWordsFixed, setLocalWordsFixed] = useState<string[]>([]); // LOCAL STATE BACKUP
 
   // Update blank word and formatted text when session changes
   useEffect(() => {
@@ -88,7 +90,20 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       failedWordsCount: fillInBlankState.failedWords.length,
       failedWords: fillInBlankState.failedWords
     });
-  }, [currentSession, wordsFixed, translatedSessionVerse, currentRound]);
+    
+    // FORCE RENDER: Trigger visual re-render when wordsFixed changes
+    setForceRenderKey(prev => prev + 1);
+    
+    // LOCAL STATE SYNC: Ensure local state matches parent state
+    if (JSON.stringify(localWordsFixed) !== JSON.stringify(wordsFixed)) {
+      console.log('🔄 LOCAL STATE SYNC:', { 
+        from: localWordsFixed, 
+        to: wordsFixed,
+        syncTimestamp: new Date().toISOString()
+      });
+      setLocalWordsFixed([...wordsFixed]); // Force new array reference
+    }
+  }, [currentSession, wordsFixed, translatedSessionVerse, currentRound, localWordsFixed]);
 
   const generateHint = async (word: string): Promise<string> => {
     // Simple hint generation - could be enhanced with AI
@@ -229,7 +244,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         </div>
         
         <div 
-          key={`verse-display-${wordsFixed.length}-${currentRound}`}
+          key={`verse-display-${wordsFixed.length}-${currentRound}-${forceRenderKey}`}
           className="text-lg leading-relaxed text-gray-700 text-center mb-4"
         >
           {(() => {
@@ -244,16 +259,29 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               )
             );
             
+            // CRITICAL FIX: Use localWordsFixed instead of potentially stale wordsFixed prop
+            const effectiveWordsFixed = localWordsFixed.length >= wordsFixed.length ? localWordsFixed : wordsFixed;
             const uniqueCompletedWords = new Set(
-              wordsFixed.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
+              effectiveWordsFixed.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
             );
             
             // ENHANCED DEBUG: Log visual render state
             console.log('🎨 VISUAL RENDER:', {
               wordsFixed,
+              localWordsFixed,
+              effectiveWordsFixed,
               uniqueFailedWords: Array.from(uniqueFailedWords),
               uniqueCompletedWords: Array.from(uniqueCompletedWords),
-              renderTimestamp: new Date().toISOString()
+              renderTimestamp: new Date().toISOString(),
+              forceRenderKey
+            });
+            
+            // CRITICAL DEBUG: Check each failed word individually
+            currentSession.wrongWords.forEach((w: any) => {
+              const originalWord = w.originalWord || w.userWord;
+              const cleanOriginal = originalWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+              const isInCompleted = uniqueCompletedWords.has(cleanOriginal);
+              console.log(`🔍 WORD CHECK: "${originalWord}" -> clean:"${cleanOriginal}" -> completed:${isInCompleted}`);
             });
             
             // Track which unique words have been processed to prevent duplicates
