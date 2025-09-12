@@ -1,5 +1,5 @@
 { 
-the fill in the blanks still have this look on the session, the 3 blanks still appear there after you tried fixing it, the fill in the blank needs to update when I type in the correct word it needs to show a the word filled which it doesnt, and proceed with the next randomized fill in the blank, if not already, make an api that can do these functions correctly: the fill in the blanks need to be randomized with working progressions (next after next word applied effectively/next fill in the blank appearing which is not currently working.)
+HUGE BUG THE UI IS NOT UPDATING TO THE NEXT WORD WHEN I TYPE IN "LOVED" PLEASE FIX THE BUG AND THERE SHOULD BE NO MENU, WHY IS THERE A MENU)
 }
 
 ---

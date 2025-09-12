@@ -36,8 +36,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   const { t } = useLanguage();
   const { getTranslatedVerse } = useAutoTranslation();
   
-  // Core state
-  const [phase, setPhase] = useState<SessionPhase>('summary');
+  // Core state - Start with practice if we have comparison data
+  const [phase, setPhase] = useState<SessionPhase>(comparisonResult && selectedVerse ? 'practice' : 'summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
   const [currentSession, setCurrentSession] = useState<SyntaxLabSession | null>(null);
   
@@ -116,7 +116,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         });
 
         setCurrentSession(result.session);
-        setPhase('practice'); // 🚀 UNIFIED: Skip menu, go directly to practice
       } catch (error) {
         console.error('❌ Failed to create memorization session:', error);
         
@@ -618,7 +617,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
           <div className="w-32"></div>
         </div>
 
-        {/* Phase Components */}
+        {/* Phase Components - FIXED: Only show menu for manual navigation, not auto-created sessions */}
+        {phase === 'summary' && !currentSession && (
+          <div className="text-center py-12">
+            <div className="text-lg text-gray-600">Loading practice session...</div>
+          </div>
+        )}
+        
         {phase === 'summary' && currentSession && (
           <SummaryPhase {...commonProps} startPractice={startPractice} />
         )}

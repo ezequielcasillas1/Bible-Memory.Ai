@@ -325,8 +325,15 @@ export class FillInBlankAPI {
    */
   static getCurrentBlankWord(state: FillInBlankState): string | null {
     const blanks = this.generateBlanks(state);
-    const currentBlank = blanks.blanks.find(blank => blank.isBlank);
-    return currentBlank ? currentBlank.word : null;
+    const activeBlankWords = blanks.blanks.filter(blank => blank.isBlank);
+    
+    // FIXED: Use currentBlankIndex to get the correct current blank, not just the first one
+    const currentBlankIndex = state.currentBlankIndex || 0;
+    
+    if (activeBlankWords.length === 0) return null;
+    if (currentBlankIndex >= activeBlankWords.length) return null;
+    
+    return activeBlankWords[currentBlankIndex].word;
   }
   
   /**
