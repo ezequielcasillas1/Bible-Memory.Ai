@@ -1,5 +1,5 @@
 {
-I need you to revamp the fill in the blank practice mode, on all appearing 3 sessions; from memorization to practice history, and autopractice, we need to remake redo everything completely to a new working model.
+I need you to apply the working fill in the blanks ui to the verses demonstrated on the new all 3 in one working api, the fill in the blanks dont show and it needs to be randomized if the user is selecting it automatically from the syntaxlabpage, otherwise if it is choosen from outside such as reg memorization or history, then apply those functions different than the autopractice, but again work on a working fill in the blank and refer to guide.md to make the highlights and "_____" and fill ins look nice and working. 
 
 }
 

@@ -27,30 +27,63 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
 
   // Update blank word and formatted text when session changes
   useEffect(() => {
-    if (!currentSession?.fillInBlankResult) return;
+    if (!currentSession) return;
 
-    // FIXED: Calculate dynamic currentBlankIndex based on completed words
-    // This ensures progression to the next blank after each correct answer
-    const failedWords = currentSession.wrongWords.map((w: any) => w.originalWord || w.userWord);
-    const dynamicBlankIndex = wordsFixed.length; // Number of completed words = current blank position
-    
-    const fillInBlankState = {
-      verse: currentSession.verse.text,
-      failedWords: failedWords,
-      completedWords: wordsFixed,
-      currentBlankIndex: dynamicBlankIndex, // FIXED: Dynamic instead of hardcoded 0
-      translationContext: translatedSessionVerse?.isTranslated ? {
-        isTranslated: true,
-        originalVerse: currentSession.verse.text,
-        translatedVerse: translatedSessionVerse.text
-      } : undefined
-    };
+    // UNIFIED: Use factory-generated fillInBlankResult if available, otherwise create fresh
+    let fillInBlankState;
+    let fillInBlankResult;
+
+    if (currentSession.fillInBlankResult) {
+      // Use factory-generated result with dynamic progression
+      const failedWords = currentSession.wrongWords.map((w: any) => (w.originalWord || w.userWord) as string);
+      const uniqueFailedWords = Array.from(new Set(
+        failedWords.map(w => w.toLowerCase().replace(/[.,!?;:"']/g, ''))
+      ));
+
+      fillInBlankState = {
+        verse: currentSession.verse.text,
+        failedWords: uniqueFailedWords,
+        completedWords: wordsFixed,
+        currentBlankIndex: wordsFixed.length, // Dynamic progression
+        translationContext: translatedSessionVerse?.isTranslated ? {
+          isTranslated: true,
+          originalVerse: currentSession.verse.text,
+          translatedVerse: translatedSessionVerse.text
+        } : undefined
+      };
+
+      // Generate fresh blanks with current progression state
+      fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+    } else {
+      // Fallback for legacy sessions without factory-generated results
+      const failedWords = currentSession.wrongWords.map((w: any) => (w.originalWord || w.userWord) as string);
+      
+      fillInBlankState = {
+        verse: currentSession.verse.text,
+        failedWords: failedWords,
+        completedWords: wordsFixed,
+        currentBlankIndex: wordsFixed.length,
+        translationContext: translatedSessionVerse?.isTranslated ? {
+          isTranslated: true,
+          originalVerse: currentSession.verse.text,
+          translatedVerse: translatedSessionVerse.text
+        } : undefined
+      };
+
+      fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+    }
 
     const currentBlank = FillInBlankAPI.getCurrentBlankWord(fillInBlankState);
     setCurrentBlankWord(currentBlank);
+    setFormattedText(fillInBlankResult.formattedText);
 
-    const result = FillInBlankAPI.generateBlanks(fillInBlankState);
-    setFormattedText(result.formattedText);
+    console.log('🎯 FILL-IN-BLANK UI UPDATE:', {
+      sessionId: currentSession.id,
+      hasFactoryResult: !!currentSession.fillInBlankResult,
+      currentBlank,
+      wordsFixed: wordsFixed.length,
+      totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length
+    });
   }, [currentSession, wordsFixed, translatedSessionVerse]);
 
   const generateHint = async (word: string): Promise<string> => {
@@ -127,36 +160,68 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       `}</style>
       
       <div className="space-y-6">
-      {/* Progress Display */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl p-6 border-2 border-emerald-200 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-emerald-800">🎯 Fill-in-the-Blank Practice</h3>
-          <div className="text-sm text-emerald-600 font-medium">
-            Round {currentRound} • Word {progressData.round.currentWord}/{progressData.round.total}
+      {/* Enhanced Progress Display - GUIDE.md Compliant */}
+      <div className="bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 rounded-3xl p-8 border-2 border-violet-200 shadow-2xl backdrop-blur-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl">🎯</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-700 to-purple-700 bg-clip-text text-transparent">
+                Fill-in-the-Blank Practice
+              </h3>
+              <p className="text-sm text-violet-600 font-medium">Master your verse with targeted practice</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-violet-700">
+              Round {currentRound} of {currentSession?.maxRounds || 3}
+            </div>
+            <div className="text-sm text-violet-600 font-medium">
+              Word {progressData.round.currentWord} of {progressData.round.total}
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6">
           <div className="flex-1">
-            <div className="w-full bg-emerald-200 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-gradient-to-r from-violet-200 to-purple-200 rounded-full h-4 overflow-hidden shadow-inner">
               <div 
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressData.round.percentage}%` }}
+                className="bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
+                style={{ 
+                  width: `${progressData.round.percentage}%`,
+                  boxShadow: '0 0 20px rgba(139, 92, 246, 0.5)'
+                }}
               ></div>
             </div>
+            <div className="flex justify-between text-xs text-violet-600 mt-2 font-medium">
+              <span>Start</span>
+              <span>{progressData.round.percentage}% Complete</span>
+              <span>Mastery</span>
+            </div>
           </div>
-          <div className="text-sm font-bold text-emerald-700">
-            {progressData.round.percentage}%
+          <div className="text-center">
+            <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+              {progressData.round.percentage}%
+            </div>
+            <div className="text-xs text-violet-500 font-medium">Progress</div>
           </div>
         </div>
       </div>
 
-      {/* Verse Display with Blanks */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border-2 border-purple-200 shadow-lg">
-        <div className="text-center mb-4">
-          <h4 className="text-lg font-semibold text-gray-800 mb-2">
-            {currentSession.verse.reference}
-          </h4>
+      {/* Enhanced Verse Display - GUIDE.md Professional Styling */}
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl p-10 border-2 border-slate-200 shadow-2xl backdrop-blur-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-slate-100 to-blue-100 rounded-2xl px-6 py-3 border border-slate-200 shadow-lg">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+              <span className="text-white text-sm font-bold">📖</span>
+            </div>
+            <h4 className="text-xl font-bold bg-gradient-to-r from-slate-700 to-blue-700 bg-clip-text text-transparent">
+              {currentSession.verse.reference}
+            </h4>
+          </div>
+          <p className="text-sm text-slate-600 mt-3 font-medium">Fill in each highlighted blank to complete the verse</p>
         </div>
         
         <div className="text-lg leading-relaxed text-gray-700 text-center mb-4">
@@ -209,34 +274,36 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
                     </span>
                   );
                 } else if (isCurrentBlank) {
-                  // PURPLE GRADIENT: Currently active blank while typing
+                  // ENHANCED: Currently active blank - GUIDE.md Professional Styling
                   return (
                     <span 
                       key={index} 
-                      className="inline-block mx-1 px-4 py-2 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white rounded-xl font-bold shadow-xl border-2 border-purple-300 animate-pulse transform scale-110"
+                      className="inline-block mx-2 px-6 py-3 bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 text-white rounded-2xl font-bold shadow-2xl border-2 border-white/30 animate-pulse transform scale-110 backdrop-blur-sm"
                       style={{
                         textDecoration: 'underline',
                         textDecorationColor: '#fbbf24',
                         textDecorationThickness: '3px',
-                        animation: 'purpleActive 1.5s ease-in-out infinite alternate'
+                        animation: 'purpleActive 1.5s ease-in-out infinite alternate',
+                        boxShadow: '0 0 30px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       }}
                     >
-                      ____
+                      <span className="text-xl font-mono tracking-widest">_____</span>
                     </span>
                   );
                 } else {
-                  // UNDERLINE: All other active blanks waiting
+                  // ENHANCED: Waiting blanks - Professional gradient styling
                   return (
                     <span 
                       key={index} 
-                      className="inline-block mx-1 px-3 py-1 bg-gradient-to-r from-yellow-200 to-orange-200 text-gray-800 rounded-lg font-bold border-2 border-yellow-400 shadow-md"
+                      className="inline-block mx-2 px-4 py-2 bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 text-amber-800 rounded-xl font-bold border-2 border-amber-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                       style={{
                         textDecoration: 'underline',
                         textDecorationColor: '#f59e0b',
-                        textDecorationThickness: '2px'
+                        textDecorationThickness: '2px',
+                        boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)'
                       }}
                     >
-                      ____
+                      <span className="text-lg font-mono tracking-wide">_____</span>
                     </span>
                   );
                 }
@@ -259,16 +326,31 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         )}
       </div>
 
-      {/* Input Section */}
-      <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-emerald-200">
-        <div className="text-center space-y-6">
-          <div className="space-y-2">
-            <h4 className="text-lg font-semibold text-gray-800">
-              Fill in the missing word:
-            </h4>
-            <p className="text-sm text-gray-600 font-medium">
-              📍 <span className="text-emerald-700">STARTING FROM LEFT TO RIGHT</span> - Fill in each highlighted blank in sequence
-            </p>
+      {/* Enhanced Input Section - GUIDE.md Professional Design */}
+      <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 rounded-3xl p-10 shadow-2xl border-2 border-slate-200 backdrop-blur-sm">
+        <div className="text-center space-y-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-2xl px-6 py-4 border border-emerald-200 shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-white text-lg font-bold">✏️</span>
+              </div>
+              <div className="text-left">
+                <h4 className="text-xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 bg-clip-text text-transparent">
+                  Fill in the missing word
+                </h4>
+                <p className="text-sm text-emerald-600 font-medium">Type the correct word to continue</p>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-100 via-indigo-100 to-purple-100 rounded-2xl px-6 py-4 border border-blue-200 shadow-inner">
+              <p className="text-sm font-medium flex items-center justify-center space-x-2">
+                <span className="text-2xl">📍</span>
+                <span className="bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent font-bold">
+                  PROGRESSIVE SEQUENCE
+                </span>
+                <span className="text-blue-600">- Complete each blank from left to right</span>
+              </p>
+            </div>
             
             <div className="flex items-center justify-center space-x-4">
               <button

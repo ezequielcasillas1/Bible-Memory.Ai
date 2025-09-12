@@ -116,6 +116,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         });
 
         setCurrentSession(result.session);
+        setPhase('practice'); // 🚀 UNIFIED: Skip menu, go directly to practice
       } catch (error) {
         console.error('❌ Failed to create memorization session:', error);
         
@@ -335,7 +336,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       });
 
       setCurrentSession(result.session);
-      setPhase('summary');
+      setPhase('practice'); // 🚀 UNIFIED: Skip menu, go directly to practice
       setShowHistoryLog(false);
     } catch (error) {
       console.error('❌ Failed to create history practice session:', error);
@@ -369,7 +370,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       });
 
       setCurrentSession(result.session);
-      setPhase('summary');
+      setPhase('practice'); // 🚀 UNIFIED: Skip menu, go directly to practice
     } catch (error) {
       console.error('❌ Failed to create auto practice session:', error);
       
