@@ -7,6 +7,7 @@ import { useAutoTranslation } from '../contexts/AutoTranslationContext';
 import { HistoryService } from '../services/historyService';
 import { SyntaxLabAPI } from '../services/syntaxLabAPI';
 import { FillInBlankAPI } from '../services/fillInBlankService';
+import { FillInBlankSessionFactory, SessionCreationOptions } from '../services/FillInBlankSessionFactory';
 
 // Import modular components
 import SummaryPhase from '../components/syntaxlab/SummaryPhase';
@@ -93,45 +94,69 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
     if (savedWeakWords) setWeakWords(JSON.parse(savedWeakWords));
   }, []);
 
-  // Initialize session
+  // UNIFIED: Initialize session using new factory
   useEffect(() => {
-    if (comparisonResult && !currentSession) {
-      const wrongWords = [
-        ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra'),
-        ...comparisonResult.originalComparison.filter(w => w.status === 'missing')
-      ];
-      
-      const verse = selectedVerse || {
-        id: `verse-${Date.now()}`,
-        text: comparisonResult.userComparison[0]?.originalWord || 'Default verse',
-        reference: 'Custom Verse',
-        testament: 'NT' as const
-      };
+    if (comparisonResult && !currentSession && selectedVerse) {
+      try {
+        const options: SessionCreationOptions = {
+          verse: selectedVerse,
+          sessionType: 'memorization',
+          settings,
+          comparisonResult
+        };
 
-      const verseText = displayVerse?.isTranslated ? displayVerse.text : verse.text;
-      const fillInBlankState = FillInBlankAPI.createFillInBlankState(verseText, comparisonResult);
-      const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+        const result = FillInBlankSessionFactory.createSession(options);
+        
+        console.log('🎯 UNIFIED SESSION CREATED:', {
+          sessionId: result.session.id,
+          source: result.sessionMetadata.source,
+          wordCount: result.sessionMetadata.wordCount,
+          difficulty: result.sessionMetadata.difficulty,
+          estimatedTime: result.sessionMetadata.estimatedTime
+        });
 
-      const session: SyntaxLabSession = {
-        id: `session-${Date.now()}`,
-        verseId: verse.id,
-        verse,
-        originalComparison: comparisonResult,
-        wrongWords,
-        practiceMode: 'blank',
-        currentRound: 1,
-        maxRounds: 3,
-        wordsFixed: [],
-        startTime: new Date(),
-        endTime: undefined,
-        fillInBlankResult,
-        finalAccuracy: 0,
-        improvementScore: 0
-      };
+        setCurrentSession(result.session);
+      } catch (error) {
+        console.error('❌ Failed to create memorization session:', error);
+        
+        // Fallback to legacy creation
+        const verse = selectedVerse || {
+          id: `verse-${Date.now()}`,
+          text: comparisonResult.userComparison[0]?.originalWord || 'Default verse',
+          reference: 'Custom Verse',
+          testament: 'NT' as const
+        };
 
-      setCurrentSession(session);
+        const wrongWords = [
+          ...comparisonResult.userComparison.filter(w => w.status === 'incorrect' || w.status === 'extra'),
+          ...comparisonResult.originalComparison.filter(w => w.status === 'missing')
+        ];
+
+        const verseText = displayVerse?.isTranslated ? displayVerse.text : verse.text;
+        const fillInBlankState = FillInBlankAPI.createFillInBlankState(verseText, comparisonResult);
+        const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+
+        const session: SyntaxLabSession = {
+          id: `fallback-${Date.now()}`,
+          verseId: verse.id,
+          verse,
+          originalComparison: comparisonResult,
+          wrongWords,
+          practiceMode: 'blank',
+          currentRound: 1,
+          maxRounds: 3,
+          wordsFixed: [],
+          startTime: new Date(),
+          endTime: undefined,
+          fillInBlankResult,
+          finalAccuracy: 0,
+          improvementScore: 0
+        };
+
+        setCurrentSession(session);
+      }
     }
-  }, [comparisonResult, selectedVerse, displayVerse, currentSession]);
+  }, [comparisonResult, selectedVerse, displayVerse, currentSession, settings]);
 
   // FIXED: Proper handleWordSubmit with dynamic blank index
   const handleWordSubmit = () => {
@@ -289,60 +314,120 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
     }
   };
 
+  const startPracticeFromHistory = (historyEntry: MemorizationHistory) => {
+    try {
+      const options: SessionCreationOptions = {
+        verse: historyEntry.verse,
+        sessionType: 'history',
+        settings,
+        historyEntry
+      };
+
+      const result = FillInBlankSessionFactory.createSession(options);
+      
+      console.log('📚 HISTORY PRACTICE SESSION CREATED:', {
+        sessionId: result.session.id,
+        verse: historyEntry.verse.reference,
+        wordCount: result.sessionMetadata.wordCount,
+        difficulty: result.sessionMetadata.difficulty,
+        estimatedTime: result.sessionMetadata.estimatedTime,
+        originalAccuracy: historyEntry.bestAccuracy
+      });
+
+      setCurrentSession(result.session);
+      setPhase('summary');
+      setShowHistoryLog(false);
+    } catch (error) {
+      console.error('❌ Failed to create history practice session:', error);
+      
+      // Show error to user
+      alert(`Failed to create practice session: ${error}`);
+    }
+  };
+
   const startAutoPractice = () => {
-    const sampleVerses: Verse[] = [
-      {
-        id: 'john-3-16',
-        text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
-        reference: 'John 3:16',
-        testament: 'NT'
-      }
-    ];
+    try {
+      // Get random verse from factory
+      const sampleVerses = FillInBlankSessionFactory.getSampleVerses();
+      const randomVerse = sampleVerses[Math.floor(Math.random() * sampleVerses.length)];
+      
+      const options: SessionCreationOptions = {
+        verse: randomVerse,
+        sessionType: 'auto',
+        settings,
+        difficulty: settings.fillInBlankDifficulty || 6
+      };
 
-    const randomVerse = sampleVerses[0];
-    const mockWords = randomVerse.text.split(' ').slice(0, 3);
-    const mockComparison: WordComparison[] = mockWords.map((word, index) => ({
-      originalWord: word,
-      userWord: word + '_wrong',
-      status: 'incorrect' as const,
-      position: index
-    }));
+      const result = FillInBlankSessionFactory.createSession(options);
+      
+      console.log('🤖 AUTO PRACTICE SESSION CREATED:', {
+        sessionId: result.session.id,
+        verse: randomVerse.reference,
+        wordCount: result.sessionMetadata.wordCount,
+        difficulty: result.sessionMetadata.difficulty,
+        estimatedTime: result.sessionMetadata.estimatedTime
+      });
 
-    const mockComparisonResult: ComparisonResult = {
-      accuracy: 70,
-      totalWords: randomVerse.text.split(' ').length,
-      correctWords: randomVerse.text.split(' ').length - 3,
-      incorrectWords: 3,
-      missingWords: 0,
-      extraWords: 0,
-      userComparison: mockComparison,
-      originalComparison: [],
-      detailedFeedback: 'Auto-generated practice session'
-    };
+      setCurrentSession(result.session);
+      setPhase('summary');
+    } catch (error) {
+      console.error('❌ Failed to create auto practice session:', error);
+      
+      // Fallback to legacy creation
+      const sampleVerses: Verse[] = [
+        {
+          id: 'john-3-16',
+          text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+          reference: 'John 3:16',
+          testament: 'NT'
+        }
+      ];
 
-    const wrongWords = mockComparison;
-    const fillInBlankState = FillInBlankAPI.createFillInBlankState(randomVerse.text, mockComparisonResult);
-    const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+      const randomVerse = sampleVerses[0];
+      const mockWords = randomVerse.text.split(' ').slice(0, 3);
+      const mockComparison: WordComparison[] = mockWords.map((word, index) => ({
+        originalWord: word,
+        userWord: word + '_wrong',
+        status: 'incorrect' as const,
+        position: index
+      }));
 
-    const session: SyntaxLabSession = {
-      id: `auto-session-${Date.now()}`,
-      verseId: randomVerse.id,
-      verse: randomVerse,
-      originalComparison: mockComparisonResult,
-      wrongWords,
-      practiceMode: 'blank',
-      currentRound: 1,
-      maxRounds: 3,
-      wordsFixed: [],
-      startTime: new Date(),
-      endTime: undefined,
-      fillInBlankResult,
-      finalAccuracy: 0,
-      improvementScore: 0
-    };
+      const mockComparisonResult: ComparisonResult = {
+        accuracy: 70,
+        totalWords: randomVerse.text.split(' ').length,
+        correctWords: randomVerse.text.split(' ').length - 3,
+        incorrectWords: 3,
+        missingWords: 0,
+        extraWords: 0,
+        userComparison: mockComparison,
+        originalComparison: [],
+        detailedFeedback: 'Auto-generated practice session (fallback)'
+      };
 
-    setCurrentSession(session);
-    setPhase('summary');
+      const wrongWords = mockComparison;
+      const fillInBlankState = FillInBlankAPI.createFillInBlankState(randomVerse.text, mockComparisonResult);
+      const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+
+      const session: SyntaxLabSession = {
+        id: `auto-fallback-${Date.now()}`,
+        verseId: randomVerse.id,
+        verse: randomVerse,
+        originalComparison: mockComparisonResult,
+        wrongWords,
+        practiceMode: 'blank',
+        currentRound: 1,
+        maxRounds: 3,
+        wordsFixed: [],
+        startTime: new Date(),
+        endTime: undefined,
+        fillInBlankResult,
+        finalAccuracy: 0,
+        improvementScore: 0
+      };
+
+      setCurrentSession(session);
+      setPhase('summary');
+    }
   };
 
   // Placeholder functions
@@ -471,7 +556,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-gray-600">History functionality coming soon...</p>
+              
+              {memorizationHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-lg">No memorization history found.</p>
+                  <p className="text-gray-400 text-sm mt-2">Complete some memorization sessions to see them here!</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {memorizationHistory.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:shadow-md transition-shadow">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{entry.verse.reference}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">{entry.verse.text.substring(0, 80)}...</p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                          <span>Best: {entry.bestAccuracy}%</span>
+                          <span>Attempts: {entry.attempts}</span>
+                          <span>{new Date(entry.lastPracticed).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => startPracticeFromHistory(entry)}
+                        className="ml-4 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all duration-200 transform hover:scale-105 font-medium text-sm"
+                      >
+                        Practice
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

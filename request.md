@@ -1,5 +1,5 @@
 {
-can you make a minimal file for syntaxlabpage.tsx, it seems to be conflicting with the components, we need to study whether or not to keep or make the file adjusted/minimal to clear out exisiting bugs
+I need you to revamp the fill in the blank practice mode, on all appearing 3 sessions; from memorization to practice history, and autopractice, we need to remake redo everything completely to a new working model.
 
 }
 
