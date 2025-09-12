@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen, History, Bot, Brain, X } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory, Verse, AppSettings } from '../types';
 import { useAutoTranslatedVerse } from '../hooks/useAutoTranslatedVerse';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -26,7 +26,7 @@ interface SyntaxLabPageProps {
   settings: AppSettings;
 }
 
-const SyntaxLabPageRefactored: React.FC<SyntaxLabPageProps> = ({ 
+const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ 
   comparisonResult, 
   selectedVerse, 
   onBack, 
@@ -112,23 +112,28 @@ const SyntaxLabPageRefactored: React.FC<SyntaxLabPageProps> = ({
       // Use selectedVerse for reference and testament, fallback to extracted data
       const verse = selectedVerse || {
         id: `verse-${Date.now()}`,
-        text: sessionData.originalText,
-        reference: 'Custom Verse',
+        text: sessionData.verseText,
+        reference: sessionData.verseReference || 'Custom Verse',
         testament: 'NT' as const
       };
 
       // TRANSLATION-AWARE FILL-IN-BLANK CREATION
-      const fillInBlankResult = translatedVerseText
-        ? FillInBlankAPI.createFillInBlankFromTranslatedText(translatedVerseText, wrongWords)
-        : FillInBlankAPI.createFillInBlank(sessionData.originalText, wrongWords);
+      const verseText = translatedVerseText || selectedVerse?.text || 'Default verse text';
+      const fillInBlankState = FillInBlankAPI.createFillInBlankState(verseText, comparisonResult);
+      const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
 
       const session: SyntaxLabSession = {
         id: sessionData.id,
+        verseId: verse.id,
         verse,
+        originalComparison: comparisonResult,
         wrongWords,
-        maxRounds: sessionData.maxRounds,
+        practiceMode: 'blank',
+        currentRound: 1,
+        maxRounds: 3,
+        wordsFixed: [],
         startTime: new Date(),
-        endTime: null,
+        endTime: undefined,
         fillInBlankResult,
         finalAccuracy: 0,
         improvementScore: 0
@@ -195,8 +200,86 @@ const SyntaxLabPageRefactored: React.FC<SyntaxLabPageProps> = ({
     };
   };
 
+  const loadHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const history = await HistoryService.getMemorizationHistory();
+      setMemorizationHistory(history);
+      setShowHistoryLog(true);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   const startAutoPractice = () => {
-    console.log('Start Auto Practice');
+    // Predefined sample verses for auto practice
+    const sampleVerses: Verse[] = [
+      {
+        id: 'john-3-16',
+        text: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+        reference: 'John 3:16',
+        testament: 'NT'
+      },
+      {
+        id: 'psalm-23-1',
+        text: 'The LORD is my shepherd, I lack nothing.',
+        reference: 'Psalm 23:1',
+        testament: 'OT'
+      }
+    ];
+
+    // Pick a random verse
+    const randomVerse = sampleVerses[Math.floor(Math.random() * sampleVerses.length)];
+    
+    // Create a mock comparison result for auto practice
+    const mockWords = randomVerse.text.split(' ').slice(0, 3); // Take first 3 words as "wrong"
+    const mockComparison: WordComparison[] = mockWords.map((word, index) => ({
+      originalWord: word,
+      userWord: word + '_wrong',
+      status: 'incorrect' as const,
+      position: index
+    }));
+
+    const mockComparisonResult: ComparisonResult = {
+      accuracy: 70,
+      totalWords: randomVerse.text.split(' ').length,
+      correctWords: randomVerse.text.split(' ').length - 3,
+      incorrectWords: 3,
+      missingWords: 0,
+      extraWords: 0,
+      userComparison: mockComparison,
+      originalComparison: [],
+      detailedFeedback: 'Auto-generated practice session'
+    };
+
+    // Create auto session
+    const sessionData = SyntaxLabAPI.createSession(mockComparisonResult);
+    const wrongWords = mockComparison;
+
+    const fillInBlankState = FillInBlankAPI.createFillInBlankState(randomVerse.text, mockComparisonResult);
+    const fillInBlankResult = FillInBlankAPI.generateBlanks(fillInBlankState);
+
+    const session: SyntaxLabSession = {
+      id: `auto-session-${Date.now()}`,
+      verseId: randomVerse.id,
+      verse: randomVerse,
+      originalComparison: mockComparisonResult,
+      wrongWords,
+      practiceMode: 'blank',
+      currentRound: 1,
+      maxRounds: 3,
+      wordsFixed: [],
+      startTime: new Date(),
+      endTime: undefined,
+      fillInBlankResult,
+      finalAccuracy: 0,
+      improvementScore: 0
+    };
+
+    setCurrentSession(session);
+    setPhase('summary');
   };
 
   const restartRegularPractice = () => {
@@ -334,6 +417,121 @@ const SyntaxLabPageRefactored: React.FC<SyntaxLabPageProps> = ({
     completeSession
   };
 
+  // Show welcome menu when no comparison result and no current session
+  if (!comparisonResult && !currentSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <h1 className="text-3xl font-bold text-gray-800">📖 Syntax Lab</h1>
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Close Syntax Lab"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {!showHistoryLog ? (
+            /* Welcome Screen */
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="bg-white rounded-3xl p-12 shadow-2xl border border-purple-200 text-center max-w-2xl">
+                <div className="relative mb-8">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 rounded-full blur-2xl opacity-20"></div>
+                  <Brain className="w-24 h-24 text-purple-600 mx-auto relative z-10" />
+                </div>
+                
+                <h2 className="text-4xl font-bold text-gray-800 mb-4">Welcome to Syntax Lab</h2>
+                <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+                  Perfect your memorization with targeted practice sessions. Train your weak spots and achieve mastery.
+                </p>
+
+                <div className="space-y-4">
+                  <button
+                    onClick={onStartNewSession}
+                    className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white px-10 py-5 rounded-2xl hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm w-full max-w-md mx-auto"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <BookOpen className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="relative z-10">🚀 Start New Memorization</span>
+                  </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">or</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={loadHistory}
+                    disabled={isLoadingHistory}
+                    className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white px-10 py-5 rounded-2xl hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm w-full max-w-md mx-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    {isLoadingHistory ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white relative z-10"></div>
+                    ) : (
+                      <History className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    )}
+                    <span className="relative z-10">📚 Practice From History</span>
+                  </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">or</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={startAutoPractice}
+                    className="group relative flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white px-10 py-5 rounded-2xl hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg font-semibold text-lg border-2 border-white/20 backdrop-blur-sm w-full max-w-md mx-auto"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <Bot className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="relative z-10">🤖 Auto Practice</span>
+                  </button>
+                  
+                  <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                    Jump into automatically generated practice sessions with verses and mock exercises—no setup required.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* History Log Display - Placeholder for now */
+            <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800">Practice History</h2>
+                <button
+                  onClick={() => setShowHistoryLog(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-600">History functionality coming soon...</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
@@ -405,4 +603,4 @@ const SyntaxLabPageRefactored: React.FC<SyntaxLabPageProps> = ({
   );
 };
 
-export default SyntaxLabPageRefactored;
+export default SyntaxLabPage;

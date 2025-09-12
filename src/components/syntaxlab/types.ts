@@ -14,7 +14,7 @@ export interface SyntaxLabPhaseProps {
   onStartNewSession: () => void;
   onBack: () => void;
   settings: any;
-  t: (key: string) => string;
+  t: (key: any) => string;
 }
 
 export interface PracticePhaseProps extends SyntaxLabPhaseProps {
