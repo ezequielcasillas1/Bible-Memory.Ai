@@ -1,5 +1,5 @@
 { 
-
+The fill in the blank progression does not go to the next blank when one is correct, (the purple blank needs to be filled in with correct word once the user types in the correct word, it doesnt do that.)
 }
 
 ---

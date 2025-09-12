@@ -29,11 +29,16 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   useEffect(() => {
     if (!currentSession?.fillInBlankResult) return;
 
+    // FIXED: Calculate dynamic currentBlankIndex based on completed words
+    // This ensures progression to the next blank after each correct answer
+    const failedWords = currentSession.wrongWords.map((w: any) => w.originalWord || w.userWord);
+    const dynamicBlankIndex = wordsFixed.length; // Number of completed words = current blank position
+    
     const fillInBlankState = {
       verse: currentSession.verse.text,
-      failedWords: currentSession.wrongWords.map((w: any) => w.originalWord || w.userWord),
+      failedWords: failedWords,
       completedWords: wordsFixed,
-      currentBlankIndex: 0,
+      currentBlankIndex: dynamicBlankIndex, // FIXED: Dynamic instead of hardcoded 0
       translationContext: translatedSessionVerse?.isTranslated ? {
         isTranslated: true,
         originalVerse: currentSession.verse.text,
