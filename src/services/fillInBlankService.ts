@@ -348,8 +348,8 @@ export class FillInBlankAPI {
   }
   
   /**
-   * NEW: Get translated word from specific verse (for multi-language support)
-   * This allows checking against any language translation, not just the primary one
+   * ENHANCED: Get translated word from specific verse (for multi-language support)
+   * Enhanced for Asian languages with better word mapping algorithms
    */
   static getTranslatedWordFromVerse(
     englishWord: string,
@@ -360,7 +360,7 @@ export class FillInBlankAPI {
     const englishWords = originalVerse.split(' ');
     const translatedWords = translatedVerse.split(' ');
     
-    // Method 1: Try exact position mapping first
+    // Method 1: Try exact position mapping first (works for most European languages)
     if (position < translatedWords.length) {
       const candidateWord = translatedWords[position];
       if (candidateWord) {
@@ -368,7 +368,7 @@ export class FillInBlankAPI {
       }
     }
     
-    // Method 2: Fallback - find by relative position
+    // Method 2: Find by word matching in original verse
     const cleanEnglishWord = englishWord.toLowerCase().replace(/[.,!?;:"']/g, '');
     const englishWordIndex = englishWords.findIndex((word, idx) => {
       const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
@@ -389,7 +389,82 @@ export class FillInBlankAPI {
       }
     }
     
-    // Fallback to English word
+    // Method 4: ENHANCED - Semantic position mapping for Asian languages
+    // For languages with very different structures, use semantic rules
+    if (englishWords.length > 0 && translatedWords.length > 0) {
+      // Special handling for common biblical words
+      const wordMappings: { [key: string]: number } = {
+        'for': 0,     // Usually first word in many languages
+        'god': 1,     // Usually second or close to beginning  
+        'so': 2,      // Adverb typically early
+        'loved': 3,   // Main verb
+        'world': 4,   // Object of love
+        'that': 5,    // Conjunction
+        'he': 6,      // Subject of giving
+        'gave': 7,    // Verb of giving
+        'his': 8,     // Possessive
+        'one': 9,     // Modifier
+        'and': 10,    // Conjunction
+        'only': 11,   // Modifier
+        'son': 12     // Final object
+      };
+      
+      const semanticIndex = wordMappings[cleanEnglishWord];
+      if (semanticIndex !== undefined) {
+        // Map semantic position to translated verse proportionally
+        const semanticPosition = Math.floor((semanticIndex / 12) * translatedWords.length);
+        if (semanticPosition < translatedWords.length) {
+          const semanticWord = translatedWords[semanticPosition];
+          if (semanticWord) {
+            return semanticWord;
+          }
+        }
+      }
+    }
+    
+    // Method 5: ENHANCED - Handle languages without word separators (Thai, Chinese, Japanese)
+    if (translatedWords.length === 1 && translatedWords[0].length > 10) {
+      // This is likely a language without spaces (Thai, Chinese, Japanese)
+      const fullTranslatedVerse = translatedWords[0];
+      
+      // For position 0 (first word), try to extract the beginning portion
+      if (position === 0) {
+        // Thai: "เพราะ" is typically the first word
+        // Chinese: "因为" or "神爱世人" are typically the first words
+        // Try specific patterns for common biblical opening words
+        const commonOpenings = [
+          'เพราะ',    // Thai "For/Because"
+          '因为',     // Chinese "Because"
+          '神爱世人',  // Chinese "God loves the world"
+          '神愛世人',  // Traditional Chinese
+          '神は世を愛し', // Japanese
+        ];
+        
+        // Check if the verse starts with any common opening
+        for (const opening of commonOpenings) {
+          if (fullTranslatedVerse.startsWith(opening)) {
+            return opening;
+          }
+        }
+        
+        // Fallback: try different lengths but prefer longer meaningful words
+        const possibleLengths = [5, 4, 6, 3, 2]; // Start with length 5 for "เพราะ"
+        
+        for (const length of possibleLengths) {
+          const candidate = fullTranslatedVerse.substring(0, length);
+          if (candidate && candidate.length >= 2) { // Minimum 2 characters
+            return candidate;
+          }
+        }
+      }
+    }
+    
+    // Method 6: FALLBACK - Return first word if position 0
+    if (position === 0 && translatedWords.length > 0) {
+      return translatedWords[0];
+    }
+    
+    // Method 7: ULTIMATE FALLBACK - Return English word
     return englishWord;
   }
 

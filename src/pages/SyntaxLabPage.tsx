@@ -28,11 +28,33 @@ interface SyntaxLabPageProps {
 }
 
 // Helper function to get multi-language translations for fill-in-blank
-const getMultiLanguageTranslations = (verse: Verse): { [languageCode: string]: string } | undefined => {
-  // For now, return undefined to maintain backward compatibility
-  // This will be enhanced when translation cache access is fully integrated
-  // TODO: Integrate with AutoTranslationContext to fetch cached translations
-  return undefined;
+const getMultiLanguageTranslations = (verse: Verse, getTranslatedVerse: any): { [languageCode: string]: string } | undefined => {
+  // ENHANCED: Integrate with AutoTranslationContext for real translations
+  
+  // All 18 supported language codes from translationService.ts
+  const supportedLanguageCodes = [
+    'es', 'fr', 'de', 'pt', 'it', 'nl',           // Romance & Germanic
+    'zh-cn', 'zh-tw', 'ja', 'ko', 'sw', 'hi',     // Asian & African  
+    'tl', 'zu', 'vi', 'th', 'ms', 'id'            // Missionary & Global
+  ];
+  
+  const multiLanguageTranslations: { [languageCode: string]: string } = {};
+  
+  // Try to get cached translations for each supported language
+  for (const langCode of supportedLanguageCodes) {
+    try {
+      const translatedVerse = getTranslatedVerse(verse, langCode);
+      if (translatedVerse && translatedVerse.isTranslated && translatedVerse.text) {
+        multiLanguageTranslations[langCode] = translatedVerse.text;
+      }
+    } catch (error) {
+      // Skip languages that don't have cached translations
+      console.debug(`No cached translation for ${langCode}:`, error);
+    }
+  }
+  
+  // Return translations if we have at least one, otherwise undefined for backward compatibility
+  return Object.keys(multiLanguageTranslations).length > 0 ? multiLanguageTranslations : undefined;
 };
 
 const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ 
@@ -357,7 +379,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
           originalVerse: currentSession.verse.text,
           translatedVerse: displayVerse.text, // Primary translation (backward compatibility)
           // NEW: Multi-language support - get translations for all supported languages
-          multiLanguageTranslations: getMultiLanguageTranslations(currentSession.verse)
+          multiLanguageTranslations: getMultiLanguageTranslations(currentSession.verse, getTranslatedVerse)
         } : undefined
       };
 
