@@ -164,19 +164,37 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             if (!currentSession?.verse?.text) return null;
             
             const words = currentSession.verse.text.split(' ');
-            const failedWords = currentSession.wrongWords.map((w: any) => w.originalWord || w.userWord);
+            
+            // CRITICAL FIX: Use Set to get unique failed words only
+            const uniqueFailedWords = new Set(
+              currentSession.wrongWords.map((w: any) => 
+                (w.originalWord || w.userWord).toLowerCase().replace(/[.,!?;:"']/g, '')
+              )
+            );
+            
+            const uniqueCompletedWords = new Set(
+              wordsFixed.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
+            );
+            
+            // Track which unique words have been processed to prevent duplicates
+            const processedUniqueWords = new Set<string>();
             
             return words.map((word: string, index: number) => {
               const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-              const isFailedWord = failedWords.some((fw: string) => 
-                fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-              );
-              const isCompleted = wordsFixed.some((wf: string) => 
-                wf.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
-              );
+              
+              // FIXED: Only show blank for FIRST occurrence of each unique failed word
+              const isUniqueFailedWord = uniqueFailedWords.has(cleanWord);
+              const hasBeenProcessed = processedUniqueWords.has(cleanWord);
+              const shouldShowBlank = isUniqueFailedWord && !hasBeenProcessed;
+              
+              if (shouldShowBlank) {
+                processedUniqueWords.add(cleanWord); // Mark as processed
+              }
+              
+              const isCompleted = uniqueCompletedWords.has(cleanWord);
               const isCurrentBlank = cleanWord === currentBlankWord?.toLowerCase().replace(/[.,!?;:"']/g, '');
               
-              if (isFailedWord) {
+              if (shouldShowBlank) {
                 if (isCompleted) {
                   // GREEN HIGHLIGHT: Completed words
                   return (

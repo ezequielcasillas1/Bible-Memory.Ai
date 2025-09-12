@@ -1,5 +1,5 @@
 { 
-Research the codebase, make sure there isnt any conflicting files, we have recently made minimal files for the syntaxlabpage.tsx, fix any bug you can possibly find, because the syntax lab fill in the blank is still buggy with the ui/functionality returning a key word 3 times, in the image seen, and it is not randomized, the fill in the blanks need to be randomized with working progressions (next after next word applied effectively/next fill in the blank appearing which is not currently working.)
+the fill in the blanks still have this look on the session, the 3 blanks still appear there after you tried fixing it, the fill in the blank needs to update when I type in the correct word it needs to show a the word filled which it doesnt, and proceed with the next randomized fill in the blank, if not already, make an api that can do these functions correctly: the fill in the blanks need to be randomized with working progressions (next after next word applied effectively/next fill in the blank appearing which is not currently working.)
 }
 
 ---
