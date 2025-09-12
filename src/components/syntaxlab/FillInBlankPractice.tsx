@@ -92,7 +92,36 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   const progressData = getProgressData();
 
   return (
-    <div className="space-y-6">
+    <>
+      {/* CSS Animations for Visual States */}
+      <style>{`
+        @keyframes greenSuccess {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+          50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        
+        @keyframes purpleActive {
+          0% { 
+            transform: scale(1.1); 
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.6);
+            filter: brightness(1);
+          }
+          100% { 
+            transform: scale(1.15); 
+            box-shadow: 0 0 30px rgba(147, 51, 234, 0.8);
+            filter: brightness(1.1);
+          }
+        }
+        
+        @keyframes correctWordFlash {
+          0% { background: linear-gradient(45deg, #10b981, #059669); }
+          50% { background: linear-gradient(45deg, #34d399, #10b981); }
+          100% { background: linear-gradient(45deg, #10b981, #059669); }
+        }
+      `}</style>
+      
+      <div className="space-y-6">
       {/* Progress Display */}
       <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl p-6 border-2 border-emerald-200 shadow-lg">
         <div className="flex items-center justify-between mb-4">
@@ -126,23 +155,78 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         </div>
         
         <div className="text-lg leading-relaxed text-gray-700 text-center mb-4">
-          {formattedText.split(' ').map((word, index) => {
-            if (word === '____') {
+          {(() => {
+            if (!currentSession?.verse?.text) return null;
+            
+            const words = currentSession.verse.text.split(' ');
+            const failedWords = currentSession.wrongWords.map((w: any) => w.originalWord || w.userWord);
+            
+            return words.map((word: string, index: number) => {
+              const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+              const isFailedWord = failedWords.some((fw: string) => 
+                fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+              );
+              const isCompleted = wordsFixed.some((wf: string) => 
+                wf.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+              );
+              const isCurrentBlank = cleanWord === currentBlankWord?.toLowerCase().replace(/[.,!?;:"']/g, '');
+              
+              if (isFailedWord) {
+                if (isCompleted) {
+                  // GREEN HIGHLIGHT: Completed words
+                  return (
+                    <span 
+                      key={index} 
+                      className="inline-block mx-1 px-3 py-1 bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 text-white rounded-lg font-bold shadow-lg border-2 border-green-300 animate-pulse"
+                      style={{
+                        animation: 'greenSuccess 0.6s ease-out'
+                      }}
+                    >
+                      {word}
+                    </span>
+                  );
+                } else if (isCurrentBlank) {
+                  // PURPLE GRADIENT: Currently active blank while typing
+                  return (
+                    <span 
+                      key={index} 
+                      className="inline-block mx-1 px-4 py-2 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white rounded-xl font-bold shadow-xl border-2 border-purple-300 animate-pulse transform scale-110"
+                      style={{
+                        textDecoration: 'underline',
+                        textDecorationColor: '#fbbf24',
+                        textDecorationThickness: '3px',
+                        animation: 'purpleActive 1.5s ease-in-out infinite alternate'
+                      }}
+                    >
+                      ____
+                    </span>
+                  );
+                } else {
+                  // UNDERLINE: All other active blanks waiting
+                  return (
+                    <span 
+                      key={index} 
+                      className="inline-block mx-1 px-3 py-1 bg-gradient-to-r from-yellow-200 to-orange-200 text-gray-800 rounded-lg font-bold border-2 border-yellow-400 shadow-md"
+                      style={{
+                        textDecoration: 'underline',
+                        textDecorationColor: '#f59e0b',
+                        textDecorationThickness: '2px'
+                      }}
+                    >
+                      ____
+                    </span>
+                  );
+                }
+              }
+              
+              // Regular words
               return (
-                <span 
-                  key={index} 
-                  className="inline-block mx-1 px-3 py-1 bg-gradient-to-r from-emerald-400 to-teal-400 text-white rounded-lg font-bold shadow-lg animate-pulse"
-                >
-                  ____
+                <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-emerald-600">
+                  {word}
                 </span>
               );
-            }
-            return (
-              <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-emerald-600">
-                {word}
-              </span>
-            );
-          })}
+            });
+          })()}
         </div>
 
         {translatedSessionVerse?.isTranslated && (
@@ -203,10 +287,20 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type the missing word..."
-              className="w-full px-6 py-4 text-lg border-2 border-emerald-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-200 focus:border-emerald-500 transition-all duration-300 text-center font-medium bg-gradient-to-r from-white to-emerald-50"
+              placeholder={`Type "${currentBlankWord}" here...`}
+              className={`w-full px-6 py-4 text-lg border-2 rounded-2xl focus:outline-none focus:ring-4 transition-all duration-300 text-center font-medium ${
+                userInput.trim() 
+                  ? 'border-purple-400 focus:ring-purple-200 focus:border-purple-600 bg-gradient-to-r from-purple-50 to-violet-50' 
+                  : 'border-emerald-300 focus:ring-emerald-200 focus:border-emerald-500 bg-gradient-to-r from-white to-emerald-50'
+              }`}
+              style={{
+                boxShadow: userInput.trim() ? '0 0 20px rgba(147, 51, 234, 0.3)' : '0 0 10px rgba(16, 185, 129, 0.2)'
+              }}
               autoFocus
             />
+            {userInput.trim() && (
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-purple-500 rounded-full animate-ping"></div>
+            )}
           </div>
           
           <button
@@ -241,7 +335,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
