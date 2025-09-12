@@ -116,9 +116,10 @@ export class FillInBlankAPI {
     // Sort by position to ensure left-to-right order
     failedWordPositions.sort((a, b) => a.position - b.position);
     
-    // Find the leftmost uncompleted failed word
-    const currentBlankPosition = failedWordPositions.find(fp => !fp.completed);
-    const currentBlankIndex = currentBlankPosition ? currentBlankPosition.position : -1;
+    // FIXED: Show ALL uncompleted failed words as blanks simultaneously
+    const uncompletedBlankIndices = failedWordPositions
+      .filter(fp => !fp.completed)
+      .map(fp => fp.position);
     
     // Generate blanks array
     words.forEach((word, index) => {
@@ -127,8 +128,8 @@ export class FillInBlankAPI {
         completedWord.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
       );
       
-      // Only blank the current leftmost uncompleted failed word
-      const isCurrentBlank = index === currentBlankIndex;
+      // Show ALL uncompleted failed words as blanks (not just one)
+      const isCurrentBlank = uncompletedBlankIndices.includes(index);
       
       blanks.push({
         word,
@@ -141,6 +142,7 @@ export class FillInBlankAPI {
     
     const formattedText = this.generateFormattedText(blanks);
     const totalBlanks = state.failedWords.length;
+    const currentBlankIndex = uncompletedBlankIndices.length > 0 ? uncompletedBlankIndices[0] : -1;
     
     return {
       blanks,
@@ -164,9 +166,9 @@ export class FillInBlankAPI {
     currentWord: string | null
   } {
     const blanks = this.generateBlanks(state);
-    const currentBlank = blanks.blanks.find(blank => blank.isBlank);
+    const activeBlankWords = blanks.blanks.filter(blank => blank.isBlank);
     
-    if (!currentBlank) {
+    if (activeBlankWords.length === 0) {
       return {
         newState: state,
         isCorrect: false,
@@ -175,26 +177,40 @@ export class FillInBlankAPI {
       };
     }
     
-    const currentWord = currentBlank.word;
-    const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
     const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
     
-    // TRANSLATION-AWARE COMPARISON
-    let expectedWord = cleanCurrentWord;
-    if (state.translationContext?.isTranslated) {
-      // If we have translation context, get the translated word for comparison
-      expectedWord = this.getTranslatedWord(
-        currentWord, 
-        currentBlank.position, 
-        state.translationContext
-      ).toLowerCase().replace(/[.,!?;:"']/g, '');
+    // FIXED: Check user input against ALL active blanks
+    let matchedBlank: BlankWord | null = null;
+    let expectedWord = '';
+    
+    for (const blankWord of activeBlankWords) {
+      const currentWord = blankWord.word;
+      const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+      
+      // TRANSLATION-AWARE COMPARISON
+      let wordToCheck = cleanCurrentWord;
+      if (state.translationContext?.isTranslated) {
+        // If we have translation context, get the translated word for comparison
+        wordToCheck = this.getTranslatedWord(
+          currentWord, 
+          blankWord.position, 
+          state.translationContext
+        ).toLowerCase().replace(/[.,!?;:"']/g, '');
+      }
+      
+      if (cleanUserInput === wordToCheck) {
+        matchedBlank = blankWord;
+        expectedWord = wordToCheck;
+        break;
+      }
     }
     
-    const isCorrect = cleanUserInput === expectedWord;
+    const isCorrect = matchedBlank !== null;
     
-    if (isCorrect) {
+    if (isCorrect && matchedBlank) {
       // Add word to completed list - use the expected word (translated if available)
-      const wordToStore = state.translationContext?.isTranslated ? expectedWord : cleanCurrentWord;
+      const cleanMatchedWord = matchedBlank.word.toLowerCase().replace(/[.,!?;:"']/g, '');
+      const wordToStore = state.translationContext?.isTranslated ? expectedWord : cleanMatchedWord;
       const newCompletedWords = [...state.completedWords, wordToStore];
       
       // Check if this word already exists to prevent duplicates
@@ -218,7 +234,7 @@ export class FillInBlankAPI {
       newState: state,
       isCorrect: false,
       shouldAdvance: false,
-      currentWord: cleanCurrentWord
+      currentWord: activeBlankWords.length > 0 ? activeBlankWords[0].word : null
     };
   }
   

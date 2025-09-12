@@ -1,51 +1,10 @@
 { 
-AutoTranslationContext.tsx:124  Warning: Cannot update a component (`AutoTranslationProvider`) while rendering a different component (`SyntaxLabPage`). To locate the bad setState() call inside `SyntaxLabPage`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
-    at SyntaxLabPage (http://127.0.0.1:5173/src/pages/SyntaxLabPage.tsx?t=1757636035818:26:26)
-    at main
-    at div
-    at AutoTranslationProvider (http://127.0.0.1:5173/src/contexts/AutoTranslationContext.tsx:31:3)
-    at AppContent (http://127.0.0.1:5173/src/App.tsx?t=1757636035818:37:29)
-    at LanguageProvider (http://127.0.0.1:5173/src/contexts/LanguageContext.tsx:249:36)
-    at AuthProvider (http://127.0.0.1:5173/src/contexts/AuthContext.tsx:30:32)
-    at App
-printWarning @ react-dom.development.js:86
-error @ react-dom.development.js:60
-warnAboutRenderPhaseUpdatesInDEV @ react-dom.development.js:27531
-scheduleUpdateOnFiber @ react-dom.development.js:25537
-dispatchSetState @ react-dom.development.js:16708
-translateVerseAsync @ AutoTranslationContext.tsx:124
-autoTranslateVerse @ AutoTranslationContext.tsx:92
-(anonymous) @ useAutoTranslatedVerse.ts:14
-updateMemo @ react-dom.development.js:16427
-useMemo @ react-dom.development.js:17067
-useMemo @ react.development.js:1650
-useAutoTranslatedVerse @ useAutoTranslatedVerse.ts:12
-SyntaxLabPage @ SyntaxLabPage.tsx:32
-renderWithHooks @ react-dom.development.js:15486
-updateFunctionComponent @ react-dom.development.js:19617
-beginWork @ react-dom.development.js:21640
-beginWork$1 @ react-dom.development.js:27465
-performUnitOfWork @ react-dom.development.js:26596
-workLoopSync @ react-dom.development.js:26505
-renderRootSync @ react-dom.development.js:26473
-performSyncWorkOnRoot @ react-dom.development.js:26124
-flushSyncCallbacks @ react-dom.development.js:12042
-(anonymous) @ react-dom.development.js:25690
-react-dom.development.js:86  Warning: validateDOMNesting(...): <button> cannot appear as a descendant of <button>.
-    at button
-    at button
-    at div
-    at div
-    at div
-    at div
-    at div
-    at div
-    at SettingsModal (http://127.0.0.1:5173/src/components/SettingsModal.tsx?t=1757634480369:25:3)
-    at div
-    at AutoTranslationProvider (http://127.0.0.1:5173/src/contexts/AutoTranslationContext.tsx:31:3)
-    at AppContent (http://127.0.0.1:5173/src/App.tsx?t=1757636035818:37:29)
-    at LanguageProvider (http://127.0.0.1:5173/src/contexts/LanguageContext.tsx:249:36)
-    at AuthProvider (
+Word progression is not advancing to the next word; (it stays at the current word even if its right to be repeated again.) that should be randomized word from left to right in auto practice mode's fill in the blank feature, the logic should be that when the user types in the right word it should advance to the next fill in the blank, which should be random and of course logically should resemble. also if there are 2 words to fill in the blank then there should be 2 fill in the blanks instead of one fill in the blank (the blanks that are underlined with green highlights. please tell me which debug buttons you would want me to use if you need to know more debug options from this list 🔬 Debug
+🔧 Debug Completion
+📝 Debug Progression
+🌍 Debug Translation
+🐑 Test
+ )
 }
 
 ---
