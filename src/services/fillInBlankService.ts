@@ -187,20 +187,37 @@ export class FillInBlankAPI {
       const currentWord = blankWord.word;
       const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
       
-      // TRANSLATION-AWARE COMPARISON
-      let wordToCheck = cleanCurrentWord;
+      // TRANSLATION-AWARE COMPARISON - Accept BOTH English and translated words
+      let isMatch = false;
+      let expectedWord = '';
+      
       if (state.translationContext?.isTranslated) {
-        // If we have translation context, get the translated word for comparison
-        wordToCheck = this.getTranslatedWord(
+        // Check both English (original) and translated word
+        const englishWord = cleanCurrentWord;
+        const translatedWord = this.getTranslatedWord(
           currentWord, 
           blankWord.position, 
           state.translationContext
         ).toLowerCase().replace(/[.,!?;:"']/g, '');
+        
+        // Accept either English or translated word
+        if (cleanUserInput === englishWord) {
+          isMatch = true;
+          expectedWord = englishWord;
+        } else if (cleanUserInput === translatedWord) {
+          isMatch = true;
+          expectedWord = translatedWord;
+        }
+      } else {
+        // No translation context - only check English
+        if (cleanUserInput === cleanCurrentWord) {
+          isMatch = true;
+          expectedWord = cleanCurrentWord;
+        }
       }
       
-      if (cleanUserInput === wordToCheck) {
+      if (isMatch) {
         matchedBlank = blankWord;
-        expectedWord = wordToCheck;
         break;
       }
     }

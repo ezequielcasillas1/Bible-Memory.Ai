@@ -1,10 +1,5 @@
 { 
-Word progression is not advancing to the next word; (it stays at the current word even if its right to be repeated again.) that should be randomized word from left to right in auto practice mode's fill in the blank feature, the logic should be that when the user types in the right word it should advance to the next fill in the blank, which should be random and of course logically should resemble. also if there are 2 words to fill in the blank then there should be 2 fill in the blanks instead of one fill in the blank (the blanks that are underlined with green highlights. please tell me which debug buttons you would want me to use if you need to know more debug options from this list 🔬 Debug
-🔧 Debug Completion
-📝 Debug Progression
-🌍 Debug Translation
-🐑 Test
- )
+"For" God so loved the world is part when typing in the correct word "For" it fails to say it is correct, and does not go to the next word"
 }
 
 ---
