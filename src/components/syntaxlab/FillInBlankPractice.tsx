@@ -79,12 +79,15 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
 
     console.log('🎯 FILL-IN-BLANK UI UPDATE:', {
       sessionId: currentSession.id,
+      currentRound: currentRound,
       hasFactoryResult: !!currentSession.fillInBlankResult,
       currentBlank,
       wordsFixed: wordsFixed.length,
-      totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length
+      totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length,
+      failedWordsCount: uniqueFailedWords.length,
+      uniqueFailedWords: uniqueFailedWords
     });
-  }, [currentSession, wordsFixed, translatedSessionVerse]);
+  }, [currentSession, wordsFixed, translatedSessionVerse, currentRound]);
 
   const generateHint = async (word: string): Promise<string> => {
     // Simple hint generation - could be enhanced with AI

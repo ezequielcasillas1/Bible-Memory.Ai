@@ -152,6 +152,13 @@ export class FillInBlankAPI {
       .filter(fp => !fp.completed)
       .map(fp => fp.position);
     
+    console.log('🔍 GENERATE BLANKS DEBUG:', {
+      failedWordPositions: failedWordPositions.length,
+      uncompletedBlankIndices: uncompletedBlankIndices.length,
+      completedWordsCount: state.completedWords.length,
+      failedWordsCount: state.failedWords.length
+    });
+    
     // Generate blanks array
     words.forEach((word, index) => {
       const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
@@ -159,13 +166,14 @@ export class FillInBlankAPI {
         completedWord.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
       );
       
-      // Show ALL uncompleted failed words as blanks (not just one)
-      const isCurrentBlank = uncompletedBlankIndices.includes(index);
+      // FIXED: Check if this word is a failed word that should be a blank
+      const isFailedWord = uniqueFailedWords.has(cleanWord);
+      const shouldBeBlank = isFailedWord && !isCompleted;
       
       blanks.push({
         word,
-        isBlank: isCurrentBlank,
-        underscores: isCurrentBlank ? this.generateUnderscores(word) : '',
+        isBlank: shouldBeBlank,
+        underscores: shouldBeBlank ? this.generateUnderscores(word) : '',
         position: index,
         isCompleted
       });
@@ -327,11 +335,29 @@ export class FillInBlankAPI {
     const blanks = this.generateBlanks(state);
     const activeBlankWords = blanks.blanks.filter(blank => blank.isBlank);
     
-    // FIXED: Use currentBlankIndex to get the correct current blank, not just the first one
+    console.log('🔍 getCurrentBlankWord DEBUG:', {
+      totalBlanks: blanks.blanks.length,
+      activeBlanks: activeBlankWords.length,
+      currentBlankIndex: state.currentBlankIndex,
+      completedWords: state.completedWords,
+      failedWords: state.failedWords,
+      activeBlankWords: activeBlankWords.map(b => b.word)
+    });
+    
+    // EMERGENCY FIX: If no active blanks but we have failed words, reset to first failed word
+    if (activeBlankWords.length === 0 && state.failedWords.length > 0) {
+      console.log('🚨 EMERGENCY: No active blanks found, returning first failed word');
+      return state.failedWords[0];
+    }
+    
     const currentBlankIndex = state.currentBlankIndex || 0;
     
     if (activeBlankWords.length === 0) return null;
-    if (currentBlankIndex >= activeBlankWords.length) return null;
+    if (currentBlankIndex >= activeBlankWords.length) {
+      // If index is out of bounds, return first active blank
+      console.log('🔧 INDEX OUT OF BOUNDS: Returning first active blank');
+      return activeBlankWords[0].word;
+    }
     
     return activeBlankWords[currentBlankIndex].word;
   }
