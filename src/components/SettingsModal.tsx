@@ -5,6 +5,7 @@ import { AppSettings } from '../types';
 import { SUPPORTED_LANGUAGES } from '../services/translationService';
 import { useLanguage, UI_LANGUAGES } from '../contexts/LanguageContext';
 import { UITranslationService } from '../services/uiTranslationService';
+import { NumericalDifficultyAPI } from '../services/numericalDifficultyAPI';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -546,7 +547,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               
               {(() => {
-                const { NumericalDifficultyAPI } = require('../services/numericalDifficultyAPI');
                 const level = NumericalDifficultyAPI.getDifficultyLevel(showDifficultyInfo);
                 
                 if (!level) return <div>Invalid difficulty level</div>;

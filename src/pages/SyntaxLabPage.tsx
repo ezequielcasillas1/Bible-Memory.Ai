@@ -153,20 +153,35 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
         wrongWords: wrongWords
       });
       
-      // TRANSLATION-AWARE FILL-IN-BLANK CREATION
+      // NUMERICAL DIFFICULTY-BASED FILL-IN-BLANK CREATION
+      // Use numerical difficulty system instead of memorization-based approach
+      const difficultyLevel = settings?.fillInBlankDifficulty || 6;
+      const difficultyWords = FillInBlankService.selectWordsForNumericalDifficulty(
+        verseTextForSession, 
+        difficultyLevel
+      );
+      
+      console.log('🎯 NUMERICAL DIFFICULTY DEBUG:', {
+        difficultyLevel,
+        verseText: verseTextForSession,
+        selectedWords: difficultyWords,
+        expectedBlanks: difficultyLevel
+      });
+      
+      // Create fill-in-blank result using numerical difficulty words
       const fillInBlankResult = translatedVerseText 
         ? FillInBlankService.calculateProgressiveFillInBlanks(
             verseTextForSession, // Spanish text
-            round1Words, // Not used when translation mapping provided
+            difficultyWords, // Use numerical difficulty words instead of round1Words
             [], // No words fixed yet
             {
               englishText: sessionData.verseText, // English text
-              englishWrongWords: round1Words // English wrong words
+              englishWrongWords: difficultyWords // English wrong words
             }
           )
         : FillInBlankService.calculateProgressiveFillInBlanks(
             verseTextForSession, // English text
-            round1Words,
+            difficultyWords, // Use numerical difficulty words
             [] // No words fixed yet
           );
       
@@ -1828,7 +1843,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">
-                      Progress: {getProgressData().global.completed} / {getProgressData().global.total} words
+                      Progress: {wordsFixed.length} / {currentSession?.fillInBlankResult?.totalBlanks || getProgressData().global.total} words
                     </span>
                     <span className="text-emerald-600 font-bold">
                       {getProgressData().global.percentage}% Complete
@@ -2182,7 +2197,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, selecte
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">{getProgressData().global.completed}/{getProgressData().global.total}</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{wordsFixed.length}/{currentSession?.fillInBlankResult?.totalBlanks || getProgressData().global.total}</div>
                 <div className="text-green-700">Mistakes Fixed</div>
               </div>
               

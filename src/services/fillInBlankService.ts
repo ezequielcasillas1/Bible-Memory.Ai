@@ -11,6 +11,7 @@
  */
 
 import { ComparisonResult, WordComparison } from './verseComparisonService';
+import { NumericalDifficultyAPI } from './numericalDifficultyAPI';
 
 export interface BlankWord {
   word: string;
@@ -376,7 +377,6 @@ export class FillInBlankService extends FillInBlankAPI {
   
   // NEW: Numerical difficulty method
   static selectWordsForNumericalDifficulty(originalText: string, difficulty: number): string[] {
-    const { NumericalDifficultyAPI } = require('./numericalDifficultyAPI');
     return NumericalDifficultyAPI.selectWordsForDifficulty(originalText, difficulty);
   }
 
