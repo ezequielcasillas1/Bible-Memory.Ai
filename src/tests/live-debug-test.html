@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Debug Test - Fill-in-Blank Issue</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .verse-display { 
+            font-size: 20px; 
+            line-height: 1.8; 
+            margin: 30px 0; 
+            padding: 25px; 
+            background: #f8f9fa; 
+            border-radius: 10px; 
+            border-left: 5px solid #3b82f6; 
+        }
+        .completed { 
+            background: linear-gradient(45deg, #10b981, #059669); 
+            color: white; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            animation: greenSuccess 0.6s ease-out;
+            margin: 0 2px;
+        }
+        .current-blank { 
+            background: linear-gradient(45deg, #8b5cf6, #7c3aed); 
+            color: white; 
+            padding: 8px 16px; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            animation: pulse 1.5s infinite; 
+            margin: 0 4px;
+            text-decoration: underline;
+            text-decoration-color: #fbbf24;
+        }
+        .waiting-blank { 
+            background: linear-gradient(45deg, #f59e0b, #d97706); 
+            color: white; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            margin: 0 2px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        @keyframes greenSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .controls { 
+            text-align: center; 
+            margin: 30px 0; 
+        }
+        input { 
+            padding: 12px 16px; 
+            font-size: 18px; 
+            border: 2px solid #ddd; 
+            border-radius: 8px; 
+            margin: 0 10px; 
+            min-width: 200px;
+        }
+        button { 
+            padding: 12px 24px; 
+            font-size: 18px; 
+            background: #3b82f6; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            margin: 0 5px;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .status { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            text-align: center;
+            font-weight: bold;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fecaca; color: #991b1b; }
+        .debug { 
+            background: #f3f4f6; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 14px; 
+            white-space: pre-line;
+        }
+        .step { 
+            background: #eff6ff; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #3b82f6; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Live Debug Test: Fill-in-Blank Visual Update</h1>
+        <p><strong>Issue:</strong> When user types correct word, blank should immediately show the actual word instead of staying as underscores.</p>
+        
+        <div class="step">
+            <h3>📋 Test Scenario: John 3:16</h3>
+            <p><strong>Failed Words:</strong> "eternal" and "life" (last 2 words)</p>
+            <p><strong>Expected Behavior:</strong> Type "eternal" → blank shows "eternal" in green → proceed to "life"</p>
+        </div>
+        
+        <div class="verse-display" id="verse-display">
+            <!-- Populated by JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <input type="text" id="user-input" placeholder="Type the missing word..." />
+            <button onclick="checkWord()" id="submit-btn">Submit Word</button>
+            <button onclick="resetTest()">Reset Test</button>
+            <button onclick="forceRerender()">Force Re-render</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        // Test data - exact John 3:16 scenario
+        const verseText = "For God so loved the world that he gave his one and only Son that whoever believes in him shall not perish but have eternal life";
+        const failedWords = ["eternal", "life"];
+        let wordsFixed = [];
+        let currentBlankIndex = 0;
+        let renderCount = 0;
+
+        // Simulate the exact React component render logic
+        function renderVerse() {
+            renderCount++;
+            console.log(`🔄 RENDER #${renderCount} - wordsFixed:`, wordsFixed);
+            
+            const words = verseText.split(' ');
+            
+            // Exact logic from FillInBlankPractice.tsx
+            const uniqueFailedWords = new Set(
+                failedWords.map(fw => fw.toLowerCase().replace(/[.,!?;:"']/g, ''))
+            );
+            
+            const uniqueCompletedWords = new Set(
+                wordsFixed.map(wf => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
+            );
+            
+            console.log('📊 Render State:', {
+                uniqueFailedWords: Array.from(uniqueFailedWords),
+                wordsFixed: wordsFixed,
+                uniqueCompletedWords: Array.from(uniqueCompletedWords)
+            });
+            
+            const processedUniqueWords = new Set();
+            let html = '';
+            
+            words.forEach((word, index) => {
+                const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                
+                const isUniqueFailedWord = uniqueFailedWords.has(cleanWord);
+                const hasBeenProcessed = processedUniqueWords.has(cleanWord);
+                const shouldShowBlank = isUniqueFailedWord && !hasBeenProcessed;
+                
+                if (shouldShowBlank) {
+                    processedUniqueWords.add(cleanWord);
+                }
+                
+                const isCompleted = uniqueCompletedWords.has(cleanWord);
+                const isCurrentBlank = shouldShowBlank && !isCompleted && 
+                    failedWords.indexOf(cleanWord) === currentBlankIndex;
+                
+                if (shouldShowBlank) {
+                    if (isCompleted) {
+                        // 🎯 KEY TEST: This should show the actual word!
+                        html += `<span class="completed">${word}</span> `;
+                        console.log(`✅ COMPLETED WORD: "${word}" should show as green`);
+                    } else if (isCurrentBlank) {
+                        html += `<span class="current-blank">_____</span> `;
+                        console.log(`🎯 CURRENT BLANK: "${word}" showing as purple blank`);
+                    } else {
+                        html += `<span class="waiting-blank">_____</span> `;
+                        console.log(`⏳ WAITING BLANK: "${word}" showing as yellow blank`);
+                    }
+                } else {
+                    html += `<span>${word}</span> `;
+                }
+            });
+            
+            document.getElementById('verse-display').innerHTML = html;
+            updateDebugInfo();
+        }
+
+        function updateDebugInfo() {
+            const debug = document.getElementById('debug');
+            debug.textContent = `
+RENDER COUNT: ${renderCount}
+WORDS FIXED: [${wordsFixed.join(', ')}]
+CURRENT BLANK INDEX: ${currentBlankIndex}
+EXPECTED WORD: ${failedWords[currentBlankIndex] || 'None'}
+REMAINING BLANKS: ${failedWords.length - wordsFixed.length}
+
+🔍 CRITICAL CHECK:
+- "eternal" in wordsFixed: ${wordsFixed.includes('eternal')}
+- "eternal" should show as completed: ${wordsFixed.includes('eternal') && failedWords.includes('eternal')}
+            `;
+        }
+
+        function checkWord() {
+            const userInput = document.getElementById('user-input').value.trim();
+            const status = document.getElementById('status');
+            
+            if (!userInput) {
+                status.innerHTML = '<div class="error">Please enter a word!</div>';
+                return;
+            }
+            
+            const expectedWord = failedWords[currentBlankIndex];
+            const isCorrect = userInput.toLowerCase() === expectedWord?.toLowerCase();
+            
+            console.log(`🎯 WORD SUBMISSION: "${userInput}" for expected "${expectedWord}"`);
+            
+            if (isCorrect) {
+                // ✅ CORRECT: This is the critical moment
+                console.log(`✅ CORRECT! Adding "${expectedWord}" to wordsFixed`);
+                
+                // Simulate the exact SyntaxLabPage.tsx logic
+                const newWordsFixed = [...wordsFixed, expectedWord];
+                wordsFixed = newWordsFixed;
+                currentBlankIndex++;
+                
+                console.log(`📊 STATE UPDATE: wordsFixed = [${wordsFixed.join(', ')}]`);
+                
+                status.innerHTML = `<div class="success">✅ Correct! "${userInput}" should now appear in the verse.</div>`;
+                
+                // 🔍 CRITICAL: Re-render should show the word
+                console.log('🔄 TRIGGERING RE-RENDER...');
+                renderVerse();
+                
+                document.getElementById('user-input').value = '';
+                
+                if (wordsFixed.length >= failedWords.length) {
+                    status.innerHTML += '<div class="success">🎊 All blanks completed!</div>';
+                }
+            } else {
+                status.innerHTML = `<div class="error">❌ Incorrect. Expected: "${expectedWord}"</div>`;
+            }
+        }
+
+        function forceRerender() {
+            console.log('🔄 FORCE RE-RENDER TRIGGERED');
+            renderVerse();
+        }
+
+        function resetTest() {
+            wordsFixed = [];
+            currentBlankIndex = 0;
+            renderCount = 0;
+            document.getElementById('user-input').value = '';
+            document.getElementById('status').innerHTML = '';
+            console.log('🔄 RESET TEST');
+            renderVerse();
+        }
+
+        // Event listeners
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkWord();
+            }
+        });
+
+        // Initialize
+        console.log('🚀 INITIALIZING LIVE DEBUG TEST');
+        renderVerse();
+    </script>
+    
+    <div class="step">
+        <h3>🧪 Test Instructions:</h3>
+        <ol>
+            <li>Type "eternal" and press Enter</li>
+            <li><strong>EXPECTED:</strong> The first blank should immediately change from "_____" to "eternal" in green</li>
+            <li><strong>IF BUG EXISTS:</strong> The blank will stay as "_____" even though it was correct</li>
+            <li>Check the debug info and browser console for detailed logs</li>
+        </ol>
+    </div>
+</body>
+</html>

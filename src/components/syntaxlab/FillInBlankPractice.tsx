@@ -82,7 +82,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       currentRound: currentRound,
       hasFactoryResult: !!currentSession.fillInBlankResult,
       currentBlank,
-      wordsFixed: wordsFixed.length,
+      wordsFixed: wordsFixed, // FIXED: Log actual array, not just length
+      wordsFixedLength: wordsFixed.length,
       totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length,
       failedWordsCount: fillInBlankState.failedWords.length,
       failedWords: fillInBlankState.failedWords
@@ -227,7 +228,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
           <p className="text-sm text-slate-600 mt-3 font-medium">Fill in each highlighted blank to complete the verse</p>
         </div>
         
-        <div className="text-lg leading-relaxed text-gray-700 text-center mb-4">
+        <div 
+          key={`verse-display-${wordsFixed.length}-${currentRound}`}
+          className="text-lg leading-relaxed text-gray-700 text-center mb-4"
+        >
           {(() => {
             if (!currentSession?.verse?.text) return null;
             
@@ -243,6 +247,14 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             const uniqueCompletedWords = new Set(
               wordsFixed.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
             );
+            
+            // ENHANCED DEBUG: Log visual render state
+            console.log('🎨 VISUAL RENDER:', {
+              wordsFixed,
+              uniqueFailedWords: Array.from(uniqueFailedWords),
+              uniqueCompletedWords: Array.from(uniqueCompletedWords),
+              renderTimestamp: new Date().toISOString()
+            });
             
             // Track which unique words have been processed to prevent duplicates
             const processedUniqueWords = new Set<string>();
@@ -265,9 +277,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               if (shouldShowBlank) {
                 if (isCompleted) {
                   // GREEN HIGHLIGHT: Completed words
+                  console.log(`✅ RENDERING COMPLETED WORD: "${word}" at index ${index}`);
                   return (
                     <span 
-                      key={index} 
+                      key={`completed-${cleanWord}-${index}-${wordsFixed.length}`} 
                       className="inline-block mx-1 px-3 py-1 bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 text-white rounded-lg font-bold shadow-lg border-2 border-green-300 animate-pulse"
                       style={{
                         animation: 'greenSuccess 0.6s ease-out'
@@ -278,9 +291,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
                   );
                 } else if (isCurrentBlank) {
                   // ENHANCED: Currently active blank - GUIDE.md Professional Styling
+                  console.log(`🎯 RENDERING CURRENT BLANK: "${word}" at index ${index}`);
                   return (
                     <span 
-                      key={index} 
+                      key={`current-${cleanWord}-${index}-${wordsFixed.length}`} 
                       className="inline-block mx-2 px-6 py-3 bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 text-white rounded-2xl font-bold shadow-2xl border-2 border-white/30 animate-pulse transform scale-110 backdrop-blur-sm"
                       style={{
                         textDecoration: 'underline',
@@ -295,9 +309,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
                   );
                 } else {
                   // ENHANCED: Waiting blanks - Professional gradient styling
+                  console.log(`⏳ RENDERING WAITING BLANK: "${word}" at index ${index}`);
                   return (
                     <span 
-                      key={index} 
+                      key={`waiting-${cleanWord}-${index}-${wordsFixed.length}`} 
                       className="inline-block mx-2 px-4 py-2 bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 text-amber-800 rounded-xl font-bold border-2 border-amber-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                       style={{
                         textDecoration: 'underline',

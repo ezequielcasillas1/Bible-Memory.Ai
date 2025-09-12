@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill-in-Blank Visual Update Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .test-case { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .verse-display { 
+            font-size: 18px; 
+            line-height: 1.6; 
+            margin: 20px 0; 
+            padding: 20px; 
+            background: #f8f9fa; 
+            border-radius: 8px; 
+        }
+        .blank { 
+            background: #fbbf24; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+        }
+        .completed { 
+            background: #10b981; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+        }
+        .current-blank { 
+            background: #8b5cf6; 
+            color: white; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            animation: pulse 1.5s infinite; 
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        input { 
+            padding: 8px; 
+            font-size: 16px; 
+            border: 2px solid #ddd; 
+            border-radius: 4px; 
+            margin: 0 10px; 
+        }
+        button { 
+            padding: 8px 16px; 
+            font-size: 16px; 
+            background: #3b82f6; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fecaca; color: #991b1b; }
+        .debug { 
+            background: #e5e7eb; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            font-size: 12px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Fill-in-Blank Visual Update Test</h1>
+    <p><strong>Issue:</strong> When user types correct word, the blank should visually fill in with the actual word before moving to next blank.</p>
+    
+    <div class="test-case">
+        <h2>Test Case: John 3:16 - Last 2 Words</h2>
+        <p><strong>Scenario:</strong> User failed "eternal" and "life" - should fill them in sequence.</p>
+        
+        <div class="verse-display" id="verse-display">
+            <!-- Will be populated by JavaScript -->
+        </div>
+        
+        <div>
+            <input type="text" id="user-input" placeholder="Type the missing word..." />
+            <button onclick="checkWord()">Submit Word</button>
+            <button onclick="resetTest()">Reset Test</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        // Test data simulating John 3:16
+        const testVerse = "For God so loved the world that he gave his one and only Son that whoever believes in him shall not perish but have eternal life";
+        const failedWords = ["eternal", "life"]; // Last 2 words that user failed
+        let completedWords = []; // Words successfully filled in
+        let currentBlankIndex = 0;
+
+        function renderVerse() {
+            const words = testVerse.split(' ');
+            const verseDisplay = document.getElementById('verse-display');
+            
+            let html = '';
+            let processedFailedWords = new Set();
+            
+            words.forEach((word, index) => {
+                const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                
+                // Check if this word is a failed word that should be a blank
+                const isFailedWord = failedWords.some(fw => fw.toLowerCase() === cleanWord);
+                const hasBeenProcessed = processedFailedWords.has(cleanWord);
+                const shouldShowBlank = isFailedWord && !hasBeenProcessed;
+                
+                if (shouldShowBlank) {
+                    processedFailedWords.add(cleanWord);
+                }
+                
+                const isCompleted = completedWords.some(cw => cw.toLowerCase() === cleanWord);
+                const isCurrentBlank = shouldShowBlank && !isCompleted && 
+                    failedWords.indexOf(cleanWord) === currentBlankIndex;
+                
+                if (shouldShowBlank) {
+                    if (isCompleted) {
+                        // ✅ COMPLETED: Should show the actual word in green
+                        html += `<span class="completed">${word}</span> `;
+                    } else if (isCurrentBlank) {
+                        // 🎯 CURRENT: Should show purple blank with underscores
+                        html += `<span class="current-blank">_____</span> `;
+                    } else {
+                        // ⏳ WAITING: Should show yellow blank with underscores
+                        html += `<span class="blank">_____</span> `;
+                    }
+                } else {
+                    // Regular word
+                    html += `<span>${word}</span> `;
+                }
+            });
+            
+            verseDisplay.innerHTML = html;
+            
+            // Update debug info
+            updateDebug();
+        }
+
+        function updateDebug() {
+            const debug = document.getElementById('debug');
+            debug.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                Failed Words: [${failedWords.join(', ')}]<br>
+                Completed Words: [${completedWords.join(', ')}]<br>
+                Current Blank Index: ${currentBlankIndex}<br>
+                Current Expected Word: ${failedWords[currentBlankIndex] || 'None'}<br>
+                Remaining Blanks: ${failedWords.length - completedWords.length}
+            `;
+        }
+
+        function checkWord() {
+            const userInput = document.getElementById('user-input').value.trim();
+            const status = document.getElementById('status');
+            
+            if (!userInput) {
+                status.innerHTML = '<div class="error">Please enter a word!</div>';
+                return;
+            }
+            
+            const expectedWord = failedWords[currentBlankIndex];
+            const isCorrect = userInput.toLowerCase() === expectedWord?.toLowerCase();
+            
+            if (isCorrect) {
+                // ✅ CORRECT: Add to completed words and advance
+                completedWords.push(expectedWord);
+                currentBlankIndex++;
+                
+                status.innerHTML = `<div class="success">✅ Correct! "${userInput}" filled in.</div>`;
+                
+                // 🔍 KEY TEST: The blank should now show the actual word instead of underscores
+                renderVerse(); // This should update the display to show the word
+                
+                // Clear input
+                document.getElementById('user-input').value = '';
+                
+                // Check if completed
+                if (completedWords.length >= failedWords.length) {
+                    status.innerHTML += '<div class="success">🎊 All blanks completed!</div>';
+                }
+            } else {
+                status.innerHTML = `<div class="error">❌ Incorrect. Expected: "${expectedWord}"</div>`;
+            }
+        }
+
+        function resetTest() {
+            completedWords = [];
+            currentBlankIndex = 0;
+            document.getElementById('user-input').value = '';
+            document.getElementById('status').innerHTML = '';
+            renderVerse();
+        }
+
+        // Initialize test
+        renderVerse();
+        
+        // Allow Enter key to submit
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkWord();
+            }
+        });
+    </script>
+    
+    <div class="test-case">
+        <h3>🎯 Expected Behavior:</h3>
+        <ol>
+            <li>Initially: "...but have <span class="current-blank">_____</span> <span class="blank">_____</span>"</li>
+            <li>Type "eternal" → Should become: "...but have <span class="completed">eternal</span> <span class="current-blank">_____</span>"</li>
+            <li>Type "life" → Should become: "...but have <span class="completed">eternal</span> <span class="completed">life</span>"</li>
+        </ol>
+        
+        <h3>🐛 Current Issue:</h3>
+        <p>The blank stays as underscores even after correct input. The visual doesn't update to show the actual word.</p>
+    </div>
+</body>
+</html>
