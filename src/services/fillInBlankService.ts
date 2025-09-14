@@ -350,16 +350,15 @@ export class FillInBlankAPI {
       return state.failedWords[0];
     }
     
-    const currentBlankIndex = state.currentBlankIndex || 0;
-    
     if (activeBlankWords.length === 0) return null;
-    if (currentBlankIndex >= activeBlankWords.length) {
-      // If index is out of bounds, return first active blank
-      console.log('🔧 INDEX OUT OF BOUNDS: Returning first active blank');
-      return activeBlankWords[0].word;
-    }
     
-    return activeBlankWords[currentBlankIndex].word;
+    // CRITICAL FIX: Always return the FIRST active blank (index 0)
+    // The currentBlankIndex was causing word skipping because it indexed into
+    // the activeBlankWords array incorrectly
+    const firstActiveBlank = activeBlankWords[0].word;
+    console.log('🎯 WORD SKIPPING FIX: Returning first active blank:', firstActiveBlank);
+    
+    return firstActiveBlank;
   }
   
   /**

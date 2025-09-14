@@ -1,5 +1,5 @@
 export type PracticeMode = 'blank' | 'type-along';
-export type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'scorecard' | 'completion';
+export type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'ai-summary' | 'scorecard' | 'completion';
 
 export interface SyntaxLabPhaseProps {
   currentSession: any;
@@ -91,4 +91,9 @@ export interface ScorecardPhaseProps extends SyntaxLabPhaseProps {
 
 export interface CompletionPhaseProps extends SyntaxLabPhaseProps {
   // Completion phase doesn't need additional props beyond the base
+}
+
+export interface AISummaryPhaseProps extends SyntaxLabPhaseProps {
+  practiceWrongWords: Array<{word: string, userAttempt: string, expectedWord: string}>;
+  getProgressData: () => { global: { completed: number; total: number; currentWord: number; percentage: number }; round: { completed: number; total: number; currentWord: number; percentage: number } };
 }
