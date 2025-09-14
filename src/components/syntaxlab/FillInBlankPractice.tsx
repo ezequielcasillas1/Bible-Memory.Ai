@@ -142,6 +142,54 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     }
   };
 
+  // NEW: Automatic word advancement - check for correct word on each keystroke
+  const [autoAdvanceTimeout, setAutoAdvanceTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimeout) {
+        clearTimeout(autoAdvanceTimeout);
+      }
+    };
+  }, [autoAdvanceTimeout]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setUserInput(newValue);
+    
+    // Clear any existing auto-advance timeout
+    if (autoAdvanceTimeout) {
+      clearTimeout(autoAdvanceTimeout);
+      setAutoAdvanceTimeout(null);
+    }
+    
+    // FEATURE: Auto-advance when word is complete and correct
+    if (newValue.trim() && currentBlankWord && !submittingRef.current) {
+      const cleanUserInput = newValue.trim().toLowerCase().replace(/[.,!?;:"']/g, '');
+      const cleanExpectedWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+      
+      // Check if typed word matches expected word exactly
+      if (cleanUserInput === cleanExpectedWord) {
+        console.log('🚀 AUTO-ADVANCE: Correct word detected, advancing automatically!', {
+          userInput: newValue,
+          expectedWord: currentBlankWord,
+          cleanUserInput,
+          cleanExpectedWord
+        });
+        
+        // Set timeout for smooth UX with visual feedback
+        const timeout = setTimeout(() => {
+          if (!submittingRef.current) {
+            handleWordSubmit();
+          }
+        }, 500); // 500ms delay for better visual feedback
+        
+        setAutoAdvanceTimeout(timeout);
+      }
+    }
+  };
+
   if (!currentSession) {
     return <div>No session available</div>;
   }
@@ -450,7 +498,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             <input
               type="text"
               value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               placeholder={`Type "${currentBlankWord}" here...`}
               className={`w-full px-6 py-4 text-lg border-2 rounded-2xl focus:outline-none focus:ring-4 transition-all duration-300 text-center font-medium ${
@@ -477,7 +525,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             <span className="relative z-10 flex items-center justify-center space-x-2">
               <Target className="w-5 h-5 group-hover:animate-spin" />
               <span>Check Word</span>
-              <span className="text-sm opacity-75">(Enter ↵)</span>
+              <span className="text-sm opacity-75">(Auto-advances ✨ or Enter ↵)</span>
             </span>
           </button>
           
