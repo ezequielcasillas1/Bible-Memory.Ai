@@ -244,7 +244,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         setUserInput('');
         
         // Check if round is completed (all words filled)
-        const updatedState = { ...fillInBlankState, completedWords: newWordsFixed };
+        // CRITICAL FIX: Only count CORRECT words, not all attempts (including wrong words)
+        const correctWordsOnly = newWordsFixed.filter(word => {
+          const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+          return fillInBlankState.failedWords.some(fw => 
+            fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+          );
+        });
+        
+        const updatedState = { ...fillInBlankState, completedWords: correctWordsOnly };
+        console.log('🔍 ROUND COMPLETION CHECK:', {
+          allAttempts: newWordsFixed.length,
+          correctOnly: correctWordsOnly.length,
+          totalBlanks: fillInBlankState.failedWords.length,
+          isCompleted: FillInBlankAPI.isCompleted(updatedState)
+        });
+        
         if (FillInBlankAPI.isCompleted(updatedState)) {
           // Round completed - check if we should advance to next round
           if (currentRound < (currentSession.maxRounds || 3)) {
@@ -328,12 +343,29 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         setUserInput('');
         
         // Check if round is completed (all words processed)
+        // CRITICAL FIX: Only count CORRECT words, not all attempts (including wrong words)
+        const failedWordsForCheck = currentSession.wrongWords.map(w => w.originalWord || w.userWord);
+        const correctWordsOnly = newWordsFixed.filter(word => {
+          const cleanWord = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+          return failedWordsForCheck.some(fw => 
+            fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanWord
+          );
+        });
+        
         const updatedState = { 
           verse: currentSession.verse.text,
-          failedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord),
-          completedWords: newWordsFixed,
-          currentBlankIndex: newWordsFixed.length
+          failedWords: failedWordsForCheck,
+          completedWords: correctWordsOnly,
+          currentBlankIndex: correctWordsOnly.length
         };
+        
+        console.log('🔍 WRONG WORD PATH - ROUND COMPLETION CHECK:', {
+          allAttempts: newWordsFixed.length,
+          correctOnly: correctWordsOnly.length,
+          totalBlanks: failedWordsForCheck.length,
+          isCompleted: FillInBlankAPI.isCompleted(updatedState)
+        });
+        
         if (FillInBlankAPI.isCompleted(updatedState)) {
           // Round completed - check if we should advance to next round
           if (currentRound < (currentSession.maxRounds || 3)) {
