@@ -5,7 +5,6 @@ import { AIService } from '../../services/aiService';
 
 interface AISummaryPhaseExtendedProps extends AISummaryPhaseProps {
   practiceWrongWords: Array<{word: string, userAttempt: string, expectedWord: string}>;
-  getProgressData: () => { global: { completed: number; total: number; percentage: number } };
 }
 
 const AISummaryPhase: React.FC<AISummaryPhaseExtendedProps> = ({
@@ -55,7 +54,18 @@ const AISummaryPhase: React.FC<AISummaryPhaseExtendedProps> = ({
           userInput,
           originalVerse,
           accuracy,
-          { versesMemorized: 1, currentStreak: 1, averageAccuracy: accuracy } // Mock user stats
+          { 
+            totalPoints: 0,
+            versesMemorized: 1, 
+            currentStreak: 1, 
+            longestStreak: 1,
+            averageAccuracy: accuracy,
+            totalPracticeTime: 0,
+            achievements: [],
+            weeklyGoal: 5,
+            dailyGoal: 1,
+            preferredVersion: 'NIV'
+          } // Mock user stats
         );
         
         setAiSummary(feedback);
