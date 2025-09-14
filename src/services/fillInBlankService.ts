@@ -352,10 +352,20 @@ export class FillInBlankAPI {
     
     if (activeBlankWords.length === 0) return null;
     
+<<<<<<< HEAD
     // CRITICAL FIX: Always return the FIRST active blank (index 0) for proper left-to-right progression
     // This fixes the word-skipping bug where currentBlankIndex was causing skips
     console.log('🎯 WORD SKIPPING FIX: Returning first active blank:', activeBlankWords[0].word);
     return activeBlankWords[0].word;
+=======
+    // CRITICAL FIX: Always return the FIRST active blank (index 0)
+    // The currentBlankIndex was causing word skipping because it indexed into
+    // the activeBlankWords array incorrectly
+    const firstActiveBlank = activeBlankWords[0].word;
+    console.log('🎯 WORD SKIPPING FIX: Returning first active blank:', firstActiveBlank);
+    
+    return firstActiveBlank;
+>>>>>>> 8f71fb360bd060d8b859a3561fb4f3e1617592d7
   }
   
   /**

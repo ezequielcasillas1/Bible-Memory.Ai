@@ -318,21 +318,35 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
                     </span>
                   );
                 } else if (isCurrentBlank) {
-                  // ENHANCED: Currently active blank - GUIDE.md Professional Styling
+                  // ENHANCED: Currently active blank with REAL-TIME LETTER-BY-LETTER TYPING
                   console.log(`🎯 RENDERING CURRENT BLANK: "${word}" at index ${index}`);
+                  
+                  // FEATURE: Show user's typing in real-time, letter by letter
+                  const displayText = userInput.trim() || '_____';
+                  const isTyping = userInput.trim().length > 0;
+                  
                   return (
                     <span 
                       key={`current-${cleanWord}-${index}-${wordsFixed.length}`} 
-                      className="inline-block mx-2 px-6 py-3 bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 text-white rounded-2xl font-bold shadow-2xl border-2 border-white/30 animate-pulse transform scale-110 backdrop-blur-sm"
+                      className={`inline-block mx-2 px-6 py-3 rounded-2xl font-bold shadow-2xl border-2 transform scale-110 backdrop-blur-sm transition-all duration-300 ${
+                        isTyping 
+                          ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 text-white border-white/30 animate-pulse'
+                          : 'bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 text-white border-white/30 animate-pulse'
+                      }`}
                       style={{
                         textDecoration: 'underline',
                         textDecorationColor: '#fbbf24',
                         textDecorationThickness: '3px',
-                        animation: 'purpleActive 1.5s ease-in-out infinite alternate',
-                        boxShadow: '0 0 30px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                        animation: isTyping ? 'none' : 'purpleActive 1.5s ease-in-out infinite alternate',
+                        boxShadow: isTyping 
+                          ? '0 0 40px rgba(59, 130, 246, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                          : '0 0 30px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       }}
                     >
-                      <span className="text-xl font-mono tracking-widest">_____</span>
+                      <span className="text-xl font-mono tracking-widest">
+                        {displayText}
+                        {isTyping && <span className="animate-pulse">|</span>}
+                      </span>
                     </span>
                   );
                 } else {

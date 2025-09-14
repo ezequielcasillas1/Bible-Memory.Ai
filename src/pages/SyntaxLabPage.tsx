@@ -14,6 +14,7 @@ import SummaryPhase from '../components/syntaxlab/SummaryPhase';
 import PracticePhase from '../components/syntaxlab/PracticePhase';
 import FlashcardsPhase from '../components/syntaxlab/FlashcardsPhase';
 import ChallengePhase from '../components/syntaxlab/ChallengePhase';
+import AISummaryPhase from '../components/syntaxlab/AISummaryPhase';
 import ScorecardPhase from '../components/syntaxlab/ScorecardPhase';
 import CompletionPhase from '../components/syntaxlab/CompletionPhase';
 import { PracticeMode, SessionPhase } from '../components/syntaxlab/types';
@@ -46,6 +47,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   const [wordsFixed, setWordsFixed] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userInput, setUserInput] = useState('');
+  
+  // NEW: Track wrong words during practice for AI summary
+  const [practiceWrongWords, setPracticeWrongWords] = useState<Array<{word: string, userAttempt: string, expectedWord: string}>>([]);
   
   // UI state
   const [showFlashcard, setShowFlashcard] = useState(false);
@@ -263,20 +267,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
             
             return; // Stay in practice phase for next round
           } else {
-            // All rounds completed - go to completion
-            console.log(`🏆 ALL ROUNDS COMPLETED! Session finished after ${currentRound} rounds.`);
-            setPhase('completion');
+            // All rounds completed - go to AI summary first
+            console.log(`🏆 ALL ROUNDS COMPLETED! Proceeding to AI Summary before final results.`);
+            setPhase('ai-summary'); // NEW: AI summary phase
             return;
           }
         }
       } else {
-        // Show error animation
-        console.log('❌ INCORRECT WORD:', {
+        // NEW FEATURE: Wrong words now PROGRESS instead of blocking
+        console.log('❌ INCORRECT WORD (BUT PROGRESSING):', {
           userInput,
           expectedWords: failedWords,
           apiSaysCorrect: result.isCorrect,
           directMatchFound: isDirectMatch
         });
+        
+        // Show error animation but still progress
         setFloatingEmoji({
           id: `emoji-${Date.now()}`,
           emoji: '❌',
@@ -284,6 +290,78 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
           y: window.innerHeight / 2
         });
         setTimeout(() => setFloatingEmoji(null), 2000);
+        
+        // CRITICAL: Track wrong word for AI summary
+        const currentBlankWord = FillInBlankAPI.getCurrentBlankWord({
+          verse: currentSession.verse.text,
+          failedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord),
+          completedWords: wordsFixed,
+          currentBlankIndex: wordsFixed.length
+        });
+        
+        if (currentBlankWord) {
+          const wrongAttempt = {
+            word: currentBlankWord,
+            userAttempt: userInput.trim(),
+            expectedWord: currentBlankWord
+          };
+          
+          setPracticeWrongWords(prev => [...prev, wrongAttempt]);
+          console.log('📝 TRACKED WRONG WORD:', wrongAttempt);
+        }
+        
+        // CRITICAL: Still progress to next word (like correct words)
+        const wordToAdd = userInput.trim(); // Use user's input as the "completed" word
+        const newWordsFixed = [...wordsFixed, wordToAdd];
+        console.log('🚀 WRONG WORD PROGRESSION:', {
+          userInput,
+          wordToAdd,
+          newWordsFixed,
+          updateTimestamp: new Date().toISOString()
+        });
+        setWordsFixed(newWordsFixed);
+        
+        // Reset UI state
+        setShowHint(false);
+        setCurrentHint('');
+        setShowAnswer(false);
+        setUserInput('');
+        
+        // Check if round is completed (all words processed)
+        const updatedState = { 
+          verse: currentSession.verse.text,
+          failedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord),
+          completedWords: newWordsFixed,
+          currentBlankIndex: newWordsFixed.length
+        };
+        if (FillInBlankAPI.isCompleted(updatedState)) {
+          // Round completed - check if we should advance to next round
+          if (currentRound < (currentSession.maxRounds || 3)) {
+            // Advance to next round
+            const nextRound = currentRound + 1;
+            setCurrentRound(nextRound);
+            setWordsFixed([]); // Reset words for new round
+            setUserInput('');
+            
+            console.log(`🎊 ROUND ${currentRound} COMPLETED! Advancing to Round ${nextRound}/${currentSession.maxRounds || 3}`);
+            
+            // Show round completion animation
+            setFloatingEmoji({
+              id: `round-complete-${Date.now()}`,
+              emoji: `🎊 Round ${currentRound} Complete!`,
+              x: window.innerWidth / 2,
+              y: window.innerHeight / 2
+            });
+            setTimeout(() => setFloatingEmoji(null), 3000);
+            
+            return; // Stay in practice phase for next round
+          } else {
+            // All rounds completed - go to AI summary (not direct completion)
+            console.log(`🏆 ALL ROUNDS COMPLETED! Proceeding to AI Summary before final results.`);
+            setPhase('ai-summary'); // NEW: AI summary phase
+            return;
+          }
+        }
       }
     } catch (error) {
       console.error('🚨 handleWordSubmit error:', error);
@@ -666,7 +744,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => {
-              if (phase === 'practice' || phase === 'flashcards' || phase === 'challenge' || phase === 'completion') {
+              if (phase === 'practice' || phase === 'flashcards' || phase === 'challenge' || phase === 'ai-summary' || phase === 'completion') {
                 setPhase('summary');
               } else if (phase === 'summary' && currentSession) {
                 setCurrentSession(null);
@@ -705,6 +783,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
 
         {phase === 'challenge' && (
           <ChallengePhase {...commonProps} challengeTimeLeft={challengeTimeLeft} setChallengeTimeLeft={setChallengeTimeLeft} challengeActive={challengeActive} setChallengeActive={setChallengeActive} currentWordIndex={currentWordIndex} setCurrentWordIndex={setCurrentWordIndex} userInput={userInput} setUserInput={setUserInput} wordsFixed={wordsFixed} setWordsFixed={setWordsFixed} completeSession={completeSession} />
+        )}
+
+        {phase === 'ai-summary' && (
+          <AISummaryPhase {...commonProps} practiceWrongWords={practiceWrongWords} getProgressData={getProgressData} />
         )}
 
         {phase === 'completion' && (
