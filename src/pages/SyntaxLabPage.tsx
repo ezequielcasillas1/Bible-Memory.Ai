@@ -208,10 +208,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         userInput,
         cleanUserInput,
         failedWords,
+        failedWordsDetailed: failedWords.map(fw => ({
+          original: fw,
+          cleaned: fw.toLowerCase().replace(/[.,!?;:"']/g, '')
+        })),
         matchingFailedWord,
         apiResult: result.isCorrect,
         directMatch: isDirectMatch,
-        finalIsCorrect
+        finalIsCorrect,
+        sessionWrongWords: currentSession.wrongWords,
+        sessionFailedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord)
       });
       
       if (finalIsCorrect) {
