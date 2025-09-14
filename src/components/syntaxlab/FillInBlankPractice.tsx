@@ -159,10 +159,24 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     const newValue = e.target.value;
     setUserInput(newValue);
     
+    // ENHANCED DEBUG: Log every keystroke for diagnosis
+    console.log('🔍 AUTO-ADVANCE DEBUG - Input Change:', {
+      newValue,
+      currentBlankWord,
+      isSubmitting,
+      hasTimeout: !!autoAdvanceTimeout,
+      conditions: {
+        hasValue: !!newValue.trim(),
+        hasCurrentBlank: !!currentBlankWord,
+        notSubmitting: !isSubmitting
+      }
+    });
+    
     // Clear any existing auto-advance timeout
     if (autoAdvanceTimeout) {
       clearTimeout(autoAdvanceTimeout);
       setAutoAdvanceTimeout(null);
+      console.log('🧹 Cleared existing auto-advance timeout');
     }
     
     // FEATURE: Auto-advance when word is complete and correct
@@ -170,27 +184,40 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       const cleanUserInput = newValue.trim().toLowerCase().replace(/[.,!?;:"']/g, '');
       const cleanExpectedWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
       
+      console.log('🎯 AUTO-ADVANCE COMPARISON:', {
+        userInput: newValue,
+        expectedWord: currentBlankWord,
+        cleanUserInput,
+        cleanExpectedWord,
+        matches: cleanUserInput === cleanExpectedWord
+      });
+      
       // Check if typed word matches expected word exactly
       if (cleanUserInput === cleanExpectedWord) {
-        console.log('🚀 AUTO-ADVANCE: Correct word detected, advancing automatically!', {
-          userInput: newValue,
-          expectedWord: currentBlankWord,
-          cleanUserInput,
-          cleanExpectedWord
-        });
+        console.log('🚀 AUTO-ADVANCE: Correct word detected, setting timeout!');
         
         // Set timeout for smooth UX with visual feedback
         const timeout = setTimeout(() => {
+          console.log('⏰ AUTO-ADVANCE TIMEOUT TRIGGERED, calling handleWordSubmit');
           if (!isSubmitting) {
             setIsSubmitting(true);
             handleWordSubmit();
             // Reset submitting state after a short delay
             setTimeout(() => setIsSubmitting(false), 100);
+          } else {
+            console.log('⚠️ AUTO-ADVANCE BLOCKED: Already submitting');
           }
         }, 500); // 500ms delay for better visual feedback
         
         setAutoAdvanceTimeout(timeout);
+        console.log('✅ AUTO-ADVANCE TIMEOUT SET');
       }
+    } else {
+      console.log('❌ AUTO-ADVANCE CONDITIONS NOT MET:', {
+        hasValue: !!newValue.trim(),
+        hasCurrentBlank: !!currentBlankWord,
+        notSubmitting: !isSubmitting
+      });
     }
   };
 

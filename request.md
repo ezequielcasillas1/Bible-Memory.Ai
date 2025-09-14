@@ -1,5 +1,5 @@
 {
-In the syntax lab fill in the blank, I need the user when he or she types to see the word being filled in the fill in blank spot, letter per letter approach, if the letter is wrong dont do anything, its part of the process when the user is supposed to see that they can enter the wrong word, and until that the end is supposed to give a box ai summary of all the words they got wrong; it also appears in the end result summary. so yes the flow is type any word > it can be wrong; + still submitted > before the user sees the results there is an ai summary that says how to best prepare for the words they missed. > if they are right then the words get highlighted to green as they are in the current build > if they are all right; then the user sees the ai summary box saying something like good job. > the round and word count cycles work so dont touch any that functionality; I dont want it to break. MAKE SURE TO NOT BREAK OTHER FUNCTIONALITY UNLESS YOU HAVE TO EDIT IT TO MAKE SURE THAT IT WORKS; MEANING ALL OF WHAT I SAID ABOVE IS ACHIEVABLE; HOWEVER MAKING SURE THAT PRIOR FUNCTIONALITY IS STILL INTACT THAT DOES NOT BREAK.
+
 
 }
 
