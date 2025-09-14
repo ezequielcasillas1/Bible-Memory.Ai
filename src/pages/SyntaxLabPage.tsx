@@ -306,7 +306,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         // NEW FEATURE: Wrong words now PROGRESS instead of blocking
         console.log('❌ INCORRECT WORD (BUT PROGRESSING):', {
           userInput,
-          expectedWords: failedWords,
+          expectedWords: fillInBlankFailedWords,
           apiSaysCorrect: result.isCorrect,
           directMatchFound: isDirectMatch
         });
