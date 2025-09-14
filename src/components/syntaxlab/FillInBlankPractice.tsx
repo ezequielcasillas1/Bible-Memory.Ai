@@ -144,6 +144,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
 
   // NEW: Automatic word advancement - check for correct word on each keystroke
   const [autoAdvanceTimeout, setAutoAdvanceTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -165,7 +166,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     }
     
     // FEATURE: Auto-advance when word is complete and correct
-    if (newValue.trim() && currentBlankWord && !submittingRef.current) {
+    if (newValue.trim() && currentBlankWord && !isSubmitting) {
       const cleanUserInput = newValue.trim().toLowerCase().replace(/[.,!?;:"']/g, '');
       const cleanExpectedWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
       
@@ -180,8 +181,11 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         
         // Set timeout for smooth UX with visual feedback
         const timeout = setTimeout(() => {
-          if (!submittingRef.current) {
+          if (!isSubmitting) {
+            setIsSubmitting(true);
             handleWordSubmit();
+            // Reset submitting state after a short delay
+            setTimeout(() => setIsSubmitting(false), 100);
           }
         }, 500); // 500ms delay for better visual feedback
         
