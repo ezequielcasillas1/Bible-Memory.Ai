@@ -194,12 +194,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         fillInBlankState: fillInBlankState
       });
       
-      // EMERGENCY FIX: Direct word matching if API fails
-      const failedWords = currentSession.wrongWords.map(w => w.originalWord || w.userWord);
+      // IMPROVED FIX: Use the actual failed words from the fill-in-blank state
+      // The issue was using currentSession.wrongWords instead of the actual failed words
+      const fillInBlankFailedWords = fillInBlankState.failedWords;
+      const sessionFailedWords = currentSession.wrongWords.map(w => w.originalWord || w.userWord);
+      
       const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
-      const matchingFailedWord = failedWords.find(fw => 
+      
+      // Try both sources of failed words
+      const matchingFromFillInBlank = fillInBlankFailedWords.find(fw => 
         fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanUserInput
       );
+      const matchingFromSession = sessionFailedWords.find(fw => 
+        fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanUserInput
+      );
+      
+      const matchingFailedWord = matchingFromFillInBlank || matchingFromSession;
       
       const isDirectMatch = !!matchingFailedWord;
       const finalIsCorrect = result.isCorrect || isDirectMatch;
@@ -207,17 +217,15 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       console.log('🔧 EMERGENCY WORD CHECK:', {
         userInput,
         cleanUserInput,
-        failedWords,
-        failedWordsDetailed: failedWords.map(fw => ({
-          original: fw,
-          cleaned: fw.toLowerCase().replace(/[.,!?;:"']/g, '')
-        })),
+        fillInBlankFailedWords,
+        sessionFailedWords,
+        matchingFromFillInBlank,
+        matchingFromSession,
         matchingFailedWord,
         apiResult: result.isCorrect,
         directMatch: isDirectMatch,
         finalIsCorrect,
-        sessionWrongWords: currentSession.wrongWords,
-        sessionFailedWords: currentSession.wrongWords.map(w => w.originalWord || w.userWord)
+        sessionWrongWords: currentSession.wrongWords
       });
       
       if (finalIsCorrect) {
