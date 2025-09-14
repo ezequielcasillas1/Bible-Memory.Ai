@@ -179,7 +179,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       console.log('🧹 Cleared existing auto-advance timeout');
     }
     
-    // FEATURE: Auto-advance when word is complete and correct
+    // ENHANCED: Auto-advance when word is complete and correct
     if (newValue.trim() && currentBlankWord && !isSubmitting) {
       const cleanUserInput = newValue.trim().toLowerCase().replace(/[.,!?;:"']/g, '');
       const cleanExpectedWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
@@ -192,25 +192,51 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         matches: cleanUserInput === cleanExpectedWord
       });
       
-      // Check if typed word matches expected word exactly
-      if (cleanUserInput === cleanExpectedWord) {
-        console.log('🚀 AUTO-ADVANCE: Correct word detected, setting timeout!');
+      // ROBUST MATCHING: Check multiple variations of the word
+      const isExactMatch = cleanUserInput === cleanExpectedWord;
+      const isPartialMatch = cleanExpectedWord.startsWith(cleanUserInput) && cleanUserInput.length >= 3;
+      const isCompleteWord = cleanUserInput === cleanExpectedWord;
+      
+      // Only auto-advance on EXACT match to prevent false positives
+      if (isExactMatch) {
+        console.log('🚀 AUTO-ADVANCE: Exact word match detected, setting timeout!');
         
-        // Set timeout for smooth UX with visual feedback
+        // IMPROVED: Use shorter delay and more robust state management
         const timeout = setTimeout(() => {
           console.log('⏰ AUTO-ADVANCE TIMEOUT TRIGGERED, calling handleWordSubmit');
-          if (!isSubmitting) {
+          
+          // Double-check conditions before submitting
+          if (!isSubmitting && currentBlankWord) {
+            console.log('✅ AUTO-ADVANCE: Conditions verified, submitting...');
             setIsSubmitting(true);
-            handleWordSubmit();
-            // Reset submitting state after a short delay
-            setTimeout(() => setIsSubmitting(false), 100);
+            
+            // Call handleWordSubmit directly
+            try {
+              handleWordSubmit();
+              console.log('✅ AUTO-ADVANCE: handleWordSubmit called successfully');
+            } catch (error) {
+              console.error('❌ AUTO-ADVANCE ERROR:', error);
+            }
+            
+            // Reset submitting state
+            setTimeout(() => {
+              setIsSubmitting(false);
+              console.log('🔄 AUTO-ADVANCE: Reset isSubmitting state');
+            }, 200);
           } else {
-            console.log('⚠️ AUTO-ADVANCE BLOCKED: Already submitting');
+            console.log('⚠️ AUTO-ADVANCE BLOCKED:', {
+              isSubmitting,
+              hasCurrentBlank: !!currentBlankWord
+            });
           }
-        }, 500); // 500ms delay for better visual feedback
+        }, 300); // Reduced delay for faster UX
         
         setAutoAdvanceTimeout(timeout);
-        console.log('✅ AUTO-ADVANCE TIMEOUT SET');
+        console.log('✅ AUTO-ADVANCE TIMEOUT SET (300ms)');
+      } else if (isPartialMatch) {
+        console.log('🔄 PARTIAL MATCH: User is typing the correct word...', {
+          progress: `${cleanUserInput.length}/${cleanExpectedWord.length}`
+        });
       }
     } else {
       console.log('❌ AUTO-ADVANCE CONDITIONS NOT MET:', {
