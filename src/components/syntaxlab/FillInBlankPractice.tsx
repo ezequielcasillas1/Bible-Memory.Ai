@@ -399,6 +399,21 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               forceRenderKey
             });
             
+            // EMERGENCY DEBUG: Understand the data structure
+            console.log('🚨 EMERGENCY DEBUG:', {
+              'wordsFixed contents': effectiveWordsFixed,
+              'uniqueFailedWords contents': Array.from(uniqueFailedWords),
+              'filter logic test': effectiveWordsFixed.map(wf => {
+                const clean = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
+                return {
+                  word: wf,
+                  cleanWord: clean,
+                  isInFailedWords: uniqueFailedWords.has(clean),
+                  shouldInclude: uniqueFailedWords.has(clean)
+                };
+              })
+            });
+            
             // CRITICAL DEBUG: Check each failed word individually
             currentSession.wrongWords.forEach((w: any) => {
               const originalWord = w.originalWord || w.userWord;
