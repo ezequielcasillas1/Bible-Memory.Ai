@@ -377,10 +377,27 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             // EMERGENCY FIX: Only count CORRECT words as completed, not all attempts
             const effectiveWordsFixed = localWordsFixed.length >= wordsFixed.length ? localWordsFixed : wordsFixed;
             
-            // CRITICAL: Filter wordsFixed to only include words that match failed words (correct attempts)
-            const correctWordsOnly = effectiveWordsFixed.filter((wf: string) => {
+            // CRITICAL FIX: Map wordsFixed entries to their target failed words (handle partial inputs)
+            const correctWordsOnly = effectiveWordsFixed.map((wf: string) => {
               const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
-              return uniqueFailedWords.has(cleanAttempt);
+              
+              // Find the failed word that this attempt was trying to complete
+              const matchingFailedWord = Array.from(uniqueFailedWords).find(fw => {
+                // Direct match (complete word)
+                if (cleanAttempt === fw) return true;
+                
+                // Partial match (user typed part of the word correctly)
+                if (fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
+                
+                return false;
+              });
+              
+              // Return the target word if found, otherwise the original attempt
+              return matchingFailedWord || wf;
+            }).filter(word => {
+              // Only include words that have a valid target in uniqueFailedWords
+              const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+              return uniqueFailedWords.has(clean);
             });
             
             const uniqueCompletedWords = new Set(
@@ -399,19 +416,23 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               forceRenderKey
             });
             
-            // EMERGENCY DEBUG: Understand the data structure
-            console.log('🚨 EMERGENCY DEBUG EXPANDED:', {
+            // EMERGENCY DEBUG: Show the mapping logic in action
+            console.log('🚨 PARTIAL INPUT FIX DEBUG:', {
               'wordsFixed RAW': effectiveWordsFixed,
               'uniqueFailedWords RAW': Array.from(uniqueFailedWords),
-              'wordsFixed length': effectiveWordsFixed.length,
-              'uniqueFailedWords length': uniqueFailedWords.size,
-              'detailed filter test': effectiveWordsFixed.map(wf => {
-                const clean = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
+              'correctWordsOnly MAPPED': correctWordsOnly,
+              'mapping logic': effectiveWordsFixed.map(wf => {
+                const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
+                const matchingFailedWord = Array.from(uniqueFailedWords).find(fw => {
+                  if (cleanAttempt === fw) return true;
+                  if (fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
+                  return false;
+                });
                 return {
-                  originalWord: wf,
-                  cleanWord: clean,
-                  isInFailedWords: uniqueFailedWords.has(clean),
-                  failedWordsArray: Array.from(uniqueFailedWords)
+                  userInput: wf,
+                  cleanInput: cleanAttempt,
+                  mappedToTarget: matchingFailedWord,
+                  willBeIncluded: !!matchingFailedWord
                 };
               })
             });
