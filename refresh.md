@@ -1,4 +1,11 @@
-{ BUG IS PERSISTING, THE WORD IS CORRECT, AND IT IS GIVING ME THAT IT IS WRONG AND DOES NOT CONTINUE WITH THE NEXT WORD, IT SHOULD GIVE ME THE NEXT WORD IF ITS RIGHT, HAVE AN "X" UI IF ITS WRONG AND NOT PROCEED UNTIL ITS RIGHT. SO WHEN I TYPE IN "KNOW" A "X" SYMBOL APPEARS INDICATING IT IS RIGHT, BUT THATS NONSENSE, IT'S SUPPOSED TO BE RIGHT. ON ROMANS 8:28
+{ 
+CRITICAL AUTO-ADVANCE BUG: User types "loved" correctly, auto-advance detects exact match and triggers after 300ms, but handleWordSubmit receives "love" (missing 'd') causing validation failure. State corruption between auto-advance detection and submission execution.
+
+EVIDENCE:
+- Auto-advance logs: userInput: 'loved', matches: true ✅
+- 300ms later submission logs: userInput: 'love', isCorrect: false ❌
+- Input state is being corrupted during the 300ms timeout delay
+- This causes correct words to be marked as wrong and no advancement occurs
 }
 
 ---

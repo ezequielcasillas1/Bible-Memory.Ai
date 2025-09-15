@@ -201,6 +201,9 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       if (isExactMatch) {
         console.log('🚀 AUTO-ADVANCE: Exact word match detected, setting timeout!');
         
+        // CRITICAL FIX: Capture the correct complete word at detection time
+        const correctCompleteWord = cleanExpectedWord;
+        
         // IMPROVED: Use shorter delay and more robust state management
         const timeout = setTimeout(() => {
           console.log('⏰ AUTO-ADVANCE TIMEOUT TRIGGERED, calling handleWordSubmit');
@@ -210,26 +213,26 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             console.log('✅ AUTO-ADVANCE: Conditions verified, submitting...');
             setIsSubmitting(true);
             
-            // CRITICAL FIX: Ensure the input field has the correct complete word
-            // The issue was that userInput state might change between detection and submission
-            if (newValue !== cleanExpectedWord) {
-              console.log('🔧 AUTO-ADVANCE: Correcting input field to complete word');
-              setUserInput(cleanExpectedWord);
-            }
+            // DEFINITIVE FIX: Always set the correct complete word before submission
+            console.log('🔧 AUTO-ADVANCE: Setting input to correct complete word:', correctCompleteWord);
+            setUserInput(correctCompleteWord);
             
-            // Call handleWordSubmit directly
-            try {
-              handleWordSubmit();
-              console.log('✅ AUTO-ADVANCE: handleWordSubmit called successfully');
-            } catch (error) {
-              console.error('❌ AUTO-ADVANCE ERROR:', error);
-            }
-            
-            // Reset submitting state
+            // Small delay to ensure state update before handleWordSubmit
             setTimeout(() => {
-              setIsSubmitting(false);
-              console.log('🔄 AUTO-ADVANCE: Reset isSubmitting state');
-            }, 200);
+              // Call handleWordSubmit directly
+              try {
+                handleWordSubmit();
+                console.log('✅ AUTO-ADVANCE: handleWordSubmit called successfully');
+              } catch (error) {
+                console.error('❌ AUTO-ADVANCE ERROR:', error);
+              }
+              
+              // Reset submitting state
+              setTimeout(() => {
+                setIsSubmitting(false);
+                console.log('🔄 AUTO-ADVANCE: Reset isSubmitting state');
+              }, 200);
+            }, 50); // Small delay for state update
           } else {
             console.log('⚠️ AUTO-ADVANCE BLOCKED:', {
               isSubmitting,
