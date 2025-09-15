@@ -400,16 +400,18 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             });
             
             // EMERGENCY DEBUG: Understand the data structure
-            console.log('🚨 EMERGENCY DEBUG:', {
-              'wordsFixed contents': effectiveWordsFixed,
-              'uniqueFailedWords contents': Array.from(uniqueFailedWords),
-              'filter logic test': effectiveWordsFixed.map(wf => {
+            console.log('🚨 EMERGENCY DEBUG EXPANDED:', {
+              'wordsFixed RAW': effectiveWordsFixed,
+              'uniqueFailedWords RAW': Array.from(uniqueFailedWords),
+              'wordsFixed length': effectiveWordsFixed.length,
+              'uniqueFailedWords length': uniqueFailedWords.size,
+              'detailed filter test': effectiveWordsFixed.map(wf => {
                 const clean = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
                 return {
-                  word: wf,
+                  originalWord: wf,
                   cleanWord: clean,
                   isInFailedWords: uniqueFailedWords.has(clean),
-                  shouldInclude: uniqueFailedWords.has(clean)
+                  failedWordsArray: Array.from(uniqueFailedWords)
                 };
               })
             });
