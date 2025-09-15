@@ -374,10 +374,17 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               )
             );
             
-            // CRITICAL FIX: Use localWordsFixed instead of potentially stale wordsFixed prop
+            // EMERGENCY FIX: Only count CORRECT words as completed, not all attempts
             const effectiveWordsFixed = localWordsFixed.length >= wordsFixed.length ? localWordsFixed : wordsFixed;
+            
+            // CRITICAL: Filter wordsFixed to only include words that match failed words (correct attempts)
+            const correctWordsOnly = effectiveWordsFixed.filter((wf: string) => {
+              const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
+              return uniqueFailedWords.has(cleanAttempt);
+            });
+            
             const uniqueCompletedWords = new Set(
-              effectiveWordsFixed.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
+              correctWordsOnly.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
             );
             
             // ENHANCED DEBUG: Log visual render state
@@ -385,6 +392,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               wordsFixed,
               localWordsFixed,
               effectiveWordsFixed,
+              correctWordsOnly,
               uniqueFailedWords: Array.from(uniqueFailedWords),
               uniqueCompletedWords: Array.from(uniqueCompletedWords),
               renderTimestamp: new Date().toISOString(),
