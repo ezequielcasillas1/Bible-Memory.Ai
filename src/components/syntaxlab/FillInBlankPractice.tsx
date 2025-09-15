@@ -210,6 +210,13 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             console.log('✅ AUTO-ADVANCE: Conditions verified, submitting...');
             setIsSubmitting(true);
             
+            // CRITICAL FIX: Ensure the input field has the correct complete word
+            // The issue was that userInput state might change between detection and submission
+            if (newValue !== cleanExpectedWord) {
+              console.log('🔧 AUTO-ADVANCE: Correcting input field to complete word');
+              setUserInput(cleanExpectedWord);
+            }
+            
             // Call handleWordSubmit directly
             try {
               handleWordSubmit();
