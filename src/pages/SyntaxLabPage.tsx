@@ -201,13 +201,23 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       
       const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
       
-      // Try both sources of failed words
-      const matchingFromFillInBlank = fillInBlankFailedWords.find(fw => 
-        fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanUserInput
-      );
-      const matchingFromSession = sessionFailedWords.find(fw => 
-        fw.toLowerCase().replace(/[.,!?;:"']/g, '') === cleanUserInput
-      );
+      // CRITICAL FIX: Use same partial matching logic as UI validation
+      const matchingFromFillInBlank = fillInBlankFailedWords.find(fw => {
+        const cleanFailedWord = fw.toLowerCase().replace(/[.,!?;:"']/g, '');
+        // Direct match (complete word)
+        if (cleanFailedWord === cleanUserInput) return true;
+        // Partial match (user typed part of the word correctly)
+        if (cleanFailedWord.startsWith(cleanUserInput) && cleanUserInput.length >= 2) return true;
+        return false;
+      });
+      const matchingFromSession = sessionFailedWords.find(fw => {
+        const cleanFailedWord = fw.toLowerCase().replace(/[.,!?;:"']/g, '');
+        // Direct match (complete word)
+        if (cleanFailedWord === cleanUserInput) return true;
+        // Partial match (user typed part of the word correctly)
+        if (cleanFailedWord.startsWith(cleanUserInput) && cleanUserInput.length >= 2) return true;
+        return false;
+      });
       
       const matchingFailedWord = matchingFromFillInBlank || matchingFromSession;
       
