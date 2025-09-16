@@ -18,6 +18,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   setIsLoadingHint,
   showAnswer,
   setShowAnswer,
+  floatingEmoji,
+  setFloatingEmoji,
   handleWordSubmit,
   getProgressData,
   t
@@ -165,6 +167,20 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     // If user typed something that doesn't match ANY language option, show X immediately
     if (!isValidProgression && currentInput.trim()) {
       setIsCurrentWordWrong(true);
+      
+      // FLYING X ANIMATION: Trigger when wrong letter is detected
+      setFloatingEmoji({
+        id: `wrong-letter-${Date.now()}`,
+        emoji: '❌',
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * (window.innerHeight / 2) + (window.innerHeight / 4)
+      });
+      
+      // Clear the flying X after animation completes
+      setTimeout(() => {
+        setFloatingEmoji(null);
+      }, 2000);
+      
       console.log('❌ REAL-TIME VALIDATION: Wrong letter detected!', {
         currentInput,
         validOptions,

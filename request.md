@@ -1,6 +1,5 @@
 {
-in the fill in the blank, since it auto completes when you insert the right right word, delete the functionality of me having to press the enter button, and even the check word functionality button remove that, and add this functionality: when the user in verse romans 8:28 types in "know" which is right but he types in "knew" then its wrong and should automatically receive the "X" symbol, the logic works that if the user types in k then n then "e" the "e" which is part of "knew" is then automatically wrong and should receive the "X" so the logic works that when the user types in the wrong letter the system should catch that and in return the user should see "X" as wrong. 
-
+can you also show an "x" flying through the page, when the user enters the wrong letter to the word.
 
 }
 
