@@ -631,6 +631,29 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
     }
   };
 
+  // Restart regular practice session with full state reset
+  const restartRegularPractice = () => {
+    if (currentSession) {
+      // Reset ALL session state for fresh practice
+      setCurrentRound(1);
+      setWordsFixed([]);
+      setCurrentWordIndex(0);
+      setUserInput('');
+      setShowHint(false);
+      setShowAnswer(false);
+      setCurrentHint('');
+      setIsLoadingHint(false);
+      setPracticeMode('blank');
+      setPhase('practice');
+      
+      console.log('🔄 RESTART: Session state fully reset for fresh practice', {
+        sessionId: currentSession.id,
+        verse: currentSession.verse.reference,
+        wordsToFix: currentSession.wrongWords.length
+      });
+    }
+  };
+
   // Placeholder functions
   const handleVerseCompletion = (accuracy: number) => {
     console.log('Handle Verse Completion', accuracy);
@@ -850,7 +873,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         )}
 
         {phase === 'scorecard' && stats && (
-          <ScorecardPhase {...commonProps} stats={stats} weakWords={weakWords} memorizationHistory={memorizationHistory} isLoadingHistory={isLoadingHistory} setIsLoadingHistory={setIsLoadingHistory} showHistoryLog={showHistoryLog} setShowHistoryLog={setShowHistoryLog} getProgressData={getProgressData} startAutoPractice={startAutoPractice} restartRegularPractice={() => setPhase('practice')} />
+          <ScorecardPhase {...commonProps} stats={stats} weakWords={weakWords} memorizationHistory={memorizationHistory} isLoadingHistory={isLoadingHistory} setIsLoadingHistory={setIsLoadingHistory} showHistoryLog={showHistoryLog} setShowHistoryLog={setShowHistoryLog} getProgressData={getProgressData} startAutoPractice={startAutoPractice} restartRegularPractice={restartRegularPractice} />
         )}
 
         {/* Floating Emoji Animation */}
