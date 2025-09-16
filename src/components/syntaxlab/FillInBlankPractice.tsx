@@ -26,6 +26,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   const [formattedText, setFormattedText] = useState<string>('');
   const [forceRenderKey, setForceRenderKey] = useState<number>(0); // FORCE RENDER MECHANISM
   const [localWordsFixed, setLocalWordsFixed] = useState<string[]>([]); // LOCAL STATE BACKUP
+  
+  // NEW: Real-time validation states
+  const [isCurrentWordWrong, setIsCurrentWordWrong] = useState<boolean>(false);
+  const [validLanguageOptions, setValidLanguageOptions] = useState<string[]>([]);
 
   // Update blank word and formatted text when session changes
   useEffect(() => {
@@ -136,10 +140,139 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleWordSubmit();
+  // REMOVED: Enter key functionality as requested
+
+  // NEW: Real-time letter-by-letter validation for multi-language support
+  const performRealTimeValidation = (currentInput: string) => {
+    if (!currentBlankWord || !currentInput) {
+      setIsCurrentWordWrong(false);
+      return;
     }
+
+    // Get all valid language options for the current word
+    const validOptions = getValidLanguageOptionsForCurrentWord();
+    setValidLanguageOptions(validOptions);
+
+    // Check if current input is progressing correctly in ANY supported language
+    const isValidProgression = validOptions.some(validWord => {
+      const cleanValidWord = validWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+      const cleanCurrentInput = currentInput.toLowerCase().replace(/[.,!?;:"']/g, '');
+      
+      // Check if current input is a valid prefix of this word
+      return cleanValidWord.startsWith(cleanCurrentInput);
+    });
+
+    // If user typed something that doesn't match ANY language option, show X immediately
+    if (!isValidProgression && currentInput.trim()) {
+      setIsCurrentWordWrong(true);
+      console.log('❌ REAL-TIME VALIDATION: Wrong letter detected!', {
+        currentInput,
+        validOptions,
+        currentBlankWord
+      });
+    } else {
+      setIsCurrentWordWrong(false);
+      
+      // Check for complete word match and auto-advance
+      const exactMatch = validOptions.find(validWord => {
+        const cleanValidWord = validWord.toLowerCase().replace(/[.,!?;:"']/g, '');
+        const cleanCurrentInput = currentInput.toLowerCase().replace(/[.,!?;:"']/g, '');
+        return cleanValidWord === cleanCurrentInput;
+      });
+      
+      if (exactMatch && !isSubmitting) {
+        console.log('✅ COMPLETE WORD MATCH: Auto-advancing...', { exactMatch });
+        // Auto-advance after short delay
+        setTimeout(() => {
+          if (!isSubmitting) {
+            handleWordSubmit();
+          }
+        }, 200);
+      }
+    }
+  };
+
+  // Get all valid language options for the current blank word (ENHANCED for 18+ languages)
+  const getValidLanguageOptionsForCurrentWord = (): string[] => {
+    if (!currentBlankWord || !currentSession) return currentBlankWord ? [currentBlankWord] : [];
+
+    const options = [currentBlankWord]; // Always include English
+
+    // Add translated options if available
+    if (translatedSessionVerse?.isTranslated && translatedSessionVerse.text) {
+      // Add the primary translation (backward compatibility)
+      const translatedWord = getTranslatedWordForCurrentBlank();
+      if (translatedWord && translatedWord !== currentBlankWord) {
+        options.push(translatedWord);
+      }
+      
+      // ENHANCED: Add multi-language translations from translationContext.multiLanguageTranslations
+      // This expands support to all 18+ languages automatically
+      if (translatedSessionVerse.multiLanguageTranslations) {
+        Object.values(translatedSessionVerse.multiLanguageTranslations).forEach((translatedVerse: string) => {
+          const multiLangWord = getTranslatedWordFromVerse(translatedVerse);
+          if (multiLangWord && multiLangWord !== currentBlankWord && !options.includes(multiLangWord)) {
+            options.push(multiLangWord);
+          }
+        });
+      }
+    }
+
+    console.log('🌍 MULTI-LANGUAGE OPTIONS:', {
+      currentBlankWord,
+      totalOptions: options.length,
+      options,
+      languagesSupported: options.length
+    });
+
+    return options;
+  };
+
+  // Helper to extract translated word from any translated verse
+  const getTranslatedWordFromVerse = (translatedVerse: string): string | null => {
+    if (!currentBlankWord || !currentSession) return null;
+    
+    try {
+      const originalWords = currentSession.verse.text.split(' ');
+      const translatedWords = translatedVerse.split(' ');
+      
+      const wordIndex = originalWords.findIndex((word: string) => 
+        word.toLowerCase().replace(/[.,!?;:"']/g, '') === 
+        currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '')
+      );
+      
+      if (wordIndex >= 0 && wordIndex < translatedWords.length) {
+        return translatedWords[wordIndex].replace(/[.,!?;:"']/g, '');
+      }
+    } catch (error) {
+      console.warn('Multi-language word mapping failed:', error);
+    }
+    
+    return null;
+  };
+
+  // Helper to get translated word for current blank
+  const getTranslatedWordForCurrentBlank = (): string | null => {
+    if (!currentBlankWord || !translatedSessionVerse?.isTranslated) return null;
+    
+    try {
+      // Simple word position mapping (this could be enhanced with better translation alignment)
+      const originalWords = currentSession?.verse.text.split(' ') || [];
+      const translatedWords = translatedSessionVerse.text.split(' ') || [];
+      
+      const wordIndex = originalWords.findIndex((word: string) => 
+        word.toLowerCase().replace(/[.,!?;:"']/g, '') === 
+        currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '')
+      );
+      
+      if (wordIndex >= 0 && wordIndex < translatedWords.length) {
+        return translatedWords[wordIndex];
+      }
+    } catch (error) {
+      console.warn('Translation word mapping failed:', error);
+    }
+    
+    return null;
   };
 
   // NEW: Automatic word advancement - check for correct word on each keystroke
@@ -159,102 +292,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
     const newValue = e.target.value;
     setUserInput(newValue);
     
-    // ENHANCED DEBUG: Log every keystroke for diagnosis
-    console.log('🔍 AUTO-ADVANCE DEBUG - Input Change:', {
-      newValue,
-      currentBlankWord,
-      isSubmitting,
-      hasTimeout: !!autoAdvanceTimeout,
-      conditions: {
-        hasValue: !!newValue.trim(),
-        hasCurrentBlank: !!currentBlankWord,
-        notSubmitting: !isSubmitting
-      }
-    });
+    // NEW: Real-time letter-by-letter validation
+    performRealTimeValidation(newValue);
     
-    // Clear any existing auto-advance timeout
-    if (autoAdvanceTimeout) {
-      clearTimeout(autoAdvanceTimeout);
-      setAutoAdvanceTimeout(null);
-      console.log('🧹 Cleared existing auto-advance timeout');
-    }
-    
-    // ENHANCED: Auto-advance when word is complete and correct
-    if (newValue.trim() && currentBlankWord && !isSubmitting) {
-      const cleanUserInput = newValue.trim().toLowerCase().replace(/[.,!?;:"']/g, '');
-      const cleanExpectedWord = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
-      
-      console.log('🎯 AUTO-ADVANCE COMPARISON:', {
-        userInput: newValue,
-        expectedWord: currentBlankWord,
-        cleanUserInput,
-        cleanExpectedWord,
-        matches: cleanUserInput === cleanExpectedWord
-      });
-      
-      // ROBUST MATCHING: Check multiple variations of the word
-      const isExactMatch = cleanUserInput === cleanExpectedWord;
-      const isPartialMatch = cleanExpectedWord.startsWith(cleanUserInput) && cleanUserInput.length >= 3;
-      const isCompleteWord = cleanUserInput === cleanExpectedWord;
-      
-      // Only auto-advance on EXACT match to prevent false positives
-      if (isExactMatch) {
-        console.log('🚀 AUTO-ADVANCE: Exact word match detected, setting timeout!');
-        
-        // CRITICAL FIX: Capture the correct complete word at detection time
-        const correctCompleteWord = cleanExpectedWord;
-        
-        // IMPROVED: Use shorter delay and more robust state management
-        const timeout = setTimeout(() => {
-          console.log('⏰ AUTO-ADVANCE TIMEOUT TRIGGERED, calling handleWordSubmit');
-          
-          // Double-check conditions before submitting
-          if (!isSubmitting && currentBlankWord) {
-            console.log('✅ AUTO-ADVANCE: Conditions verified, submitting...');
-            setIsSubmitting(true);
-            
-            // DEFINITIVE FIX: Always set the correct complete word before submission
-            console.log('🔧 AUTO-ADVANCE: Setting input to correct complete word:', correctCompleteWord);
-            setUserInput(correctCompleteWord);
-            
-            // Small delay to ensure state update before handleWordSubmit
-            setTimeout(() => {
-              // Call handleWordSubmit directly
-              try {
-                handleWordSubmit();
-                console.log('✅ AUTO-ADVANCE: handleWordSubmit called successfully');
-              } catch (error) {
-                console.error('❌ AUTO-ADVANCE ERROR:', error);
-              }
-              
-              // Reset submitting state
-              setTimeout(() => {
-                setIsSubmitting(false);
-                console.log('🔄 AUTO-ADVANCE: Reset isSubmitting state');
-              }, 200);
-            }, 50); // Small delay for state update
-          } else {
-            console.log('⚠️ AUTO-ADVANCE BLOCKED:', {
-              isSubmitting,
-              hasCurrentBlank: !!currentBlankWord
-            });
-          }
-        }, 300); // Reduced delay for faster UX
-        
-        setAutoAdvanceTimeout(timeout);
-        console.log('✅ AUTO-ADVANCE TIMEOUT SET (300ms)');
-      } else if (isPartialMatch) {
-        console.log('🔄 PARTIAL MATCH: User is typing the correct word...', {
-          progress: `${cleanUserInput.length}/${cleanExpectedWord.length}`
-        });
-      }
-    } else {
-      console.log('❌ AUTO-ADVANCE CONDITIONS NOT MET:', {
-        hasValue: !!newValue.trim(),
-        hasCurrentBlank: !!currentBlankWord,
-        notSubmitting: !isSubmitting
-      });
-    }
+    // Real-time validation handles auto-advance now
   };
 
   if (!currentSession) {
@@ -382,7 +423,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
               
               // Find the failed word that this attempt was trying to complete
-              const matchingFailedWord = Array.from(uniqueFailedWords).find(fw => {
+              const matchingFailedWord = Array.from(uniqueFailedWords).find((fw: string) => {
                 // Direct match (complete word)
                 if (cleanAttempt === fw) return true;
                 
@@ -423,7 +464,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               'correctWordsOnly MAPPED': correctWordsOnly,
               'mapping logic': effectiveWordsFixed.map(wf => {
                 const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
-                const matchingFailedWord = Array.from(uniqueFailedWords).find(fw => {
+                const matchingFailedWord = Array.from(uniqueFailedWords).find((fw: string) => {
                   if (cleanAttempt === fw) return true;
                   if (fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
                   return false;
@@ -612,35 +653,31 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               type="text"
               value={userInput}
               onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
               placeholder={`Type "${currentBlankWord}" here...`}
               className={`w-full px-6 py-4 text-lg border-2 rounded-2xl focus:outline-none focus:ring-4 transition-all duration-300 text-center font-medium ${
-                userInput.trim() 
-                  ? 'border-purple-400 focus:ring-purple-200 focus:border-purple-600 bg-gradient-to-r from-purple-50 to-violet-50' 
-                  : 'border-emerald-300 focus:ring-emerald-200 focus:border-emerald-500 bg-gradient-to-r from-white to-emerald-50'
+                isCurrentWordWrong 
+                  ? 'border-red-400 focus:ring-red-200 focus:border-red-600 bg-gradient-to-r from-red-50 to-pink-50' 
+                  : userInput.trim() 
+                    ? 'border-green-400 focus:ring-green-200 focus:border-green-600 bg-gradient-to-r from-green-50 to-emerald-50' 
+                    : 'border-emerald-300 focus:ring-emerald-200 focus:border-emerald-500 bg-gradient-to-r from-white to-emerald-50'
               }`}
               style={{
                 boxShadow: userInput.trim() ? '0 0 20px rgba(147, 51, 234, 0.3)' : '0 0 10px rgba(16, 185, 129, 0.2)'
               }}
               autoFocus
             />
-            {userInput.trim() && (
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-purple-500 rounded-full animate-ping"></div>
+            {/* Real-time validation feedback */}
+            {isCurrentWordWrong && userInput.trim() && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                <span className="text-white font-bold text-sm">❌</span>
+              </div>
+            )}
+            {userInput.trim() && !isCurrentWordWrong && (
+              <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
             )}
           </div>
           
-          <button
-            onClick={handleWordSubmit}
-            disabled={!userInput.trim()}
-            className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-            <span className="relative z-10 flex items-center justify-center space-x-2">
-              <Target className="w-5 h-5 group-hover:animate-spin" />
-              <span>Check Word</span>
-              <span className="text-sm opacity-75">(Auto-advances ✨ or Enter ↵)</span>
-            </span>
-          </button>
+          {/* REMOVED: Check Word button as requested in request.md */}
           
           {/* Proceed to Results button when 100% complete */}
           {progressData.global.percentage >= 100 && (
