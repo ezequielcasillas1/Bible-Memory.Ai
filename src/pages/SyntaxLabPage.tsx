@@ -164,7 +164,18 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
 
   // FIXED: Proper handleWordSubmit with dynamic blank index
   const handleWordSubmit = () => {
-    if (submittingRef.current || !currentSession || !userInput.trim()) return;
+    console.log('🔥 VERSION CHECK: This is the LATEST handleWordSubmit - Build 2024-12-19');
+    console.log('🚀 HANDLEWORDSUBMIT STARTED:', {
+      submittingRef: submittingRef.current,
+      hasCurrentSession: !!currentSession,
+      userInputTrimmed: userInput.trim(),
+      shouldEarlyReturn: submittingRef.current || !currentSession || !userInput.trim()
+    });
+    
+    if (submittingRef.current || !currentSession || !userInput.trim()) {
+      console.log('⚠️ EARLY RETURN from handleWordSubmit');
+      return;
+    }
     
     submittingRef.current = true;
     setTimeout(() => { submittingRef.current = false; }, 250);
@@ -238,7 +249,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         sessionWrongWords: currentSession.wrongWords
       });
       
+      console.log('🧪 HYPOTHESIS TEST: finalIsCorrect =', finalIsCorrect);
+      
       if (finalIsCorrect) {
+        console.log('✅ ENTERING CORRECT WORD PATH');
         // Show success animation
         setFloatingEmoji({
           id: `emoji-${Date.now()}`,
@@ -306,6 +320,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
           }
         }
       } else {
+        console.log('❌ ENTERING WRONG WORD PATH');
         // NEW FEATURE: Wrong words now PROGRESS instead of blocking
         console.log('❌ INCORRECT WORD (BUT PROGRESSING):', {
           userInput,
@@ -400,7 +415,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         }
       }
     } catch (error) {
-      console.error('🚨 handleWordSubmit error:', error);
+      console.error('🚨 HANDLEWORDSUBMIT ERROR:', error);
+      console.error('🚨 ERROR STACK:', error.stack);
+    } finally {
+      console.log('🏁 HANDLEWORDSUBMIT FINISHED');
     }
   };
 

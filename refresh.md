@@ -1,5 +1,5 @@
 { 
-There is a bug, that makes the progression not continue when it reaches round 1/3 and when word count is at 5/5 the system does not proceed to the next round, can you fix this bug, if it is universal fix it to; because we dont want this bug seen on more verses as well
+There is a bug, that is not letting us see the debug information your wanting to input for me to see to have debug process logic, the only thing we see is emergency word check.
 }
 
 ---

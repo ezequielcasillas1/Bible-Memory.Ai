@@ -146,8 +146,16 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
 
   // NEW: Real-time letter-by-letter validation for multi-language support
   const performRealTimeValidation = (currentInput: string) => {
+    console.log('🔍 REAL-TIME VALIDATION CALLED:', {
+      currentInput,
+      currentBlankWord,
+      hasInput: !!currentInput,
+      hasBlankWord: !!currentBlankWord
+    });
+    
     if (!currentBlankWord || !currentInput) {
       setIsCurrentWordWrong(false);
+      console.log('⚠️ EARLY RETURN: No blank word or no input');
       return;
     }
 
@@ -203,6 +211,12 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         return cleanValidWord === cleanCurrentInput;
       });
       
+      console.log('🎯 EXACT MATCH RESULT:', {
+        exactMatch,
+        isSubmitting,
+        shouldAutoAdvance: exactMatch && !isSubmitting
+      });
+      
       if (exactMatch && !isSubmitting) {
         console.log('✅ COMPLETE WORD MATCH: Auto-advancing...', { exactMatch });
         // Auto-advance after short delay
@@ -210,8 +224,16 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
           if (!isSubmitting) {
             console.log('🚀 AUTO-ADVANCE: Calling handleWordSubmit()');
             handleWordSubmit();
+          } else {
+            console.log('⚠️ AUTO-ADVANCE BLOCKED: isSubmitting = true');
           }
         }, 200);
+      } else {
+        console.log('❌ NO AUTO-ADVANCE:', {
+          hasExactMatch: !!exactMatch,
+          isSubmitting: isSubmitting,
+          reason: !exactMatch ? 'No exact match found' : 'Currently submitting'
+        });
       }
     }
   };
@@ -311,15 +333,48 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       }
     };
   }, [autoAdvanceTimeout]);
+
+  // GLOBAL EVENT LISTENER: Catch ALL input events
+  useEffect(() => {
+    const handleGlobalInput = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target.tagName === 'INPUT' && target.type === 'text') {
+        console.log('🔥 GLOBAL INPUT EVENT DETECTED:', {
+          value: target.value,
+          target: target,
+          eventType: e.type,
+          timestamp: Date.now()
+        });
+      }
+    };
+
+    document.addEventListener('input', handleGlobalInput, true);
+    document.addEventListener('change', handleGlobalInput, true);
+
+    return () => {
+      document.removeEventListener('input', handleGlobalInput, true);
+      document.removeEventListener('change', handleGlobalInput, true);
+    };
+  }, []);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setUserInput(newValue);
-    
-    // NEW: Real-time letter-by-letter validation
-    performRealTimeValidation(newValue);
-    
-    // Real-time validation handles auto-advance now
+    try {
+      const newValue = e.target.value;
+      console.log('🔥 HANDLEINPUTCHANGE CALLED:', { newValue, timestamp: Date.now() });
+      setUserInput(newValue);
+      
+      // NEW: Real-time letter-by-letter validation
+      console.log('🔥 ABOUT TO CALL performRealTimeValidation');
+      performRealTimeValidation(newValue);
+      console.log('🔥 FINISHED performRealTimeValidation');
+      
+      // Real-time validation handles auto-advance now
+    } catch (error) {
+      console.error('🚨 HANDLEINPUTCHANGE ERROR:', error);
+      console.error('🚨 ERROR STACK:', error.stack);
+      // Still update the input even if validation fails
+      setUserInput(e.target.value);
+    }
   };
 
   if (!currentSession) {
@@ -673,6 +728,10 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
           
           {/* Input field */}
           <div className="relative max-w-lg mx-auto">
+            {/* 🔥 VERSION MARKER: FillInBlankPractice.tsx - Build 2024-12-19 */}
+            <div style={{position: 'absolute', top: '-30px', left: '0', background: 'red', color: 'white', padding: '2px 8px', fontSize: '12px', zIndex: 1000}}>
+              🔥 LATEST VERSION
+            </div>
             <input
               type="text"
               value={userInput}
