@@ -1,5 +1,5 @@
 {
-can you also show an "x" flying through the page, when the user enters the wrong letter to the word.
+can you have the "X" Wrong pop up message appear only in the middle of the page, right now it looks like it is scrambled across the page.
 
 }
 

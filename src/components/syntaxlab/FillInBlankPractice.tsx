@@ -172,8 +172,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       setFloatingEmoji({
         id: `wrong-letter-${Date.now()}`,
         emoji: '❌',
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * (window.innerHeight / 2) + (window.innerHeight / 4)
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
       });
       
       // Clear the flying X after animation completes
