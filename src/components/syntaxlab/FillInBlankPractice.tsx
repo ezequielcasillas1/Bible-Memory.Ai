@@ -190,9 +190,16 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       setIsCurrentWordWrong(false);
       
       // Check for complete word match and auto-advance
+      console.log('🔍 CHECKING FOR EXACT MATCH:', {
+        currentInput,
+        validOptions,
+        currentBlankWord
+      });
+      
       const exactMatch = validOptions.find(validWord => {
         const cleanValidWord = validWord.toLowerCase().replace(/[.,!?;:"']/g, '');
         const cleanCurrentInput = currentInput.toLowerCase().replace(/[.,!?;:"']/g, '');
+        console.log(`  Comparing: "${cleanCurrentInput}" vs "${cleanValidWord}"`);
         return cleanValidWord === cleanCurrentInput;
       });
       
@@ -201,6 +208,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
         // Auto-advance after short delay
         setTimeout(() => {
           if (!isSubmitting) {
+            console.log('🚀 AUTO-ADVANCE: Calling handleWordSubmit()');
             handleWordSubmit();
           }
         }, 200);
