@@ -1,6 +1,16 @@
 {
-can you have the "X" Wrong pop up message appear only in the middle of the page, right now it looks like it is scrambled across the page.
+COMPLETED: "X" Wrong pop up message now appears centered on the page.
 
+NEW REQUEST: Add visual UI effects from auto practice mode to regular memorization mode without breaking functionality. Specifically:
+- Green highlighted text for correct words
+- Purple/blue gradients for current focus
+- Fill-in-blank "____" placeholders 
+- All visual enhancements from syntax lab auto practice
+- Must not cause blank screens or break existing functionality
+- Preserve all current memorization features
+- Keep the transfer to syntax lab working properly
+
+CONSTRAINT: Work incrementally and test each change to prevent regressions.
 }
 
 ---

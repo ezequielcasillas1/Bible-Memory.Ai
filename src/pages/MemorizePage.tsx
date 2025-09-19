@@ -9,6 +9,7 @@ import { VerseComparisonService, ComparisonResult } from '../services/verseCompa
 import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion } from '../services/BibleAPI';
 import CountdownTimer from '../components/CountdownTimer';
+import VisualMemorizeInput from '../components/VisualMemorizeInput';
 
 interface MemorizePageProps {
   selectedVerse: Verse | null;
@@ -379,13 +380,12 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
             </div>
 
             <div className="space-y-6">
-              <textarea
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
+              <VisualMemorizeInput
+                targetVerse={displayVerse?.text || ''}
+                userInput={userInput}
+                onInputChange={setUserInput}
                 placeholder="Type the verse from memory..."
-                className="w-full p-3 sm:p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm sm:text-lg"
-                rows={3}
-                autoFocus
+                autoFocus={true}
               />
               
               <div className="text-center">
