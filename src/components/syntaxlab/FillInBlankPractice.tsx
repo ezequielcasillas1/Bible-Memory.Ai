@@ -24,6 +24,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   getProgressData,
   t
 }) => {
+  console.log('🔥 COMPONENT MOUNT TEST: FillInBlankPractice is loading!', Date.now());
+  
   const [currentBlankWord, setCurrentBlankWord] = useState<string | null>(null);
   const [formattedText, setFormattedText] = useState<string>('');
   const [forceRenderKey, setForceRenderKey] = useState<number>(0); // FORCE RENDER MECHANISM

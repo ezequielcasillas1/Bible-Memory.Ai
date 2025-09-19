@@ -22,6 +22,11 @@ const AppContent: React.FC = () => {
   const { user, signOut } = useAuth();
   const { currentLanguage, setLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>('generator');
+  
+  // DEBUG: Track tab changes
+  useEffect(() => {
+    console.log('🔥 TAB CHANGE TEST: activeTab =', activeTab, Date.now());
+  }, [activeTab]);
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);

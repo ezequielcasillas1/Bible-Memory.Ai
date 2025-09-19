@@ -31,7 +31,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   comparisonResult, 
   selectedVerse, 
   onBack, 
-  onStartNewSession, 
+  onStartNewSession,
   settings 
 }) => {
   const { t } = useLanguage();
@@ -40,6 +40,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   // Core state - Start with practice if we have comparison data
   const [phase, setPhase] = useState<SessionPhase>(comparisonResult && selectedVerse ? 'practice' : 'summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
+  
+  console.log('🔥 SYNTAXLABPAGE MOUNT TEST: SyntaxLabPage is loading!', { phase, practiceMode });
   const [currentSession, setCurrentSession] = useState<SyntaxLabSession | null>(null);
   
   // Practice state
