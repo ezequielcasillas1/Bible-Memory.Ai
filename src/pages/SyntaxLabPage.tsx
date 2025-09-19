@@ -237,7 +237,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       const isDirectMatch = !!matchingFailedWord;
       const finalIsCorrect = result.isCorrect || isDirectMatch;
       
-      console.log('🔧 EMERGENCY WORD CHECK:', {
+      console.log('🔥 TEST: This should definitely appear!');
+      console.log('🔥 UPDATED EMERGENCY WORD CHECK - NEW VERSION:', {
         userInput,
         cleanUserInput,
         fillInBlankFailedWords,
@@ -251,9 +252,22 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         sessionWrongWords: currentSession.wrongWords
       });
       
-      console.log('🧪 HYPOTHESIS TEST: finalIsCorrect =', finalIsCorrect);
+      console.log('🔥 STEP 1: After EMERGENCY WORD CHECK');
+      console.log('🔥 IMMEDIATE NEXT LINE TEST');
       
-      if (finalIsCorrect) {
+      // Force synchronous logging to prevent React interruption
+      setTimeout(() => {
+        console.log('🔥 STEP 2 ASYNC: finalIsCorrect value is:', finalIsCorrect);
+        console.log('🔥 STEP 3 ASYNC: About to continue execution');
+      }, 0);
+      
+      console.log('🔥 STEP 2 SYNC: finalIsCorrect value is:', finalIsCorrect);
+      console.log('🔥 DEBUG: About to check finalIsCorrect =', finalIsCorrect);
+      
+      try {
+        console.log('🧪 HYPOTHESIS TEST: finalIsCorrect =', finalIsCorrect);
+        
+        if (finalIsCorrect) {
         console.log('✅ ENTERING CORRECT WORD PATH');
         // Show success animation
         setFloatingEmoji({
@@ -290,8 +304,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
         console.log('🔍 ROUND COMPLETION CHECK:', {
           allAttempts: newWordsFixed.length,
           totalBlanks: fillInBlankState.failedWords.length,
-          roundCompleted: roundCompleted
+          roundCompleted: roundCompleted,
+          currentRound: currentRound,
+          maxRounds: currentSession.maxRounds || 3
         });
+        
+        console.log('🔥 ROUND COMPLETION RESULT:', roundCompleted ? 'WILL ADVANCE' : 'WILL NOT ADVANCE');
         
         if (roundCompleted) {
           // Round completed - check if we should advance to next round
@@ -415,6 +433,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
             return;
           }
         }
+      }
+      } catch (innerError) {
+        console.error('🚨 INNER ERROR in finalIsCorrect check:', innerError);
+        console.error('🚨 INNER ERROR STACK:', innerError.stack);
       }
     } catch (error) {
       console.error('🚨 HANDLEWORDSUBMIT ERROR:', error);
