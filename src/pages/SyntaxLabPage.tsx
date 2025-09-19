@@ -165,6 +165,79 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
   }, [comparisonResult, selectedVerse, displayVerse, currentSession, settings]);
 
   // FIXED: Proper handleWordSubmit with dynamic blank index
+  // Helper function to continue word submission logic outside React's execution context
+  const continueWordSubmissionLogic = (finalIsCorrect: boolean, result: any, userInput: string) => {
+    console.log('🔄 CONTINUING WORD SUBMISSION LOGIC:', { finalIsCorrect, result, userInput });
+    
+    try {
+      if (finalIsCorrect) {
+        console.log('✅ ENTERING CORRECT WORD PATH');
+        // Show success animation
+        setFloatingEmoji({
+          id: `emoji-${Date.now()}`,
+          emoji: '✅',
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+        setTimeout(() => setFloatingEmoji(null), 2000);
+        
+        // CRITICAL: Update wordsFixed to trigger progression
+        const matchingFailedWord = fillInBlankState.failedWords.find(fw => {
+          const cleanFailedWord = fw.toLowerCase().replace(/[.,!?;:"']/g, '');
+          const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+          return cleanFailedWord === cleanUserInput || cleanFailedWord.startsWith(cleanUserInput);
+        });
+        
+        const wordToAdd = result.currentWord || matchingFailedWord || userInput;
+        const newWordsFixed = [...wordsFixed, wordToAdd];
+        console.log('🚀 PARENT STATE UPDATE:', {
+          oldWordsFixed: wordsFixed,
+          resultCurrentWord: result.currentWord,
+          matchingFailedWord,
+          wordToAdd,
+          newWordsFixed,
+          updateTimestamp: new Date().toISOString()
+        });
+        setWordsFixed(newWordsFixed);
+        
+        // Reset UI state
+        setShowHint(false);
+        setCurrentHint('');
+        setShowAnswer(false);
+        setUserInput('');
+        
+        // Check if round is completed
+        const roundCompleted = newWordsFixed.length >= fillInBlankState.failedWords.length;
+        
+        console.log('🔍 ROUND COMPLETION CHECK:', {
+          allAttempts: newWordsFixed.length,
+          totalBlanks: fillInBlankState.failedWords.length,
+          roundCompleted: roundCompleted,
+          currentRound: currentRound,
+          maxRounds: currentSession.maxRounds || 3
+        });
+        
+        if (roundCompleted) {
+          console.log('🎉 ROUND COMPLETED - ADVANCING TO NEXT ROUND');
+          if (currentRound < (currentSession.maxRounds || 3)) {
+            setCurrentRound(prev => prev + 1);
+            setWordsFixed([]);
+          } else {
+            console.log('🏆 ALL ROUNDS COMPLETED');
+            setPhase('completion');
+          }
+        }
+      } else {
+        console.log('❌ ENTERING WRONG WORD PATH');
+        // Handle wrong word logic here...
+      }
+    } catch (error) {
+      console.error('🚨 ERROR in continueWordSubmissionLogic:', error);
+    } finally {
+      submittingRef.current = false;
+    }
+  };
+
   const handleWordSubmit = () => {
     console.log('🔥 VERSION CHECK: This is the LATEST handleWordSubmit - Build 2024-12-19');
     console.log('🚀 HANDLEWORDSUBMIT STARTED:', {
@@ -237,8 +310,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       const isDirectMatch = !!matchingFailedWord;
       const finalIsCorrect = result.isCorrect || isDirectMatch;
       
-      console.log('🔥 TEST: This should definitely appear!');
-      console.log('🔥 UPDATED EMERGENCY WORD CHECK - NEW VERSION:', {
+      console.log('🔥 BEFORE EMERGENCY WORD CHECK');
+      console.error('🔥 ERROR TEST: This should definitely appear!');
+      console.warn('🔥 WARN TEST: This should definitely appear!');
+      console.info('🔥 INFO TEST: This should definitely appear!');
+      console.log('🔥 UPDATED EMERGENCY WORD CHECK + EXTRA TESTS - NEW VERSION:', {
         userInput,
         cleanUserInput,
         fillInBlankFailedWords,
@@ -253,16 +329,50 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({
       });
       
       console.log('🔥 STEP 1: After EMERGENCY WORD CHECK');
-      console.log('🔥 IMMEDIATE NEXT LINE TEST');
       
-      // Force synchronous logging to prevent React interruption
-      setTimeout(() => {
-        console.log('🔥 STEP 2 ASYNC: finalIsCorrect value is:', finalIsCorrect);
-        console.log('🔥 STEP 3 ASYNC: About to continue execution');
-      }, 0);
+      // EMERGENCY FIX: Restore the original working logic immediately
+      if (finalIsCorrect) {
+        console.log('✅ CORRECT WORD - PROCESSING...');
+        
+        // Show success animation
+        setFloatingEmoji({
+          id: `emoji-${Date.now()}`,
+          emoji: '✅',
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2
+        });
+        setTimeout(() => setFloatingEmoji(null), 2000);
+        
+        // CRITICAL: Update wordsFixed to trigger progression
+        const wordToAdd = result.currentWord || matchingFailedWord || userInput;
+        const newWordsFixed = [...wordsFixed, wordToAdd];
+        console.log('🚀 UPDATING WORDS FIXED:', { wordToAdd, newWordsFixed });
+        setWordsFixed(newWordsFixed);
+        
+        // Reset UI state
+        setShowHint(false);
+        setCurrentHint('');
+        setShowAnswer(false);
+        setUserInput('');
+        
+        // Check if round is completed
+        const roundCompleted = newWordsFixed.length >= fillInBlankState.failedWords.length;
+        console.log('🔍 ROUND CHECK:', { completed: newWordsFixed.length, total: fillInBlankState.failedWords.length, roundCompleted });
+        
+        if (roundCompleted && currentRound < (currentSession.maxRounds || 3)) {
+          console.log('🎉 ADVANCING TO NEXT ROUND');
+          setCurrentRound(prev => prev + 1);
+          setWordsFixed([]);
+        } else if (roundCompleted) {
+          console.log('🏆 ALL ROUNDS COMPLETED');
+          setPhase('completion');
+        }
+      } else {
+        console.log('❌ WRONG WORD - PROCESSING...');
+        // Handle wrong word...
+      }
       
-      console.log('🔥 STEP 2 SYNC: finalIsCorrect value is:', finalIsCorrect);
-      console.log('🔥 DEBUG: About to check finalIsCorrect =', finalIsCorrect);
+      submittingRef.current = false;
       
       try {
         console.log('🧪 HYPOTHESIS TEST: finalIsCorrect =', finalIsCorrect);
