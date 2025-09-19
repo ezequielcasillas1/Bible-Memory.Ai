@@ -386,6 +386,7 @@ const MemorizePage: React.FC<MemorizePageProps> = ({
                 onInputChange={setUserInput}
                 placeholder="Type the verse from memory..."
                 autoFocus={true}
+                comparisonResult={comparisonResult}
               />
               
               <div className="text-center">
