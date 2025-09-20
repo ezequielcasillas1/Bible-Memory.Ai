@@ -1,5 +1,5 @@
 { 
-There is a bug, that is not letting us see the debug information your wanting to input for me to see to have debug process logic, the only thing we see is emergency word check.
+There is a bug, that when doing the regular memorization to transfer to the syntax lab the fill in blank does not have the special ui effects as seen on practice lab, Ill show you a 2 picures, one will have the special ui effects and one will have no effect just plain text, the plain text needs to look like the one from auto practice so fix that bug. 
 }
 
 ---
