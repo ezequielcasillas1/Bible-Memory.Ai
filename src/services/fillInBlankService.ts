@@ -216,95 +216,78 @@ export class FillInBlankAPI {
       };
     }
     
-    const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
-    
+    const normalizeWord = (value: string) => value.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    const cleanUserInput = normalizeWord(userInput);
+
     // FIXED: Check user input against ALL active blanks
     let matchedBlank: BlankWord | null = null;
-    let expectedWord = '';
-    
+    let canonicalEnglishWord: string | null = null;
+
     for (const blankWord of activeBlankWords) {
       const currentWord = blankWord.word;
-      const cleanCurrentWord = currentWord.toLowerCase().replace(/[.,!?;:"']/g, '');
-      
-      // MULTI-LANGUAGE TRANSLATION-AWARE COMPARISON
-      let isMatch = false;
-      let expectedWord = '';
-      let matchedLanguage = '';
-      
-      if (state.translationContext?.isTranslated) {
-        // Always check English first
-        const englishWord = cleanCurrentWord;
-        if (cleanUserInput === englishWord) {
-          isMatch = true;
-          expectedWord = englishWord;
-          matchedLanguage = 'en';
-        } else {
-          // Check multi-language translations if available
-          if (state.translationContext.multiLanguageTranslations) {
-            for (const [langCode, translatedVerse] of Object.entries(state.translationContext.multiLanguageTranslations)) {
-              const translatedWord = this.getTranslatedWordFromVerse(
-                currentWord,
-                blankWord.position,
-                state.translationContext.originalVerse,
-                translatedVerse
-              ).toLowerCase().replace(/[.,!?;:"']/g, '');
-              
-              if (cleanUserInput === translatedWord) {
-                isMatch = true;
-                expectedWord = translatedWord;
-                matchedLanguage = langCode;
-                break;
-              }
-            }
-          }
-          
-          // Fallback: Check primary translated verse (backward compatibility)
-          if (!isMatch && state.translationContext.translatedVerse) {
-            const translatedWord = this.getTranslatedWord(
-              currentWord, 
-              blankWord.position, 
-              state.translationContext
-            ).toLowerCase().replace(/[.,!?;:"']/g, '');
-            
-            if (cleanUserInput === translatedWord) {
-              isMatch = true;
-              expectedWord = translatedWord;
-              matchedLanguage = 'primary';
-            }
-          }
-        }
-      } else {
-        // No translation context - only check English
-        if (cleanUserInput === cleanCurrentWord) {
-          isMatch = true;
-          expectedWord = cleanCurrentWord;
-          matchedLanguage = 'en';
-        }
-      }
-      
-      if (isMatch) {
+      const cleanCurrentWord = normalizeWord(currentWord);
+
+      // Always accept the English word
+      if (cleanUserInput === cleanCurrentWord) {
         matchedBlank = blankWord;
+        canonicalEnglishWord = currentWord;
         break;
       }
+
+      // Translation-aware comparison
+      if (state.translationContext?.isTranslated) {
+        const tryMatch = (candidate?: string) => {
+          if (!candidate || matchedBlank) return;
+          if (cleanUserInput === normalizeWord(candidate)) {
+            matchedBlank = blankWord;
+            canonicalEnglishWord = currentWord;
+          }
+        };
+
+        if (state.translationContext.multiLanguageTranslations) {
+          for (const translatedVerse of Object.values(state.translationContext.multiLanguageTranslations)) {
+            if (matchedBlank) break;
+            const translatedWord = this.getTranslatedWordFromVerse(
+              currentWord,
+              blankWord.position,
+              state.translationContext.originalVerse,
+              translatedVerse
+            );
+            tryMatch(translatedWord);
+          }
+        }
+
+        if (!matchedBlank && state.translationContext.translatedVerse) {
+          const translatedWord = this.getTranslatedWord(
+            currentWord,
+            blankWord.position,
+            state.translationContext
+          );
+          tryMatch(translatedWord);
+        }
+
+        if (matchedBlank) {
+          break;
+        }
+      }
     }
-    
-    const isCorrect = matchedBlank !== null;
-    
-    if (isCorrect && matchedBlank) {
-      // Add word to completed list - use the expected word (translated if available)
-      const cleanMatchedWord = matchedBlank.word.toLowerCase().replace(/[.,!?;:"']/g, '');
-      const wordToStore = state.translationContext?.isTranslated ? expectedWord : cleanMatchedWord;
+
+    const isCorrect = matchedBlank !== null && canonicalEnglishWord !== null;
+
+    if (isCorrect && matchedBlank && canonicalEnglishWord) {
+      // Always store the English word so blank resolution stays consistent
+      const wordToStore = matchedBlank.word;
       const newCompletedWords = [...state.completedWords, wordToStore];
-      
+
       // Check if this word already exists to prevent duplicates
       const uniqueCompletedWords = Array.from(new Set(newCompletedWords));
-      
+
       const newState: FillInBlankState = {
         ...state,
         completedWords: uniqueCompletedWords,
         currentBlankIndex: state.currentBlankIndex + 1
       };
-      
+
       return {
         newState,
         isCorrect: true,
