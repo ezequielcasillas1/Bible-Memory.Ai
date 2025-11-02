@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { History, TrendingUp, Target, Clock, BookOpen, Plus, Edit3, Trash2 } from 'lucide-react';
+import { History, TrendingUp, Target, Clock, BookOpen, Plus, Trash2 } from 'lucide-react';
 import { MemorizationHistory, ImprovementPlan, AppSettings, UserStats } from '../types';
 import { HistoryService } from '../services/historyService';
 import { BibleVersion } from '../services/BibleAPI';
@@ -11,7 +11,7 @@ interface HistoryPageProps {
   availableBibleVersions: BibleVersion[];
 }
 
-const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemorizeVerse, availableBibleVersions }) => {
+const HistoryPage: React.FC<HistoryPageProps> = ({ settings: _settings, userStats, onMemorizeVerse, availableBibleVersions: _availableBibleVersions }) => {
   const [history, setHistory] = useState<MemorizationHistory[]>([]);
   const [improvementPlans, setImprovementPlans] = useState<ImprovementPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,35 +126,10 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ settings, userStats, onMemori
     }
   }, [improvementPlans]);
 
-  const deleteHistoryEntry = async (entryId: string) => {
-    try {
-      await HistoryService.deleteHistoryEntry(entryId);
-      // Refresh history after deletion
-      const updatedHistory = await HistoryService.getMemorizationHistory();
-      setHistory(updatedHistory);
-    } catch (error) {
-      console.error('Failed to delete history entry:', error);
-    }
-  };
-
   // Add manual refresh button for debugging
   const handleManualRefresh = () => {
     console.log('Manual refresh triggered');
     refreshHistory();
-  };
-
-  // Debug function to check localStorage
-  const checkLocalStorage = () => {
-    const localData = localStorage.getItem('bibleMemoryHistory');
-    console.log('Current localStorage data:', localData);
-    if (localData) {
-      try {
-        const parsed = JSON.parse(localData);
-        console.log('Parsed localStorage history:', parsed);
-      } catch (error) {
-        console.error('Failed to parse localStorage:', error);
-      }
-    }
   };
 
   // Clear localStorage history (cleanup)

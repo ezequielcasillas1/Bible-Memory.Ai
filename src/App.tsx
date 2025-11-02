@@ -13,7 +13,6 @@ import FavoritesPage from './pages/FavoritesPage';
 import HistoryPage from './pages/HistoryPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthModal from './components/AuthModal';
-import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
 import SyntaxLabPage from './pages/SyntaxLabPage';
 

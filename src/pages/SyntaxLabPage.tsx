@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Play, RotateCcw, Target, Zap, Clock, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Target, Zap, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, History, Calendar, BarChart3 } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison, MemorizationHistory } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
 import { HistoryService } from '../services/historyService';
 
 interface SyntaxLabPageProps {
@@ -14,7 +13,6 @@ type PracticeMode = 'blank' | 'type-along';
 type SessionPhase = 'summary' | 'practice' | 'flashcards' | 'challenge' | 'scorecard';
 
 const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack, onStartNewSession }) => {
-  const { t } = useLanguage();
   const [phase, setPhase] = useState<SessionPhase>('summary');
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('blank');
   const [currentSession, setCurrentSession] = useState<SyntaxLabSession | null>(null);
@@ -22,8 +20,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   const [wordsFixed, setWordsFixed] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userInput, setUserInput] = useState('');
-  const [showFlashcard, setShowFlashcard] = useState(false);
-  const [flashcardSide, setFlashcardSide] = useState<'front' | 'back'>('front');
   const [challengeTimeLeft, setChallengeTimeLeft] = useState(30);
   const [challengeActive, setChallengeActive] = useState(false);
   const [stats, setStats] = useState<SyntaxLabStats | null>(null);
@@ -36,13 +32,46 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   useEffect(() => {
     const savedStats = localStorage.getItem('syntaxLabStats');
     const savedWeakWords = localStorage.getItem('syntaxLabWeakWords');
-    
+
     if (savedStats) {
-      setStats(JSON.parse(savedStats));
+      try {
+        const parsed = JSON.parse(savedStats) as Partial<SyntaxLabStats>;
+        setStats({
+          totalSessions: parsed.totalSessions ?? 0,
+          wordsFixed: parsed.wordsFixed ?? 0,
+          averageImprovement: parsed.averageImprovement ?? 0,
+          weakWords: parsed.weakWords ?? [],
+          accuracyTrend: parsed.accuracyTrend ?? [],
+          mostMissedTypes: parsed.mostMissedTypes ?? [],
+          streakDays: parsed.streakDays ?? 0,
+          averageAccuracy: parsed.averageAccuracy ?? 0,
+          totalTimeSpent: parsed.totalTimeSpent ?? 0
+        });
+      } catch (error) {
+        console.error('Failed to parse syntax lab stats:', error);
+      }
     }
-    
+
     if (savedWeakWords) {
-      setWeakWords(JSON.parse(savedWeakWords));
+      try {
+        const parsedWeakWords = (JSON.parse(savedWeakWords) as Partial<WeakWord>[])
+          .map((word) => ({
+            id: word.id ?? `weak-word-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            word: word.word ?? '',
+            originalWord: word.originalWord ?? word.word ?? '',
+            verse: word.verse ?? '',
+            reference: word.reference ?? '',
+            timesWrong: word.timesWrong ?? 0,
+            timesCorrect: word.timesCorrect ?? 0,
+            lastMissed: word.lastMissed ? new Date(word.lastMissed) : new Date(),
+            definition: word.definition,
+            mastered: word.mastered ?? false
+          }));
+        setWeakWords(parsedWeakWords);
+        setStats(prev => prev ? { ...prev, weakWords: parsedWeakWords } : prev);
+      } catch (error) {
+        console.error('Failed to parse weak words:', error);
+      }
     }
   }, []);
 
@@ -171,40 +200,47 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     if (isCorrect) {
       const newWordsFixed = [...wordsFixed, currentWord.originalWord];
       setWordsFixed(newWordsFixed);
-      
-      // Track weak word improvement
+
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
       if (existingWeakWord) {
-        existingWeakWord.timesCorrect += 1;
-        if (existingWeakWord.timesCorrect >= 3) {
-          existingWeakWord.mastered = true;
-        }
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
+        const updatedWeakWord: WeakWord = {
+          ...existingWeakWord,
+          timesCorrect: existingWeakWord.timesCorrect + 1,
+          mastered: existingWeakWord.timesCorrect + 1 >= 3
+        };
+        const updatedWeakWords = weakWords.map(w =>
+          w.word === currentWord.originalWord ? updatedWeakWord : w
         );
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
     } else {
-      // Add to weak words if not already there
       const existingWeakWord = weakWords.find(w => w.word === currentWord.originalWord);
-      if (!existingWeakWord) {
+      if (!existingWeakWord && currentSession) {
         const newWeakWord: WeakWord = {
+          id: `weak-word-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           word: currentWord.originalWord,
+          originalWord: currentWord.originalWord,
+          verse: currentSession.verse.text,
+          reference: currentSession.verse.reference,
           timesWrong: 1,
           timesCorrect: 0,
           lastMissed: new Date(),
+          definition: currentWord.suggestion,
           mastered: false
         };
         const updatedWeakWords = [...weakWords, newWeakWord];
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
-      } else {
-        existingWeakWord.timesWrong += 1;
-        existingWeakWord.lastMissed = new Date();
-        existingWeakWord.mastered = false;
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
+      } else if (existingWeakWord) {
+        const updatedWeakWord: WeakWord = {
+          ...existingWeakWord,
+          timesWrong: existingWeakWord.timesWrong + 1,
+          lastMissed: new Date(),
+          mastered: false
+        };
+        const updatedWeakWords = weakWords.map(w =>
+          w.word === currentWord.originalWord ? updatedWeakWord : w
         );
         setWeakWords(updatedWeakWords);
         localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
@@ -265,6 +301,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     const newStats: SyntaxLabStats = {
       totalSessions: (stats?.totalSessions || 0) + 1,
       wordsFixed: (stats?.wordsFixed || 0) + wordsFixed.length,
+      averageImprovement: stats ?
+        ((stats.averageImprovement * stats.totalSessions) + finalSession.improvementScore) / (stats.totalSessions + 1) :
+        finalSession.improvementScore,
+      weakWords,
       averageAccuracy: stats ? 
         ((stats.averageAccuracy * stats.totalSessions) + finalSession.finalAccuracy) / (stats.totalSessions + 1) :
         finalSession.finalAccuracy,
@@ -292,7 +332,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">📖 Syntax Lab</h1>
+            <h1 className="text-3xl font-bold text-gray-800">?? Syntax Lab</h1>
             <div className="w-16"></div>
           </div>
 
@@ -317,7 +357,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                     <BookOpen className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-                    <span className="relative z-10">🚀 Start New Memorization</span>
+                    <span className="relative z-10">?? Start New Memorization</span>
                   </button>
 
                   <div className="relative">
@@ -340,7 +380,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                     ) : (
                       <History className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
                     )}
-                    <span className="relative z-10">📚 Practice From History</span>
+                    <span className="relative z-10">?? Practice From History</span>
                   </button>
                 </div>
               </div>
@@ -355,7 +395,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                       <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-lg blur opacity-30"></div>
                       <History className="w-8 h-8 text-emerald-600 relative z-10" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800">📚 Your Memorization History</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">?? Your Memorization History</h2>
                   </div>
                   <button
                     onClick={() => setShowHistoryLog(false)}
@@ -395,9 +435,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                               entry.status === 'reviewing' ? 'bg-yellow-100 text-yellow-700' :
                               'bg-red-100 text-red-700'
                             }`}>
-                              {entry.status === 'mastered' ? '🏆 Mastered' :
-                               entry.status === 'reviewing' ? '📖 Reviewing' :
-                               '📚 Learning'}
+                              {entry.status === 'mastered' ? '?? Mastered' :
+                               entry.status === 'reviewing' ? '?? Reviewing' :
+                               '?? Learning'}
                             </div>
                             <BarChart3 className="w-4 h-4 text-gray-400 group-hover:text-purple-500 transition-colors" />
                           </div>
@@ -510,7 +550,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                   <Target className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🎯 Fill in the Blank Mode</span>
+                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">?? Fill in the Blank Mode</span>
                 </button>
                 <button
                   onClick={() => startPractice('type-along')}
@@ -518,7 +558,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                   <Brain className="w-6 h-6 relative z-10 group-hover:pulse transition-transform duration-300" />
-                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">🧠 Type-Along Mode</span>
+                  <span className="relative z-10 group-hover:text-white transition-colors duration-300">?? Type-Along Mode</span>
                 </button>
               </div>
             </div>
@@ -533,7 +573,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                 {practiceMode === 'blank' ? 'Fill in the Blank Mode' : 'Type-Along Mode'}
               </h2>
               <div className="text-sm text-gray-600">
-                Round {currentRound}/{currentSession.maxRounds} • Word {currentWordIndex + 1}/{currentSession.wrongWords.length}
+                Round {currentRound}/{currentSession.maxRounds} ? Word {currentWordIndex + 1}/{currentSession.wrongWords.length}
               </div>
             </div>
 
@@ -627,7 +667,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         {/* Phase: Flashcards */}
         {phase === 'flashcards' && (
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">🃏 Flashcard Review</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">?? Flashcard Review</h2>
             
             <div className="text-center space-y-6">
               <p className="text-gray-600">Review the words you practiced with flashcards</p>
@@ -647,7 +687,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         {phase === 'challenge' && (
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">⚡ Speed Challenge</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">? Speed Challenge</h2>
               <div className="text-2xl font-bold text-red-600">
                 {challengeTimeLeft}s
               </div>
@@ -668,9 +708,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         )}
 
         {/* Phase: Scorecard */}
-        {phase === 'scorecard' && stats && (
+        {phase === 'scorecard' && stats && currentSession && (
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-purple-200 animate-fade-in">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">🏆 Session Complete!</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">?? Session Complete!</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
@@ -690,10 +730,10 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                 Your Progress
               </h3>
               <div className="space-y-2 text-sm">
-                <p>• Total sessions completed: <span className="font-semibold">{stats.totalSessions}</span></p>
-                <p>• Words mastered this week: <span className="font-semibold">{stats.wordsFixed}</span></p>
-                <p>• Current streak: <span className="font-semibold">{stats.streakDays} days</span></p>
-                <p>• Most missed type: <span className="font-semibold">{stats.mostMissedTypes[0]}</span></p>
+                <p>? Total sessions completed: <span className="font-semibold">{stats.totalSessions}</span></p>
+                <p>? Words mastered this week: <span className="font-semibold">{stats.wordsFixed}</span></p>
+                <p>? Current streak: <span className="font-semibold">{stats.streakDays} days</span></p>
+                <p>? Most missed type: <span className="font-semibold">{stats.mostMissedTypes[0]}</span></p>
               </div>
             </div>
 
@@ -703,7 +743,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                 <div>
                   <h4 className="font-semibold text-yellow-800 mb-2">Encouragement</h4>
                   <p className="text-yellow-700 text-sm">
-                    You mastered {wordsFixed.length} challenging words today—keep it up! 
+                    You mastered {wordsFixed.length} challenging words today?keep it up! 
                     {wordsFixed.length >= currentSession.wrongWords.length * 0.8 && " You're becoming a Scripture master!"}
                   </p>
                 </div>

@@ -152,6 +152,7 @@ export interface WeakWord {
   verse: string;
   reference: string;
   timesWrong: number;
+  timesCorrect: number;
   lastMissed: Date;
   definition?: string;
   mastered: boolean;
@@ -165,6 +166,8 @@ export interface SyntaxLabStats {
   accuracyTrend: number[];
   mostMissedTypes: string[];
   streakDays: number;
+  averageAccuracy: number;
+  totalTimeSpent: number;
 }
 
 export interface UserProfile {

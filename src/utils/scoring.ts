@@ -25,7 +25,7 @@ export function calculateAccuracy(userInput: string, originalVerse: string): num
   return Math.max(0, Math.min(100, Math.round(accuracy * 100)));
 }
 
-export function generateFeedback(accuracy: number, userInput: string, originalVerse: string): {
+export function generateFeedback(accuracy: number, _userInput: string, _originalVerse: string): {
   feedback: string;
   suggestions: string[];
 } {

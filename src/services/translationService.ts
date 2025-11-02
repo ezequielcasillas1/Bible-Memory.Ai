@@ -193,7 +193,8 @@ export class TranslationService {
       return await response.json();
     } catch (error) {
       console.error('Translation service error:', error);
-      throw new Error(`Translation service error: ${error.message || 'Service temporarily unavailable'}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Translation service error: ${message || 'Service temporarily unavailable'}`);
     }
   }
 

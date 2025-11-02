@@ -1,11 +1,10 @@
 import { SearchResult } from '../types';
-import { getVersionById } from '../data/bibleVersions';
 import { BibleVersion, getPassageByReference, searchVerses } from './BibleAPI';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export class BibleSearchService {
-  static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], limit: number = 20): Promise<SearchResult[]> {
+  static async searchVerses(query: string, versionId: string, availableVersions: BibleVersion[], _limit: number = 20): Promise<SearchResult[]> {
     try {
       // Check if the version is available
       const version = availableVersions.find(v => v.id === versionId);

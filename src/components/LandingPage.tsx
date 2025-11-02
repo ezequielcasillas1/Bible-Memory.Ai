@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BookOpen, 
   Brain, 
   Search, 
   Trophy, 
@@ -26,7 +25,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onAuthClick }) => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  const [weeklyVerse, setWeeklyVerse] = useState({
+  const [weeklyVerse] = useState({
     text: "Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.",
     reference: "Proverbs 3:5-6",
     theme: "Trust & Guidance"
@@ -265,7 +264,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onAuthClick }) => {
                 Why Commission Verses Transform Lives
               </h2>
               <p className="text-xl mb-8 text-purple-100 leading-relaxed">
-                Memorizing commission verses isn't just about personal growth—it's about being equipped 
+                Memorizing commission verses isn't just about personal growth?it's about being equipped 
                 to share the Gospel effectively and confidently in any situation.
               </p>
               
