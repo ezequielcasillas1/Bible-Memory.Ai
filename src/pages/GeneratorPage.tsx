@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import TranslationModal from '../components/TranslationModal';
-import { RefreshCw, Heart, Sparkles } from 'lucide-react';
+import { RefreshCw, Heart } from 'lucide-react';
 import { VerseType, Verse, AppSettings } from '../types';
 import { commissionVerses, helpVerses, connections } from '../data/verses';
 import { AIService } from '../services/aiService';

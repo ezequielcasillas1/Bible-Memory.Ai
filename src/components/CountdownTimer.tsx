@@ -19,7 +19,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ timeLeft, totalTime, is
 
   return (
     <div className="flex justify-center mb-8">
-      <div className="relative w-32 h-32">
+      <div className={`relative w-32 h-32 transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`}>
         <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"

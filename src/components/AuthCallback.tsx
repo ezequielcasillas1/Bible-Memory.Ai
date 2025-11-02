@@ -1,35 +1,36 @@
 import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const AuthCallback: React.FC = () => {
-  const navigate = useNavigate()
+const redirectTo = (search: string) => {
+  const url = `${window.location.origin}/${search}`.replace(/\/+/g, '/').replace(':/', '://')
+  window.location.replace(url)
+}
 
+const AuthCallback: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
         const { data, error } = await supabase.auth.getSession()
-        
+
         if (error) {
           console.error('Auth callback error:', error)
-          navigate('/?error=auth_failed')
+          redirectTo('?error=auth_failed')
           return
         }
 
         if (data.session) {
-          // Successfully authenticated
-          navigate('/?success=auth_success')
+          redirectTo('?success=auth_success')
         } else {
-          navigate('/?error=no_session')
+          redirectTo('?error=no_session')
         }
       } catch (error) {
         console.error('Auth callback error:', error)
-        navigate('/?error=auth_failed')
+        redirectTo('?error=auth_failed')
       }
     }
 
     handleAuthCallback()
-  }, [navigate])
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">

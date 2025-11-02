@@ -316,7 +316,7 @@ export async function searchVerses(query: string, versionId: string = 'kjv'): Pr
 async function searchWldehVerses(query: string, versionId: string): Promise<any[]> {
   // For now, return empty array as wldeh API doesn't have a direct search endpoint
   // This could be enhanced with a local search implementation
-  console.log(`Wldeh search not yet implemented for ${versionId}`);
+  console.log(`Wldeh search not yet implemented for ${versionId} with query "${query}"`);
   return [];
 }
 

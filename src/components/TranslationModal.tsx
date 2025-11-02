@@ -43,15 +43,6 @@ const TranslationModal: React.FC<TranslationModalProps> = ({ isOpen, onClose, ve
     }
   };
 
-  const getStrategyColor = (strategy: string) => {
-    switch (strategy) {
-      case 'romance_germanic': return 'text-blue-600 bg-blue-50';
-      case 'asian_african': return 'text-green-600 bg-green-50';
-      case 'missionary_global': return 'text-purple-600 bg-purple-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
   const getStrategyIcon = (strategy: string) => {
     switch (strategy) {
       case 'romance_germanic': return '🏛️';

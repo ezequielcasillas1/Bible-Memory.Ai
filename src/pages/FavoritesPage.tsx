@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, BookOpen, Trash2, Tag, Calendar, Filter } from 'lucide-react';
+import { Heart, BookOpen, Trash2, Calendar, Filter } from 'lucide-react';
 import { FavoriteVerse, SearchResult, AppSettings } from '../types';
 import { BibleVersion } from '../services/BibleAPI';
 
@@ -9,7 +9,7 @@ interface FavoritesPageProps {
   availableBibleVersions: BibleVersion[];
 }
 
-const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse, availableBibleVersions }) => {
+const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings: _settings, onMemorizeVerse, availableBibleVersions: _availableBibleVersions }) => {
   const [favorites, setFavorites] = useState<FavoriteVerse[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
@@ -18,13 +18,14 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ settings, onMemorizeVerse
   useEffect(() => {
     const savedFavorites = localStorage.getItem('bibleMemoryFavorites');
     if (savedFavorites) {
-      const parsedFavorites = JSON.parse(savedFavorites);
+      const parsedFavorites = JSON.parse(savedFavorites) as FavoriteVerse[];
       setFavorites(parsedFavorites);
       
       // Extract unique categories
-      const uniqueCategories = [...new Set(parsedFavorites
-        .map((fav: FavoriteVerse) => fav.category)
-        .filter((cat: string) => cat)
+      const uniqueCategories = [...new Set(
+        parsedFavorites
+          .map(fav => fav.category)
+          .filter((cat): cat is string => Boolean(cat))
       )];
       setCategories(uniqueCategories);
     }
