@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill-in-Blank UI Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes purpleActive {
+            0% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.6); }
+            100% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.9); }
+        }
+        .purple-active {
+            animation: purpleActive 1.5s ease-in-out infinite alternate;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Fill-in-Blank UI Comparison Test</h1>
+        
+        <!-- ENHANCED UI VERSION (From FillInBlankPractice.tsx) -->
+        <div class="bg-white rounded-2xl p-8 shadow-xl border border-purple-200">
+            <h2 class="text-xl font-bold text-purple-600 mb-4">✨ Enhanced UI (FillInBlankPractice.tsx)</h2>
+            <div class="text-lg leading-relaxed text-gray-700 text-center mb-4">
+                The 
+                <span class="inline-block mx-2 px-6 py-3 rounded-2xl font-bold shadow-2xl border-2 transform scale-110 backdrop-blur-sm transition-all duration-300 bg-gradient-to-br from-purple-500 via-violet-500 to-fuchsia-500 text-white border-white/30 animate-pulse purple-active">
+                    <span class="text-xl font-mono tracking-widest" style="text-decoration: underline; text-decoration-color: #fbbf24; text-decoration-thickness: 3px;">_____</span>
+                </span>
+                is my 
+                <span class="inline-block mx-2 px-4 py-2 bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 text-amber-800 rounded-xl font-bold border-2 border-amber-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" style="text-decoration: underline; text-decoration-color: #f59e0b; text-decoration-thickness: 2px;">
+                    <span class="text-lg font-mono tracking-wide">_____</span>
+                </span>
+                I 
+                <span class="inline-block mx-2 px-4 py-2 bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 text-amber-800 rounded-xl font-bold border-2 border-amber-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" style="text-decoration: underline; text-decoration-color: #f59e0b; text-decoration-thickness: 2px;">
+                    <span class="text-lg font-mono tracking-wide">_____</span>
+                </span>
+                <span class="inline-block mx-2 px-4 py-2 bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 text-amber-800 rounded-xl font-bold border-2 border-amber-300 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" style="text-decoration: underline; text-decoration-color: #f59e0b; text-decoration-thickness: 2px;">
+                    <span class="text-lg font-mono tracking-wide">_____</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- PLAIN UI VERSION (From SyntaxLabPage.backup.tsx) -->
+        <div class="bg-white rounded-2xl p-8 shadow-xl border border-emerald-200">
+            <h2 class="text-xl font-bold text-emerald-600 mb-4">📝 Plain UI (SyntaxLabPage.backup.tsx)</h2>
+            <div class="text-xl leading-relaxed text-center font-medium">
+                For God so loved the world, that he gave his only Son, that whoever be-
+                lieves in him should not perish but have eternal life.
+            </div>
+        </div>
+
+        <!-- CURRENT ISSUE REPRODUCTION -->
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-8">
+            <h2 class="text-xl font-bold text-red-600 mb-4">🐛 Current Issue</h2>
+            <p class="text-gray-700 mb-4">
+                <strong>Problem:</strong> When transferring from memorization to syntax lab, the fill-in-blank shows 
+                <span class="bg-red-100 px-2 py-1 rounded font-mono">plain text</span> instead of 
+                <span class="bg-purple-100 px-2 py-1 rounded font-mono">enhanced UI effects</span>.
+            </p>
+            <p class="text-gray-700">
+                <strong>Root Cause:</strong> Two different rendering implementations exist - the current SyntaxLabPage.tsx uses modular FillInBlankPractice component with enhanced effects, but something is causing it to fall back to plain text rendering.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

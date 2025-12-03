@@ -39,6 +39,34 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
   useEffect(() => {
     if (!currentSession) return;
 
+    // CRITICAL FIX: Defensive check for wrongWords array
+    if (!currentSession.wrongWords || currentSession.wrongWords.length === 0) {
+      console.error('🚨 CRITICAL ERROR: currentSession.wrongWords is empty or undefined!', {
+        sessionId: currentSession.id,
+        wrongWords: currentSession.wrongWords,
+        hasOriginalComparison: !!currentSession.originalComparison,
+        originalComparison: currentSession.originalComparison
+      });
+      
+      // EMERGENCY FALLBACK: Extract failed words from originalComparison
+      if (currentSession.originalComparison) {
+        const emergencyFailedWords = [
+          ...currentSession.originalComparison.userComparison.filter((w: any) => w.status === 'incorrect' || w.status === 'extra'),
+          ...currentSession.originalComparison.originalComparison.filter((w: any) => w.status === 'missing')
+        ];
+        
+        console.log('🆘 EMERGENCY FALLBACK: Using originalComparison to extract failed words', {
+          emergencyFailedWords: emergencyFailedWords.map((w: any) => w.originalWord || w.userWord)
+        });
+        
+        // Temporarily patch the session
+        currentSession.wrongWords = emergencyFailedWords;
+      } else {
+        console.error('🚨 FATAL: No originalComparison available for fallback!');
+        return; // Cannot proceed without failed words
+      }
+    }
+
     // UNIFIED: Use factory-generated fillInBlankResult if available, otherwise create fresh
     let fillInBlankState;
     let fillInBlankResult;
@@ -49,6 +77,12 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       const uniqueFailedWords: string[] = Array.from(new Set(
         failedWords.map((w: string) => w.toLowerCase().replace(/[.,!?;:"']/g, ''))
       ));
+
+      console.log('🎯 USING FACTORY RESULT:', {
+        factoryFailedWords: uniqueFailedWords,
+        sessionWrongWords: currentSession.wrongWords.length,
+        wordsFixedCount: wordsFixed.length
+      });
 
       fillInBlankState = {
         verse: currentSession.verse.text,
@@ -68,6 +102,12 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       // Fallback for legacy sessions without factory-generated results
       const failedWords = currentSession.wrongWords.map((w: any) => (w.originalWord || w.userWord) as string);
       
+      console.log('🔄 USING LEGACY FALLBACK:', {
+        legacyFailedWords: failedWords,
+        sessionWrongWords: currentSession.wrongWords.length,
+        wordsFixedCount: wordsFixed.length
+      });
+
       fillInBlankState = {
         verse: currentSession.verse.text,
         failedWords: failedWords,
@@ -96,7 +136,16 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       wordsFixedLength: wordsFixed.length,
       totalBlanks: fillInBlankResult.blanks.filter(b => b.isBlank).length,
       failedWordsCount: fillInBlankState.failedWords.length,
-      failedWords: fillInBlankState.failedWords
+      failedWords: fillInBlankState.failedWords,
+      // ENHANCED DEBUG INFO
+      sessionWrongWordsCount: currentSession.wrongWords?.length || 0,
+      sessionWrongWords: currentSession.wrongWords?.map((w: any) => w.originalWord || w.userWord) || [],
+      blanksWithUI: fillInBlankResult.blanks.filter(b => b.isBlank).map(b => ({
+        word: b.word,
+        underscores: b.underscores,
+        position: b.position,
+        isCompleted: b.isCompleted
+      }))
     });
     
     // FORCE RENDER: Trigger visual re-render when wordsFixed changes
@@ -257,8 +306,8 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       // ENHANCED: Add multi-language translations from translationContext.multiLanguageTranslations
       // This expands support to all 18+ languages automatically
       if (translatedSessionVerse.multiLanguageTranslations) {
-        Object.values(translatedSessionVerse.multiLanguageTranslations).forEach((translatedVerse: string) => {
-          const multiLangWord = getTranslatedWordFromVerse(translatedVerse);
+        Object.values(translatedSessionVerse.multiLanguageTranslations).forEach((translatedVerse) => {
+          const multiLangWord = getTranslatedWordFromVerse(translatedVerse as string);
           if (multiLangWord && multiLangWord !== currentBlankWord && !options.includes(multiLangWord)) {
             options.push(multiLangWord);
           }
@@ -373,7 +422,7 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
       // Real-time validation handles auto-advance now
     } catch (error) {
       console.error('🚨 HANDLEINPUTCHANGE ERROR:', error);
-      console.error('🚨 ERROR STACK:', error.stack);
+      console.error('🚨 ERROR STACK:', (error as Error).stack);
       // Still update the input even if validation fails
       setUserInput(e.target.value);
     }
@@ -491,39 +540,55 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
             
             // CRITICAL FIX: Use Set to get unique failed words only
             const uniqueFailedWords = new Set(
-              currentSession.wrongWords.map((w: any) => 
+              (currentSession.wrongWords || []).map((w: any) => 
                 (w.originalWord || w.userWord).toLowerCase().replace(/[.,!?;:"']/g, '')
               )
             );
+
+            // EMERGENCY CHECK: If no failed words, show warning and render as regular text
+            if (uniqueFailedWords.size === 0) {
+              console.warn('⚠️ NO FAILED WORDS FOUND - Rendering as regular text', {
+                sessionId: currentSession.id,
+                wrongWordsCount: currentSession.wrongWords?.length || 0,
+                wrongWords: currentSession.wrongWords
+              });
+              
+              // Render all words as regular text
+              return words.map((word: string, index: number) => (
+                <span key={index} className="mx-1 text-gray-700 transition-all duration-300 hover:text-emerald-600">
+                  {word}
+                </span>
+              ));
+            }
             
             // EMERGENCY FIX: Only count CORRECT words as completed, not all attempts
             const effectiveWordsFixed = localWordsFixed.length >= wordsFixed.length ? localWordsFixed : wordsFixed;
             
             // CRITICAL FIX: Map wordsFixed entries to their target failed words (handle partial inputs)
-            const correctWordsOnly = effectiveWordsFixed.map((wf: string) => {
+            const correctWordsOnly = effectiveWordsFixed.map((wf) => {
               const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
               
               // Find the failed word that this attempt was trying to complete
-              const matchingFailedWord = Array.from(uniqueFailedWords).find((fw: string) => {
+              const matchingFailedWord = Array.from(uniqueFailedWords).find((fw) => {
                 // Direct match (complete word)
                 if (cleanAttempt === fw) return true;
                 
                 // Partial match (user typed part of the word correctly)
-                if (fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
+                if (typeof fw === 'string' && fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
                 
                 return false;
               });
               
               // Return the target word if found, otherwise the original attempt
               return matchingFailedWord || wf;
-            }).filter(word => {
+            }).filter((word) => {
               // Only include words that have a valid target in uniqueFailedWords
-              const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+              const clean = (word as string).toLowerCase().replace(/[.,!?;:"']/g, '');
               return uniqueFailedWords.has(clean);
             });
             
             const uniqueCompletedWords = new Set(
-              correctWordsOnly.map((wf: string) => wf.toLowerCase().replace(/[.,!?;:"']/g, ''))
+              correctWordsOnly.map((wf) => (wf as string).toLowerCase().replace(/[.,!?;:"']/g, ''))
             );
             
             // ENHANCED DEBUG: Log visual render state
@@ -545,9 +610,9 @@ const FillInBlankPractice: React.FC<PracticePhaseProps> = ({
               'correctWordsOnly MAPPED': correctWordsOnly,
               'mapping logic': effectiveWordsFixed.map(wf => {
                 const cleanAttempt = wf.toLowerCase().replace(/[.,!?;:"']/g, '');
-                const matchingFailedWord = Array.from(uniqueFailedWords).find((fw: string) => {
+                const matchingFailedWord = Array.from(uniqueFailedWords).find((fw) => {
                   if (cleanAttempt === fw) return true;
-                  if (fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
+                  if (typeof fw === 'string' && fw.startsWith(cleanAttempt) && cleanAttempt.length >= 2) return true;
                   return false;
                 });
                 return {
