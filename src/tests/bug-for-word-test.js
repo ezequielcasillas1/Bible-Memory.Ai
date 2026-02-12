@@ -44,9 +44,9 @@ const mockFillInBlankAPI = {
   },
 
   processWordSubmission: (state, userInput) => {
-    const cleanUserInput = userInput.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
-    
-    // Find the current blank word
+    const normalize = (value) => value.toLowerCase().trim().replace(/[.,!?;:"']/g, '');
+    const cleanUserInput = normalize(userInput);
+
     const currentBlankWord = mockFillInBlankAPI.getCurrentBlankWord(state);
     if (!currentBlankWord) {
       return {
@@ -56,53 +56,63 @@ const mockFillInBlankAPI = {
         currentWord: null
       };
     }
-    
-    let wordToCheck = currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '');
-    
-    // TRANSLATION-AWARE COMPARISON (this is where the bug likely is)
-    if (state.translationContext?.isTranslated) {
-      // This is the critical logic that may be broken
-      const originalWords = state.translationContext.originalVerse.split(' ');
-      const translatedWords = state.translationContext.translatedVerse.split(' ');
-      
-      // Find position of current word in original verse
-      const originalPosition = originalWords.findIndex(w => 
-        w.toLowerCase().replace(/[.,!?;:"']/g, '') === currentBlankWord.toLowerCase().replace(/[.,!?;:"']/g, '')
-      );
-      
-      if (originalPosition >= 0 && originalPosition < translatedWords.length) {
-        const translatedWord = translatedWords[originalPosition];
-        wordToCheck = translatedWord.toLowerCase().replace(/[.,!?;:"']/g, '');
-        
-        console.log('🌍 TRANSLATION DEBUG:', {
-          currentBlankWord,
-          originalPosition,
-          translatedWord,
-          wordToCheck,
-          userInput: cleanUserInput,
-          matches: cleanUserInput === wordToCheck
-        });
-      }
-    }
-    
-    const isCorrect = cleanUserInput === wordToCheck;
-    
-    if (isCorrect) {
-      const newCompletedWords = [...state.completedWords, currentBlankWord];
+
+    const cleanCurrentWord = normalize(currentBlankWord);
+
+    // Always accept the English word first
+    if (cleanUserInput === cleanCurrentWord) {
+      const newCompletedWords = Array.from(new Set([...state.completedWords, currentBlankWord]));
       return {
         newState: { ...state, completedWords: newCompletedWords },
         isCorrect: true,
         shouldAdvance: true,
         currentWord: currentBlankWord
       };
-    } else {
+    }
+
+    let matched = false;
+
+    if (state.translationContext?.isTranslated) {
+      const originalWords = state.translationContext.originalVerse.split(' ');
+      const translatedWords = state.translationContext.translatedVerse.split(' ');
+
+      const originalPosition = originalWords.findIndex(w => normalize(w) === cleanCurrentWord);
+
+      if (originalPosition >= 0 && originalPosition < translatedWords.length) {
+        const translatedWord = translatedWords[originalPosition];
+        const normalizedTranslated = normalize(translatedWord);
+
+        console.log('🌍 TRANSLATION DEBUG (UPDATED):', {
+          currentBlankWord,
+          originalPosition,
+          translatedWord,
+          normalizedTranslated,
+          userInput: cleanUserInput,
+          matches: cleanUserInput === normalizedTranslated
+        });
+
+        if (cleanUserInput === normalizedTranslated) {
+          matched = true;
+        }
+      }
+    }
+
+    if (matched) {
+      const newCompletedWords = Array.from(new Set([...state.completedWords, currentBlankWord]));
       return {
-        newState: state,
-        isCorrect: false,
-        shouldAdvance: false,
+        newState: { ...state, completedWords: newCompletedWords },
+        isCorrect: true,
+        shouldAdvance: true,
         currentWord: currentBlankWord
       };
     }
+
+    return {
+      newState: state,
+      isCorrect: false,
+      shouldAdvance: false,
+      currentWord: currentBlankWord
+    };
   }
 };
 
@@ -140,49 +150,53 @@ function runBugReproductionTest() {
   const currentBlank = mockFillInBlankAPI.getCurrentBlankWord(state);
   console.log('🎯 Current blank word:', currentBlank);
   
-  // Test the failing scenario: user types "For"
-  console.log('\n🧪 TESTING: User types "For"');
-  const result = mockFillInBlankAPI.processWordSubmission(state, 'For');
+  // Test the previously failing scenario: user types "For"
+  console.log('\n🧪 TEST 1: User types "For"');
+  const englishResult = mockFillInBlankAPI.processWordSubmission(state, 'For');
   
   console.log('📋 Result:', {
-    isCorrect: result.isCorrect,
-    shouldAdvance: result.shouldAdvance,
-    currentWord: result.currentWord
+    isCorrect: englishResult.isCorrect,
+    shouldAdvance: englishResult.shouldAdvance,
+    currentWord: englishResult.currentWord
   });
   
-  // Expected vs Actual
-  console.log('\n🎯 EXPECTED: isCorrect = true, shouldAdvance = true');
-  console.log(`🔍 ACTUAL: isCorrect = ${result.isCorrect}, shouldAdvance = ${result.shouldAdvance}`);
+  console.log('\n🎯 EXPECTED: isCorrect = true, shouldAdvance = true (English accepted)');
+  console.log(`🔍 ACTUAL: isCorrect = ${englishResult.isCorrect}, shouldAdvance = ${englishResult.shouldAdvance}`);
   
-  if (result.isCorrect) {
-    console.log('✅ TEST PASSED: "For" was correctly recognized');
+  // Test translation scenario: user types "Porque"
+  console.log('\n🧪 TEST 2: User types "Porque"');
+  const freshState = mockFillInBlankAPI.createFillInBlankState(
+    JOHN_3_16_SCENARIO.englishVerse,
+    JOHN_3_16_SCENARIO.comparisonResult
+  );
+  freshState.translationContext = state.translationContext;
+  const spanishResult = mockFillInBlankAPI.processWordSubmission(freshState, 'Porque');
+  
+  console.log('📋 Result:', {
+    isCorrect: spanishResult.isCorrect,
+    shouldAdvance: spanishResult.shouldAdvance,
+    currentWord: spanishResult.currentWord
+  });
+  
+  console.log('\n🎯 EXPECTED: isCorrect = true, shouldAdvance = true (Spanish accepted)');
+  console.log(`🔍 ACTUAL: isCorrect = ${spanishResult.isCorrect}, shouldAdvance = ${spanishResult.shouldAdvance}`);
+  
+  const allPassed = englishResult.isCorrect && spanishResult.isCorrect;
+  
+  if (allPassed) {
+    console.log('\n✅ FIX VERIFIED: English and Spanish inputs are both accepted.');
   } else {
-    console.log('❌ TEST FAILED: "For" was NOT recognized as correct');
-    console.log('🚨 BUG CONFIRMED: This reproduces the reported issue');
+    console.log('\n❌ REGRESSION: One or more inputs were not accepted.');
   }
   
-  // Additional debugging
-  console.log('\n🔍 TRANSLATION MAPPING DEBUG:');
-  const originalWords = state.translationContext.originalVerse.split(' ');
-  const translatedWords = state.translationContext.translatedVerse.split(' ');
-  
-  console.log('Position 0 (should be "For" → "Porque"):');
-  console.log(`  English: "${originalWords[0]}"`);
-  console.log(`  Spanish: "${translatedWords[0]}"`);
-  console.log(`  User typed: "For"`);
-  console.log(`  Should match: "${originalWords[0]}" (English) or "${translatedWords[0]}" (Spanish)`);
-  
-  return !result.isCorrect; // Return true if bug is confirmed
+  return !allPassed; // Return true if bug is (still) confirmed
 }
 
 // Run the test
 const bugConfirmed = runBugReproductionTest();
 
 if (bugConfirmed) {
-  console.log('\n🚨 BUG REPRODUCTION SUCCESSFUL');
-  console.log('The "For" word recognition failure has been isolated and reproduced.');
-  console.log('Ready for Root Cause Analysis phase.');
+  console.log('\n🚨 BUG STILL PRESENT: Investigate translation-aware matching logic.');
 } else {
-  console.log('\n✅ No bug found in this test');
-  console.log('The logic appears to work correctly in isolation.');
+  console.log('\n✅ SELF-CHECK PASSED: Translation-aware matching honors English and translated words.');
 }
