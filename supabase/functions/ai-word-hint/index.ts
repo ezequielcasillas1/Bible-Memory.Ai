@@ -138,14 +138,26 @@ serve(async (req) => {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
 
     if (!openaiApiKey || !openaiApiKey.startsWith('sk-') || openaiApiKey.length < 20) {
-      // Return static fallback
+      console.error('OPENAI_API_KEY is missing or invalid — returning local fallback')
+      // Build contextual fallback using word properties
+      const firstLetter = sanitizedWord.charAt(0).toUpperCase()
+      const lastLetter = sanitizedWord.charAt(sanitizedWord.length - 1).toLowerCase()
+      const words = sanitizedVerse.split(/\s+/)
+      const idx = words.findIndex(w => w.toLowerCase().replace(/[^a-z]/g, '') === sanitizedWord.toLowerCase())
+      const before = idx > 0 ? words[idx - 1] : ''
+      const after = idx >= 0 && idx < words.length - 1 ? words[idx + 1] : ''
+
       return new Response(
         JSON.stringify({
           fallback: true,
-          soundsLike: `This word has ${sanitizedWord.length} letters. Try sounding it out syllable by syllable.`,
-          modernEquivalent: "Think about what modern word you would use in this spot.",
-          memoryTrick: "Close your eyes and picture yourself reading this verse aloud — what word fits naturally?",
-          verseClue: `Look at the words right before and after the blank in ${sanitizedRef || 'the verse'} — what does the sentence need?`,
+          soundsLike: `This ${sanitizedWord.length}-letter word starts with "${firstLetter}" and ends with "${lastLetter}".`,
+          modernEquivalent: `Think about what modern word starting with "${firstLetter}" would fit the meaning here.`,
+          memoryTrick: before
+            ? `Picture the verse — after "${before}", what ${sanitizedWord.length}-letter word comes next?`
+            : `Close your eyes and picture yourself reading this verse aloud — what word fits naturally?`,
+          verseClue: before && after
+            ? `In ${sanitizedRef || 'this verse'}, this word appears between "${before}" and "${after}".`
+            : `Look at the words right before and after the blank in ${sanitizedRef || 'the verse'}.`,
           synonyms: []
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -267,9 +279,11 @@ Return ONLY this JSON:
 
   } catch (error) {
     console.error('AI Word Hint Error:', error.message)
+    // Return fallback as 200 so frontend can use the data, include error detail for debugging
     return new Response(
       JSON.stringify({
         fallback: true,
+        error: error.message || 'Unknown error',
         soundsLike: "AI hints are unavailable right now. Try the scrambled letters option instead!",
         modernEquivalent: "",
         memoryTrick: "Read the verse aloud and pause at the blank — your mouth may remember the word.",
@@ -277,7 +291,7 @@ Return ONLY this JSON:
         synonyms: []
       }),
       {
-        status: 500,
+        status: 200,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',

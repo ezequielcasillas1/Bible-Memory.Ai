@@ -114,6 +114,16 @@ export class AIService {
   ): Promise<WordHintData> {
     try {
       const url = `${SUPABASE_URL}/functions/v1/ai-word-hint`;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:entry',message:'getWordHint called',data:{word,verseReference,supabaseUrl:SUPABASE_URL?'SET':'MISSING',anonKey:import.meta.env.VITE_SUPABASE_ANON_KEY?'SET':'MISSING',fullUrl:url},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
+      // #endregion
+
+      if (!SUPABASE_URL) {
+        console.error('AI word hint: VITE_SUPABASE_URL is not configured');
+        return AIService.buildLocalHints(word, verseText, verseReference);
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -123,22 +133,69 @@ export class AIService {
         body: JSON.stringify({ word, verseText, verseReference }),
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:response',message:'Edge function responded',data:{status:response.status,ok:response.ok,statusText:response.statusText,headers:Object.fromEntries(response.headers.entries())},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
+      // #endregion
+
       if (!response.ok) {
-        throw new Error('Failed to get word hint');
+        const errorBody = await response.text().catch(() => 'no body');
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:errorBody',message:'Non-OK response body',data:{status:response.status,errorBody},timestamp:Date.now(),hypothesisId:'H1-H2'})}).catch(()=>{});
+        // #endregion
+        console.error(`AI word hint failed [${response.status}]:`, errorBody);
+        throw new Error(`Edge function error: ${response.status}`);
       }
 
       const data = await response.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:data',message:'Parsed response data',data:{fallback:data.fallback,error:data.error,hasSoundsLike:!!data.soundsLike,hasVerseClue:!!data.verseClue},timestamp:Date.now(),hypothesisId:'H1-H3'})}).catch(()=>{});
+      // #endregion
+      // If edge function returned its own fallback, log the reason for debugging
+      if (data.fallback) {
+        console.warn('AI word hint: edge function returned fallback.', data.error || 'API key may be missing');
+      }
       return data as WordHintData;
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:catch',message:'Fetch failed completely',data:{errorType:(error as any)?.constructor?.name,errorMessage:(error as any)?.message},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
+      // #endregion
       console.error('AI word hint failed:', error);
-      return {
-        soundsLike: "Try sounding the word out syllable by syllable, or think of words that rhyme.",
-        modernEquivalent: "Think about what modern word you would use in this spot in the verse.",
-        memoryTrick: "Close your eyes and picture yourself reading this verse aloud — what word fits?",
-        verseClue: `Look at the words before and after the blank in ${verseReference || 'the verse'} for context clues.`,
-        synonyms: [],
-        fallback: true,
-      };
+      return AIService.buildLocalHints(word, verseText, verseReference);
     }
+  }
+
+  /** Generate contextual hints locally when AI is unavailable */
+  private static buildLocalHints(
+    word: string,
+    verseText: string,
+    verseReference?: string
+  ): WordHintData {
+    const len = word.length;
+    const firstLetter = word.charAt(0).toUpperCase();
+    const lastLetter = word.charAt(word.length - 1).toLowerCase();
+
+    // Find surrounding words in the verse
+    const verseWords = verseText.split(/\s+/);
+    const wordIdx = verseWords.findIndex(
+      w => w.toLowerCase().replace(/[^a-z]/g, '') === word.toLowerCase()
+    );
+    const before = wordIdx > 0 ? verseWords[wordIdx - 1] : '';
+    const after = wordIdx >= 0 && wordIdx < verseWords.length - 1 ? verseWords[wordIdx + 1] : '';
+
+    // Rough syllable count
+    const syllables = Math.max(1,
+      (word.toLowerCase().replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/i, '').match(/[aeiouy]{1,2}/gi) || []).length
+    );
+
+    return {
+      soundsLike: `This ${len}-letter word starts with "${firstLetter}" and ends with "${lastLetter}". It has about ${syllables} syllable${syllables > 1 ? 's' : ''}.`,
+      verseClue: before && after
+        ? `In ${verseReference || 'this verse'}, this word appears between "${before}" and "${after}".`
+        : `Look at the words surrounding the blank in ${verseReference || 'this verse'} for context.`,
+      modernEquivalent: `Think about what ${syllables > 2 ? 'longer' : 'short'} modern word starting with "${firstLetter}" would fit the meaning here.`,
+      memoryTrick: `Picture the verse in your mind — after "${before || '...'}", what ${len}-letter word starting with "${firstLetter}" comes next?`,
+      synonyms: [],
+      fallback: true,
+    };
   }
 }

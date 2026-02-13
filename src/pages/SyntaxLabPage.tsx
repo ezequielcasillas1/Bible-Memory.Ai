@@ -299,14 +299,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
           );
           setHintData(data);
         } catch {
-          setHintData({
-            soundsLike: 'Try sounding it out — break it into syllables.',
-            modernEquivalent: 'Think about what modern word you would use here.',
-            memoryTrick: 'Picture yourself reading this verse aloud — what comes next?',
-            verseClue: 'Look at the words before and after the blank for clues.',
-            synonyms: [],
-            fallback: true,
-          });
+          // AIService.getWordHint already returns dynamic local fallback on failure
+          // This catch is a safety net — shouldn't normally be reached
+          console.error('Unexpected error calling AIService.getWordHint');
         } finally {
           setHintLoading(false);
         }
@@ -840,6 +835,9 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                     </div>
                   ) : hintData ? (
                     <div className="space-y-4">
+                      {hintData.fallback && (
+                        <p className="text-xs text-gray-400 italic text-center">AI unavailable — showing basic hints</p>
+                      )}
                       {hintData.soundsLike && (
                         <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
                           <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">Sounds Like</p>
