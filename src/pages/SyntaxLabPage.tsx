@@ -79,7 +79,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     return saved !== null ? JSON.parse(saved) : false;
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
-
   // Hint system state
   const [hintStage, setHintStage] = useState(0); // 0=none, 1=description, 2=scramble, 3=revealed
   const [hintData, setHintData] = useState<WordHintData | null>(null);
@@ -174,69 +173,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     }
   }, [comparisonResult, currentSession, useSampleData]);
 
-  // Load memorization history
-  const loadHistory = async () => {
-    setIsLoadingHistory(true);
-    try {
-      const history = await HistoryService.getMemorizationHistory();
-      setMemorizationHistory(history);
-      setShowHistoryLog(true);
-    } catch (error) {
-      console.error('Failed to load history:', error);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
-  // Create a practice session from history entry
-  const startPracticeFromHistory = (historyEntry: MemorizationHistory) => {
-    // Create a mock comparison result based on the history entry's accuracy
-    const mockComparisonResult: ComparisonResult = {
-      accuracy: historyEntry.bestAccuracy,
-      totalWords: 20, // Approximate
-      correctWords: Math.round((historyEntry.bestAccuracy / 100) * 20),
-      incorrectWords: Math.round(((100 - historyEntry.bestAccuracy) / 100) * 20),
-      missingWords: 0,
-      extraWords: 0,
-      userComparison: [],
-      originalComparison: [],
-      detailedFeedback: `Practice session for ${historyEntry.verse.reference}`
-    };
-
-    // Generate some practice words based on accuracy
-    const practiceWords: WordComparison[] = [];
-    const wordsToGenerate = Math.max(1, Math.round(((100 - historyEntry.bestAccuracy) / 100) * 10));
-    
-    for (let i = 0; i < wordsToGenerate; i++) {
-      practiceWords.push({
-        userWord: `word${i}`,
-        originalWord: `target${i}`,
-        status: 'incorrect' as const,
-        position: i,
-        suggestion: `target${i}`
-      });
-    }
-
-    const newSession: SyntaxLabSession = {
-      id: `session-${Date.now()}`,
-      startTime: new Date(),
-      verseId: historyEntry.verse.id,
-      verse: historyEntry.verse,
-      originalComparison: mockComparisonResult,
-      wrongWords: practiceWords,
-      practiceMode: 'blank',
-      currentRound: 1,
-      maxRounds: 3,
-      wordsFixed: [],
-      improvementScore: 0,
-      finalAccuracy: 0
-    };
-
-    setCurrentSession(newSession);
-    setPhase('summary');
-    setShowHistoryLog(false);
-  };
-
   // Challenge timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -305,6 +241,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       
       updateWeakWords(currentWord, true);
       
+      updateWeakWords(currentWord, true);
+
       if (currentWordIndex < currentSession.wrongWords.length - 1) {
         setCurrentWordIndex(currentWordIndex + 1);
         setUserInput('');
@@ -316,11 +254,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         } else {
           setPhase('flashcards');
         }
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
-        );
-        setWeakWords(updatedWeakWords);
-        localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
       }
     } else {
       setSubmitError(`"${value}" is not correct. Try again!`);
@@ -351,9 +284,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     if (!currentWord) return;
 
     const nextStage = hintStage + 1;
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SyntaxLabPage.tsx:handleHintPress',message:'Hint pressed',data:{nextStage,hintStage,currentWord:currentWord.originalWord,hasHintData:!!hintData},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
 
     if (nextStage === 1) {
       // Stage 1: Fetch AI description
@@ -367,9 +297,6 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             currentSession.verse.text,
             currentSession.verse.reference
           );
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SyntaxLabPage.tsx:hintResult',message:'Hint data received',data:{keys:Object.keys(data),fallback:data.fallback,soundsLike:data.soundsLike?.substring(0,80)},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
           setHintData(data);
         } catch {
           setHintData({
@@ -425,30 +352,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
       if (wasCorrect) {
         updatedWeakWords[existingWordIndex].mastered = true;
       } else {
-        existingWeakWord.timesWrong += 1;
-        existingWeakWord.lastMissed = new Date();
-        existingWeakWord.mastered = false;
-        const updatedWeakWords = weakWords.map(w => 
-          w.word === currentWord.originalWord ? existingWeakWord : w
-        );
-        setWeakWords(updatedWeakWords);
-        localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
+        updatedWeakWords[existingWordIndex].timesWrong += 1;
+        updatedWeakWords[existingWordIndex].lastMissed = new Date();
+        updatedWeakWords[existingWordIndex].mastered = false;
       }
-    }
-
-    if (currentWordIndex < currentSession.wrongWords.length - 1) {
-      setCurrentWordIndex(currentWordIndex + 1);
-      setUserInput('');
-    } else {
-      // End of round
-      if (currentRound < currentSession.maxRounds) {
-        setCurrentRound(currentRound + 1);
-        setCurrentWordIndex(0);
-        setUserInput('');
-      } else {
-        setPhase('flashcards');
-      }
-      return;
+      setWeakWords(updatedWeakWords);
+      localStorage.setItem('syntaxLabWeakWords', JSON.stringify(updatedWeakWords));
     }
   };
 
@@ -481,46 +390,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     return result;
   };
 
-  const startPractice = (mode: PracticeMode) => {
-    setPracticeMode(mode);
-    setPhase('practice');
-    setCurrentWordIndex(0);
-    setUserInput('');
-  };
-
   const startChallenge = () => {
     setPhase('challenge');
     setChallengeTimeLeft(30);
     setChallengeActive(true);
     setCurrentWordIndex(0);
     setUserInput('');
-  };
-
-  const completeSession = () => {
-    if (!currentSession) return;
-
-    const finalSession = {
-      ...currentSession,
-      endTime: new Date(),
-      finalAccuracy: (wordsFixed.length / currentSession.wrongWords.length) * 100,
-      improvementScore: Math.min(100, (wordsFixed.length / currentSession.wrongWords.length) * 100 + 10)
-    };
-
-    const newStats: SyntaxLabStats = {
-      totalSessions: (stats?.totalSessions || 0) + 1,
-      wordsFixed: (stats?.wordsFixed || 0) + wordsFixed.length,
-      averageAccuracy: stats ? 
-        ((stats.averageAccuracy * stats.totalSessions) + finalSession.finalAccuracy) / (stats.totalSessions + 1) :
-        finalSession.finalAccuracy,
-      totalTimeSpent: (stats?.totalTimeSpent || 0) + ((finalSession.endTime!.getTime() - finalSession.startTime.getTime()) / 1000 / 60),
-      accuracyTrend: [...(stats?.accuracyTrend || []), finalSession.improvementScore].slice(-10),
-      mostMissedTypes: ['connecting words', 'theological terms'],
-      streakDays: (stats?.streakDays || 0) + 1
-    };
-
-    setStats(newStats);
-    localStorage.setItem('syntaxLabStats', JSON.stringify(newStats));
-    setPhase('scorecard');
   };
 
   // Ensure we have a session + stats for scorecard preview

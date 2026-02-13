@@ -160,35 +160,40 @@ serve(async (req) => {
         'User-Agent': 'Bible-Memory-AI/1.0',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-5-mini',
         max_tokens: MAX_TOKENS,
         temperature: 0.7,
         messages: [
           {
             role: 'system',
-            content: `You are a creative Bible memory coach specializing in helping people RECALL forgotten words. You never say the word directly. Instead you give vivid, multi-sensory recall clues: what it sounds like, rhymes with, modern equivalents, phonetic breakdowns, visual imagery, and mnemonic tricks. You make each hint feel like a fun puzzle, not a dictionary entry. Respond ONLY with valid JSON.`
+            content: `You are a Bible memory hint generator. ABSOLUTE RULE: You must NEVER write the hidden word in ANY field. Not spelled out, not hyphenated, not broken into pieces, not in quotes, not capitalized, not embedded in sentences. If the hidden word is "example", you cannot write "example", "EXAMPLE", "E-X-A-M-P-L-E", "EX-AM-PLE", or any recognizable form. The user is trying to RECALL the word — if you reveal it, you defeat the purpose. Respond ONLY with valid JSON.`
           },
           {
             role: 'user',
-            content: `The user is memorizing this verse: "${sanitizedVerse}" (${sanitizedRef}).
-They are stuck on the word: "${sanitizedWord}"
+            content: `Verse: "${sanitizedVerse}" (${sanitizedRef}).
+Hidden word (DO NOT REVEAL): "${sanitizedWord}"
 
-Give them RECALL-FOCUSED hints to help them remember this specific word. Do NOT write the word itself in any field.
+Generate recall hints WITHOUT revealing the hidden word in any form.
 
-HINT STRATEGY:
-- "soundsLike": What does this word sound like? What does it rhyme with? Break it into syllables or phonetic chunks. E.g. for "begotten" you might say "be-GOT-ten — rhymes with 'forgotten', starts like 'begin'"
-- "modernEquivalent": If this is an archaic/KJV word, what is the modern version? E.g. "whosoever" → "The modern way to say this is 'whoever' — but the KJV adds a prefix meaning 'any person at all'"
-- "memoryTrick": A vivid mnemonic, mental image, or association trick. E.g. "Picture someone SO EVER determined to believe — that 'so' + 'ever' is baked right into the word"
-- "verseClue": A contextual clue from the verse itself — what comes before/after, what the sentence needs. E.g. "Right before 'believeth' — who is the verse talking about? Everyone, anyone, ___"
-- "synonyms": 2-3 modern synonyms or near-equivalents
+RULES:
+1. NEVER write the hidden word — not spelled, hyphenated, quoted, or embedded
+2. NEVER break the word into syllable chunks that spell it out
+3. Use INDIRECT clues only — rhymes, descriptions, associations
+
+FIELDS:
+- "soundsLike": What it rhymes with or sounds similar to. Do NOT phonetically spell the word. Instead say things like "It rhymes with ___" or "It sounds like ___ combined with ___"
+- "modernEquivalent": Describe what the word MEANS in modern terms without saying it. E.g. "A modern way to say this would refer to any person without exception"
+- "memoryTrick": A vivid image or mnemonic. Do NOT embed the word or its syllables in the trick
+- "verseClue": What role does this word play in the verse? What comes before and after? Do NOT quote the word
+- "synonyms": 2-3 modern synonyms only
 
 Return ONLY this JSON:
 {
-  "soundsLike": "Phonetic breakdown, rhymes, similar-sounding words",
-  "modernEquivalent": "Modern translation of this word and how it differs from the KJV form",
-  "memoryTrick": "A vivid mnemonic or mental image to lock this word in memory",
-  "verseClue": "A contextual clue using the surrounding words in the verse",
-  "synonyms": ["synonym1", "synonym2"]
+  "soundsLike": "...",
+  "modernEquivalent": "...",
+  "memoryTrick": "...",
+  "verseClue": "...",
+  "synonyms": ["...", "..."]
 }`
           }
         ],
@@ -218,13 +223,29 @@ Return ONLY this JSON:
         throw new Error('Invalid response structure')
       }
 
-      // Sanitize all fields
-      hintData.soundsLike = sanitizeInput(hintData.soundsLike || '')
-      hintData.modernEquivalent = sanitizeInput(hintData.modernEquivalent || '')
-      hintData.memoryTrick = sanitizeInput(hintData.memoryTrick || '')
-      hintData.verseClue = sanitizeInput(hintData.verseClue || '')
+      // Scrub the target word from all AI output
+      const scrubWord = (text: string, word: string): string => {
+        if (!text || !word) return text
+        // Build pattern: match the word with optional hyphens/spaces between letters
+        // e.g. "gave" matches "gave", "GAVE", "G-A-V-E", "G A V E", "g-a-v-e"
+        const letters = word.split('')
+        const spaced = letters.join('[\\s\\-]*')
+        const pat = new RegExp(spaced, 'gi')
+        let result = text.replace(pat, '___')
+        // Also catch the plain word in any case
+        result = result.replace(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '___')
+        return result
+      }
+
+      // Sanitize and scrub all fields
+      hintData.soundsLike = scrubWord(sanitizeInput(hintData.soundsLike || ''), sanitizedWord)
+      hintData.modernEquivalent = scrubWord(sanitizeInput(hintData.modernEquivalent || ''), sanitizedWord)
+      hintData.memoryTrick = scrubWord(sanitizeInput(hintData.memoryTrick || ''), sanitizedWord)
+      hintData.verseClue = scrubWord(sanitizeInput(hintData.verseClue || ''), sanitizedWord)
       if (Array.isArray(hintData.synonyms)) {
-        hintData.synonyms = hintData.synonyms.slice(0, 5).map((s: any) => sanitizeInput(String(s))).filter((s: string) => s.length > 0)
+        hintData.synonyms = hintData.synonyms.slice(0, 5)
+          .map((s: any) => scrubWord(sanitizeInput(String(s)), sanitizedWord))
+          .filter((s: string) => s.length > 0 && s !== '___')
       } else {
         hintData.synonyms = []
       }

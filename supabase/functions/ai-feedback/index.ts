@@ -410,7 +410,7 @@ serve(async (req) => {
         'User-Agent': 'Bible-Memory-AI/1.0',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-5-mini',
         max_tokens: MAX_TOKENS,
         temperature: 0.8,
         top_p: 1,
