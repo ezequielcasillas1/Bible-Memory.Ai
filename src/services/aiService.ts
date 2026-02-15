@@ -115,10 +115,6 @@ export class AIService {
     try {
       const url = `${SUPABASE_URL}/functions/v1/ai-word-hint`;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:entry',message:'getWordHint called',data:{word,verseReference,supabaseUrl:SUPABASE_URL?'SET':'MISSING',anonKey:import.meta.env.VITE_SUPABASE_ANON_KEY?'SET':'MISSING',fullUrl:url},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
-      // #endregion
-
       if (!SUPABASE_URL) {
         console.error('AI word hint: VITE_SUPABASE_URL is not configured');
         return AIService.buildLocalHints(word, verseText, verseReference);
@@ -133,32 +129,18 @@ export class AIService {
         body: JSON.stringify({ word, verseText, verseReference }),
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:response',message:'Edge function responded',data:{status:response.status,ok:response.ok,statusText:response.statusText,headers:Object.fromEntries(response.headers.entries())},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
-      // #endregion
-
       if (!response.ok) {
         const errorBody = await response.text().catch(() => 'no body');
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:errorBody',message:'Non-OK response body',data:{status:response.status,errorBody},timestamp:Date.now(),hypothesisId:'H1-H2'})}).catch(()=>{});
-        // #endregion
         console.error(`AI word hint failed [${response.status}]:`, errorBody);
         throw new Error(`Edge function error: ${response.status}`);
       }
 
       const data = await response.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:data',message:'Parsed response data',data:{fallback:data.fallback,error:data.error,hasSoundsLike:!!data.soundsLike,hasVerseClue:!!data.verseClue},timestamp:Date.now(),hypothesisId:'H1-H3'})}).catch(()=>{});
-      // #endregion
-      // If edge function returned its own fallback, log the reason for debugging
       if (data.fallback) {
         console.warn('AI word hint: edge function returned fallback.', data.error || 'API key may be missing');
       }
       return data as WordHintData;
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/042add78-b658-4104-af04-a421d00cd193',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiService.ts:getWordHint:catch',message:'Fetch failed completely',data:{errorType:(error as any)?.constructor?.name,errorMessage:(error as any)?.message},timestamp:Date.now(),hypothesisId:'H1-H4'})}).catch(()=>{});
-      // #endregion
       console.error('AI word hint failed:', error);
       return AIService.buildLocalHints(word, verseText, verseReference);
     }

@@ -172,9 +172,10 @@ serve(async (req) => {
         'User-Agent': 'Bible-Memory-AI/1.0',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         max_tokens: MAX_TOKENS,
         temperature: 0.7,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
