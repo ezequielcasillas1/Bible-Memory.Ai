@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Target, Zap, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, Eye, Layers, ChevronRight, Home, AlertCircle, Settings, HelpCircle, Shuffle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft, Target, Zap, Trophy, BookOpen, Brain, CheckCircle, X, Lightbulb, TrendingUp, Eye, Layers, ChevronRight, Home, AlertCircle, Settings, HelpCircle, Shuffle, Loader2, SkipForward } from 'lucide-react';
 import { SyntaxLabSession, WeakWord, SyntaxLabStats, ComparisonResult, WordComparison } from '../types';
 import { AIService, WordHintData } from '../services/aiService';
 
@@ -85,6 +85,12 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
   const [showHintPopup, setShowHintPopup] = useState(false);
   const [hintLoading, setHintLoading] = useState(false);
   const [scrambledWord, setScrambledWord] = useState('');
+  const isSubmittingRef = useRef(false);
+  const roundWordRef = useRef({ round: 1, wordIndex: 0 });
+
+  useEffect(() => {
+    roundWordRef.current = { round: currentRound, wordIndex: currentWordIndex };
+  }, [currentRound, currentWordIndex]);
 
   // Reset hint state when word changes
   useEffect(() => {
@@ -229,35 +235,39 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
 
   const handleWordSubmit = (inputOverride?: string) => {
     if (!currentSession) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
+    const { round: r, wordIndex: wi } = roundWordRef.current;
     const value = inputOverride ?? userInput;
-    const currentWord = currentSession.wrongWords[currentWordIndex];
+    const currentWord = currentSession.wrongWords[wi];
     const isCorrect = checkWord(value, currentWord.originalWord);
 
     if (isCorrect) {
       setSubmitError(null);
       const newWordsFixed = [...wordsFixed, currentWord.originalWord];
       setWordsFixed(newWordsFixed);
-      
-      updateWeakWords(currentWord, true);
-      
       updateWeakWords(currentWord, true);
 
-      if (currentWordIndex < currentSession.wrongWords.length - 1) {
-        setCurrentWordIndex(currentWordIndex + 1);
+      if (wi < currentSession.wrongWords.length - 1) {
+        setCurrentWordIndex(wi + 1);
         setUserInput('');
+        isSubmittingRef.current = false;
       } else {
-        if (currentRound < currentSession.maxRounds) {
-          setCurrentRound(currentRound + 1);
+        if (r < currentSession.maxRounds) {
+          setCurrentRound(r + 1);
           setCurrentWordIndex(0);
           setUserInput('');
+          isSubmittingRef.current = false;
         } else {
           setPhase('flashcards');
+          isSubmittingRef.current = false;
         }
       }
     } else {
       setSubmitError(`"${value}" is not correct. Try again!`);
       updateWeakWords(currentWord, false);
+      setTimeout(() => { isSubmittingRef.current = false; }, 200);
     }
   };
 
@@ -270,9 +280,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
     const targetWord = currentSession.wrongWords[currentWordIndex]?.originalWord;
     if (!targetWord) return;
 
-    // Once typed length reaches target length, auto-submit
     if (newValue.length >= targetWord.length) {
-      // Use setTimeout so state updates and the live mask renders the last char first
       setTimeout(() => handleWordSubmit(newValue), 150);
     }
   };
@@ -335,6 +343,54 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         }
       }, 1500);
     }
+  };
+
+  // Skip to next word/round — for faster testing without typing
+  const handleSkip = () => {
+    if (!currentSession) return;
+    const currentWord = currentSession.wrongWords[currentWordIndex];
+    if (!currentWord) return;
+
+    if (phase === 'practice' && practiceMode === 'blank') {
+      setShowHintPopup(false);
+      updateWeakWords(currentWord, false);
+      if (currentWordIndex < currentSession.wrongWords.length - 1) {
+        setCurrentWordIndex(currentWordIndex + 1);
+        setUserInput('');
+      } else {
+        if (currentRound < currentSession.maxRounds) {
+          setCurrentRound(currentRound + 1);
+          setCurrentWordIndex(0);
+          setUserInput('');
+        } else {
+          setPhase('flashcards');
+        }
+      }
+    } else if (phase === 'practice' && practiceMode === 'type-along') {
+      setPhase('flashcards');
+    } else if (phase === 'challenge') {
+      updateWeakWords(currentWord, false);
+      if (currentWordIndex < currentSession.wrongWords.length - 1) {
+        setCurrentWordIndex(currentWordIndex + 1);
+        setUserInput('');
+      } else {
+        setPhase('scorecard');
+      }
+    }
+  };
+
+  const handleFlashcardSkip = () => {
+    if (currentWordIndex < renderSession.wrongWords.length - 1) {
+      setCurrentWordIndex(currentWordIndex + 1);
+      setFlashcardSide('front');
+    } else {
+      startChallenge();
+    }
+  };
+
+  const handleSkipToEnd = () => {
+    setCurrentWordIndex(renderSession.wrongWords.length - 1);
+    setFlashcardSide('front');
   };
 
   const updateWeakWords = (wordComparison: WordComparison, wasCorrect: boolean) => {
@@ -677,7 +733,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
         <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
           <div 
             className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((currentWordIndex + 1) / renderSession.wrongWords.length) * 100}%` }}
+            style={{ width: `${((currentRound - 1) * renderSession.wrongWords.length + currentWordIndex + 1) / (renderSession.maxRounds * renderSession.wrongWords.length) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -781,9 +837,16 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             )}
           </div>
 
-          {/* Hint button — escalating label */}
-          {hintStage < 3 && (
-            <div className="text-center">
+          {/* Skip + Hint buttons */}
+          <div className="text-center flex flex-wrap justify-center gap-3">
+            <button
+              onClick={handleSkip}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+            >
+              <SkipForward className="w-4 h-4" />
+              <span>Skip</span>
+            </button>
+            {hintStage < 3 && (
               <button
                 onClick={handleHintPress}
                 disabled={hintLoading}
@@ -806,8 +869,8 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
                   {hintStage === 2 && 'Reveal Word'}
                 </span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Hint Popup */}
           {showHintPopup && (
@@ -1002,7 +1065,11 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
               autoFocus
             />
           </div>
-          <div className="text-center">
+          <div className="text-center flex flex-wrap justify-center gap-3">
+            <button onClick={handleSkip} className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200">
+              <SkipForward className="w-4 h-4" />
+              <span>Skip to Flashcards</span>
+            </button>
             <button onClick={() => handleWordSubmit()} className="button-primary">
               Check Progress
             </button>
@@ -1043,7 +1110,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
           )}
         </div>
         
-        <div className="flex justify-between mt-6">
+        <div className="flex flex-wrap justify-between items-center gap-4 mt-6">
           <button
             onClick={() => { setCurrentWordIndex(Math.max(0, currentWordIndex - 1)); setFlashcardSide('front'); }}
             disabled={currentWordIndex === 0}
@@ -1054,21 +1121,32 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
           <span className="flex items-center text-sm text-gray-500">
             {currentWordIndex + 1} / {renderSession.wrongWords.length}
           </span>
-          {currentWordIndex < renderSession.wrongWords.length - 1 ? (
-            <button
-              onClick={() => { setCurrentWordIndex(currentWordIndex + 1); setFlashcardSide('front'); }}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              onClick={startChallenge}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              Start Challenge
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {currentWordIndex < renderSession.wrongWords.length - 1 && (
+              <button
+                onClick={handleSkipToEnd}
+                className="inline-flex items-center space-x-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+              >
+                <SkipForward className="w-4 h-4" />
+                <span>Skip to End</span>
+              </button>
+            )}
+            {currentWordIndex < renderSession.wrongWords.length - 1 ? (
+              <button
+                onClick={handleFlashcardSkip}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={startChallenge}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Start Challenge
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1094,7 +1172,7 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
           </p>
         </div>
         
-        <div className="text-center">
+        <div className="text-center space-y-3">
           <input
             type="text"
             value={userInput}
@@ -1105,6 +1183,13 @@ const SyntaxLabPage: React.FC<SyntaxLabPageProps> = ({ comparisonResult, onBack,
             autoFocus
             disabled={!challengeActive}
           />
+          <button
+            onClick={handleSkip}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+          >
+            <SkipForward className="w-4 h-4" />
+            <span>Skip</span>
+          </button>
         </div>
       </div>
     </div>
